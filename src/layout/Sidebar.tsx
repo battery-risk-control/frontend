@@ -10,6 +10,7 @@ import {
   FlaskConical,
   Home,
   Layers,
+  LogIn,
   Radar,
   Settings,
   Star,
@@ -131,6 +132,13 @@ export function Sidebar() {
           <Clock size={16} />
           최근 본 화면
         </button>
+        <NavLink
+          to="/login"
+          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-slate-400 hover:bg-navy-700 hover:text-white"
+        >
+          <LogIn size={16} />
+          로그인 / 권한 신청
+        </NavLink>
       </div>
     </aside>
   );

@@ -107,18 +107,19 @@ export interface HotspotItem {
   name: string;
   issue: string;
   level: RiskLevel;
-  top: string;
-  left: string;
+  lat: number;
+  lon: number;
   levelDot: "낮음" | "보통" | "높음" | "매우 높음";
+  material: "리튬" | "니켈" | "흑연" | "코발트";
 }
 
 export const hotspots: HotspotItem[] = [
-  { name: "유럽 (EU)", issue: "정책 변화", level: "경고", top: "28%", left: "47%", levelDot: "높음" },
-  { name: "우크라이나", issue: "지정학적 리스크", level: "심각", top: "26%", left: "56%", levelDot: "매우 높음" },
-  { name: "중국", issue: "수출 규제", level: "심각", top: "38%", left: "72%", levelDot: "매우 높음" },
-  { name: "DRC", issue: "운송/안보 리스크", level: "경고", top: "48%", left: "50%", levelDot: "높음" },
-  { name: "호주", issue: "광산 차질", level: "경고", top: "72%", left: "80%", levelDot: "높음" },
-  { name: "칠레", issue: "수자원 부족", level: "주의", top: "70%", left: "26%", levelDot: "보통" },
+  { name: "유럽 (EU)", issue: "정책 변화", level: "경고", lat: 50.1, lon: 10.5, levelDot: "높음", material: "니켈" },
+  { name: "우크라이나", issue: "지정학적 리스크", level: "심각", lat: 48.4, lon: 31.2, levelDot: "매우 높음", material: "리튬" },
+  { name: "중국", issue: "수출 규제", level: "심각", lat: 35.9, lon: 104.2, levelDot: "매우 높음", material: "흑연" },
+  { name: "DRC", issue: "운송/안보 리스크", level: "경고", lat: -4.0, lon: 21.8, levelDot: "높음", material: "코발트" },
+  { name: "호주", issue: "광산 차질", level: "경고", lat: -25.3, lon: 133.8, levelDot: "높음", material: "리튬" },
+  { name: "칠레", issue: "수자원 부족", level: "주의", lat: -23.5, lon: -68.5, levelDot: "보통", material: "리튬" },
 ];
 
 export const monitoringPrices = [

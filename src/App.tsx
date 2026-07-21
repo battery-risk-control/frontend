@@ -6,11 +6,15 @@ import { ErpImpact } from "./pages/ErpImpact";
 import { DataManagement } from "./pages/DataManagement";
 import { Briefing } from "./pages/Briefing";
 import { Placeholder } from "./pages/Placeholder";
+import { Login } from "./pages/auth/Login";
+import { Signup } from "./pages/auth/Signup";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
         <Route element={<AppLayout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/risk-monitoring" element={<RiskMonitoring />} />

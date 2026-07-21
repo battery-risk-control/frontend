@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { AlertCircle, ChevronDown, Download, Landmark, Ship, Sailboat, Pickaxe, RotateCcw } from "lucide-react";
 import { Card } from "../components/ui/Card";
 import { RiskBadge } from "../components/ui/Badge";
 import { MultiLineChart } from "../components/ui/Charts";
+import { WorldMapBackground, projectToPercent } from "../components/ui/WorldMap";
 import {
   eventTimeline,
   hotspots,
@@ -21,7 +23,16 @@ const HOTSPOT_COLOR: Record<string, string> = {
   심각: "#dc2626",
 };
 
+const MATERIAL_COLOR: Record<string, string> = {
+  리튬: "#2563eb",
+  니켈: "#16a34a",
+  흑연: "#78716c",
+  코발트: "#7c3aed",
+};
+
 export function RiskMonitoring() {
+  const [mapView, setMapView] = useState<"material" | "country">("material");
+
   return (
     <div className="space-y-5">
       <Card className="!p-3">
@@ -53,33 +64,66 @@ export function RiskMonitoring() {
       </Card>
 
       <div className="grid grid-cols-[1.8fr_1fr_1fr_1fr] gap-4">
-        <Card title="글로벌 리스크 지도" icon={<span className="text-slate-300">ⓘ</span>}>
+        <Card
+          title="글로벌 리스크 지도"
+          icon={<span className="text-slate-300">ⓘ</span>}
+          action={
+            <div className="flex items-center gap-1 rounded-lg border border-slate-200 p-1">
+              {([
+                ["material", "원자재 뷰"],
+                ["country", "국가 뷰"],
+              ] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setMapView(key)}
+                  className={`rounded-md px-2.5 py-1 text-[12px] font-medium ${
+                    mapView === key ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-100"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          }
+        >
           <div className="relative h-[300px] overflow-hidden rounded-lg bg-slate-50">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,#eef2fb,transparent_45%),radial-gradient(circle_at_70%_60%,#eef2fb,transparent_45%)]" />
-            {hotspots.map((h) => (
-              <div
-                key={h.name}
-                className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
-                style={{ top: h.top, left: h.left }}
-              >
-                <span
-                  className="h-3 w-3 rounded-full ring-4 ring-white/60"
-                  style={{ backgroundColor: HOTSPOT_COLOR[h.level] }}
-                />
-                <div className="mt-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-center shadow-sm">
-                  <div className="text-[11px] font-semibold text-slate-700">{h.name}</div>
-                  <div className="text-[10px] text-slate-400">{h.issue}</div>
-                  <div className="text-[10px] font-medium" style={{ color: HOTSPOT_COLOR[h.level] }}>
-                    {h.levelDot}
+            <WorldMapBackground />
+            {hotspots.map((h) => {
+              const color = mapView === "material" ? MATERIAL_COLOR[h.material] : HOTSPOT_COLOR[h.level];
+              const { top, left } = projectToPercent(h.lat, h.lon);
+              return (
+                <div
+                  key={h.name}
+                  className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+                  style={{ top, left }}
+                >
+                  <span className="h-3 w-3 rounded-full ring-4 ring-white/60" style={{ backgroundColor: color }} />
+                  <div className="mt-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-center shadow-sm">
+                    <div className="text-[11px] font-semibold text-slate-700">{h.name}</div>
+                    <div className="text-[10px] text-slate-400">{mapView === "material" ? h.material : h.issue}</div>
+                    <div className="text-[10px] font-medium" style={{ color }}>
+                      {h.levelDot}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div className="absolute bottom-2 left-2 flex items-center gap-3 rounded-md bg-white/90 px-2 py-1 text-[10px] text-slate-500 shadow-sm">
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-600" />매우 높음</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-orange-500" />높음</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-400" />보통</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-sky-400" />낮음</span>
+              {mapView === "material" ? (
+                <>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: MATERIAL_COLOR.리튬 }} />리튬</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: MATERIAL_COLOR.니켈 }} />니켈</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: MATERIAL_COLOR.흑연 }} />흑연</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: MATERIAL_COLOR.코발트 }} />코발트</span>
+                </>
+              ) : (
+                <>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-600" />매우 높음</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-orange-500" />높음</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-400" />보통</span>
+                  <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-sky-400" />낮음</span>
+                </>
+              )}
             </div>
           </div>
         </Card>

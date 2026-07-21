@@ -1,25 +1,18 @@
-import { AlertTriangle, ArrowRight, BarChart3, FileText, Info, Upload } from "lucide-react";
+import { AlertTriangle, Info } from "lucide-react";
 import { Card } from "../components/ui/Card";
 import { RiskBadge, AlertLevelBadge, Tag } from "../components/ui/Badge";
 import { RiskStepGauge } from "../components/ui/RiskGauge";
 import { DonutChart, MultiLineChart } from "../components/ui/Charts";
+import { GlobalRiskMap } from "../components/ui/GlobalRiskMap";
 import {
   dashboardAlerts,
   dataStatus,
   importDependency,
   materialRiskCards,
   priceTrend,
-  quickActions,
   summaryScores,
   supplierRisks,
 } from "../data/mock";
-
-const ACTION_ICONS = { emerald: BarChart3, blue: FileText, violet: Upload } as const;
-const ACTION_COLORS = {
-  emerald: "bg-emerald-100 text-emerald-600",
-  blue: "bg-blue-100 text-blue-600",
-  violet: "bg-violet-100 text-violet-600",
-};
 
 export function Dashboard() {
   return (
@@ -55,6 +48,8 @@ export function Dashboard() {
             delta={summaryScores.erp.deltaLabel}
           />
         </div>
+
+        <GlobalRiskMap height={460} />
 
         <div className="grid grid-cols-[340px_1fr] gap-5">
           <Card title="수입 의존도 (2024년 기준)" action={<LinkBtn>상세 보기</LinkBtn>}>
@@ -174,29 +169,6 @@ export function Dashboard() {
                 </div>
               </li>
             ))}
-          </ul>
-        </Card>
-
-        <Card title="빠른 작업">
-          <ul className="space-y-2.5">
-            {quickActions.map((q) => {
-              const Icon = ACTION_ICONS[q.color as keyof typeof ACTION_ICONS];
-              return (
-                <li
-                  key={q.title}
-                  className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-100 p-3 hover:border-blue-200 hover:bg-blue-50/40"
-                >
-                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${ACTION_COLORS[q.color as keyof typeof ACTION_COLORS]}`}>
-                    <Icon size={16} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[13px] font-semibold text-slate-700">{q.title}</p>
-                    <p className="text-[11.5px] text-slate-400">{q.desc}</p>
-                  </div>
-                  <ArrowRight size={14} className="mt-2 text-slate-300" />
-                </li>
-              );
-            })}
           </ul>
         </Card>
 

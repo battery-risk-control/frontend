@@ -111,15 +111,70 @@ export interface HotspotItem {
   lon: number;
   levelDot: "낮음" | "보통" | "높음" | "매우 높음";
   material: "리튬" | "니켈" | "흑연" | "코발트";
+  newsSummary: string;
 }
 
 export const hotspots: HotspotItem[] = [
-  { name: "유럽 (EU)", issue: "정책 변화", level: "경고", lat: 50.1, lon: 10.5, levelDot: "높음", material: "니켈" },
-  { name: "우크라이나", issue: "지정학적 리스크", level: "심각", lat: 48.4, lon: 31.2, levelDot: "매우 높음", material: "리튬" },
-  { name: "중국", issue: "수출 규제", level: "심각", lat: 35.9, lon: 104.2, levelDot: "매우 높음", material: "흑연" },
-  { name: "DRC", issue: "운송/안보 리스크", level: "경고", lat: -4.0, lon: 21.8, levelDot: "높음", material: "코발트" },
-  { name: "호주", issue: "광산 차질", level: "경고", lat: -25.3, lon: 133.8, levelDot: "높음", material: "리튬" },
-  { name: "칠레", issue: "수자원 부족", level: "주의", lat: -23.5, lon: -68.5, levelDot: "보통", material: "리튬" },
+  {
+    name: "유럽 (EU)",
+    issue: "정책 변화",
+    level: "경고",
+    lat: 50.1,
+    lon: 10.5,
+    levelDot: "높음",
+    material: "니켈",
+    newsSummary: "EU 배터리 원자재 공급망 실사 규정 초안 공개. 니켈·리튬 공급망 실사 의무화로 컴플라이언스 부담 증가 전망.",
+  },
+  {
+    name: "우크라이나",
+    issue: "지정학적 리스크",
+    level: "심각",
+    lat: 48.4,
+    lon: 31.2,
+    levelDot: "매우 높음",
+    material: "리튬",
+    newsSummary: "동부 전선 교전 격화로 인근 물류·에너지 인프라 피해 우려. 현지 리튬 개발 프로젝트 일정 지연 가능성.",
+  },
+  {
+    name: "중국",
+    issue: "수출 규제",
+    level: "심각",
+    lat: 35.9,
+    lon: 104.2,
+    levelDot: "매우 높음",
+    material: "흑연",
+    newsSummary: "흑연 제품 수출 통제 강화 조치 발표. 흑연 음극재 수출 허가제 전환으로 글로벌 공급 차질 우려.",
+  },
+  {
+    name: "DRC",
+    issue: "운송/안보 리스크",
+    level: "경고",
+    lat: -4.0,
+    lon: 21.8,
+    levelDot: "높음",
+    material: "코발트",
+    newsSummary: "동부 지역 무장 충돌로 코발트 운송 차질. 주요 광산 인근 물류 경로 안전 우려 지속.",
+  },
+  {
+    name: "호주",
+    issue: "광산 차질",
+    level: "경고",
+    lat: -25.3,
+    lon: 133.8,
+    levelDot: "높음",
+    material: "리튬",
+    newsSummary: "WA 지역 사이클론으로 리튬 광산 운영 일시 중단. 필바라 지역 선적 일정 차질 예상.",
+  },
+  {
+    name: "칠레",
+    issue: "수자원 부족",
+    level: "주의",
+    lat: -23.5,
+    lon: -68.5,
+    levelDot: "보통",
+    material: "리튬",
+    newsSummary: "북부 아타카마 지역 수자원 부족 심화. 리튬 브라인 생산량 제한 조치 검토 중.",
+  },
 ];
 
 export const monitoringPrices = [

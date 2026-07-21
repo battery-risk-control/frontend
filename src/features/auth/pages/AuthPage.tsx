@@ -1,0 +1,68 @@
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { login, signup } from '../../../api/auth.api'
+import type { LoginFormValues, OrgTier, SignupFormValues } from '../../../api/types'
+import { useAuthState } from '../../../lib/useAuthState'
+import { AuthTabs, type AuthTabKey } from '../components/AuthTabs'
+import { LoginForm } from '../components/LoginForm'
+import { SignupForm } from '../components/SignupForm'
+import { PendingApprovalScreen } from '../components/PendingApprovalScreen'
+import { SecurityBadge } from '../components/SecurityBadge'
+import styles from './AuthPage.module.css'
+
+const DASHBOARD_PATH_BY_TIER: Record<OrgTier, string> = {
+  purchasing: '/purchasing',
+  planning: '/planning',
+  executive: '/executive',
+}
+
+/**
+ * 로그인/회원가입 통합 페이지 (Seq 32). 좌:우 5:6 스플릿 스크린 — 좌측은 아직 플레이스홀더 영역만 둔다.
+ * 로그인/회원가입 응답이 PENDING이면 승인 대기 락 화면(Seq 35)으로 전환한다.
+ */
+export function AuthPage() {
+  const navigate = useNavigate()
+  const { signIn } = useAuthState()
+  const [activeTab, setActiveTab] = useState<AuthTabKey>('login')
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null)
+
+  function handleLogin(values: LoginFormValues) {
+    const result = login(values)
+    if ('error' in result) {
+      setPendingMessage(result.message)
+      return
+    }
+    signIn(result.org_tier)
+    navigate(DASHBOARD_PATH_BY_TIER[result.org_tier])
+  }
+
+  function handleSignup(values: SignupFormValues) {
+    const result = signup(values)
+    setPendingMessage(result.message)
+  }
+
+  function handleGoHome() {
+    setPendingMessage(null)
+    setActiveTab('login')
+  }
+
+  if (pendingMessage) {
+    return <PendingApprovalScreen message={pendingMessage} onGoHome={handleGoHome} />
+  }
+
+  return (
+    <div className={styles.page}>
+      <div className={styles.placeholderPanel}>
+        <span>플랫폼 소개 영역 (준비 중)</span>
+      </div>
+      <div className={styles.formPanel}>
+        <Link to="/" className={styles.homeLink}>
+          ← 홈으로
+        </Link>
+        <AuthTabs activeTab={activeTab} onChange={setActiveTab} />
+        {activeTab === 'login' ? <LoginForm onSubmit={handleLogin} /> : <SignupForm onSubmit={handleSignup} />}
+        <SecurityBadge />
+      </div>
+    </div>
+  )
+}

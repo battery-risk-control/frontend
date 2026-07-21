@@ -1,0 +1,43 @@
+:root {
+  /* Brand / Neutral */
+  --color-bg: #F1F1F3;              /* 데모 이미지 공통 배경 */
+  --color-surface: #FFFFFF;
+  --color-primary: #17345C;         /* 데모 이미지 공통 네이비 — 헤더/사이드바/주요 텍스트 */
+  --color-primary-alt: #0D4D5D;     /* 네이비 보조안(짙은 틸) — 필요 시 다크 섹션용 */
+  --color-text: #1A1A1A;
+  --color-text-muted: #6B7280;
+  --color-border: #E2E4E8;
+
+  /* 리스크 등급 (Seq 20 신뢰도 라벨과는 별개 — 등급 색상) */
+  --color-risk-critical: #D93A3F;   /* 심각 */
+  --color-risk-warning: #F0933F;    /* 주의 */
+  --color-risk-normal: #2AAE8A;     /* 정상 */
+
+  /* 신뢰도 라벨 (확정/참고/경고) */
+  --color-confidence-confirmed: #17345C;  /* 확정 — 브랜드 네이비, 가장 강한 신뢰 */
+  --color-confidence-reference: #2AB7C4;  /* 참고 — 청록, 중립적 정보 */
+  --color-confidence-warning: #F0933F;    /* 경고 — 주의 색상과 통일 */
+
+  /* Typography */
+  --font-family-base: 'Pretendard GOV', 'Pretendard', -apple-system, 'Apple SD Gothic Neo', sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 24px;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* Spacing (4px 배수, 업계 관례 — 미확정) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+}

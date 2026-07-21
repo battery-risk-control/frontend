@@ -1,0 +1,86 @@
+# CLAUDE.md — Frontend
+
+이 저장소는 "배터리 원자재 공급망 리스크 관제 AI 에이전트" 프로젝트의 Frontend(React 대시보드)입니다. 별도 레포로 운영되며(백엔드 레포와 분리), 이 레포만으로 개발·리뷰가 완결됩니다.
+
+## 프로젝트 문서
+
+@docs/product-overview.md
+@docs/architecture.md
+@docs/requirements-frontend.md
+@docs/mock-schemas.md
+@docs/design-tokens.md
+@docs/roadmap.md
+
+## 화면 구조 (requirements-frontend.md 기준)
+
+1. 비로그인 공개 대시보드 (Seq 23) — 상단 탭(구매팀/경영기획팀/경영진) + 로그인/회원가입 버튼 + 2x2: 글로벌 리스크 관제 맵 / AI 기반 권고 조치 리스트 / 원자재 가격 추이 / 실시간 뉴스 속보
+2. 로그인 / 회원가입 (스플릿스크린 + 탭 토글, 3계층 선택 포함)
+3. 승인 대기 락 화면
+4. 대시보드 공통 셸: Head / Navigation / Main
+5. 1계층 구매팀 대시보드 (Seq 24) — MVP 필수 — 사이드바(목록) + 단일 컬럼 스택(상단 KPI 요약 / 원자재 공급사 리스크 현황 / ERP 영향·자체재고·계약 분석 / 구매 대응 우선순위) + 우측 "주요 알림 및 빠른 작업" 패널
+6. 2계층 경영기획팀 대시보드 — 확장 범위
+7. 3계층 경영진 대시보드 — 확장 범위
+8. 파일 업로드 UI
+9. 산출물 다운로드 (브리핑 카드/비교표/그래프/협상요약)
+
+> ⚠️ 정정 이력: 최초 작성 시 Seq 23(비로그인 공개 대시보드) 프레임 내용을 Seq 24(구매팀 대시보드)로 잘못 라벨링했었음. 위 목록이 정정된 버전.
+
+전 화면 공통: 리스크 판단 신뢰도 라벨(확정/참고/경고) 표시 필수, 로그인/회원가입 화면 보안 배지 표시.
+
+## 참고 자료 (`docs-ref/`, 프로젝트 문서와 별개 — 아직 미확정 시각 자료)
+
+- `docs-ref/figma-export/KT_AIVLE_빅프로젝트.png` — Figma 설계 원본. **화면 구조·레이아웃·컴포넌트 배치의 근거는 항상 이 파일을 기준으로 한다.**
+- `docs-ref/ui-demo-images/` — 위 Figma를 바탕으로 만든 비주얼 데모 이미지 9장. 색감·톤 등 스타일 참고에만 사용하고, 레이아웃 근거로 삼지 않는다.
+- `docs-ref/uiux-guideline.pdf` — 행정안전부 디지털 정부서비스 UI/UX 가이드라인. AIVLE이 "개발권고사항"으로 표시한 항목만 채택한다 (전체를 따르지 않음):
+- `docs-ref/service-flow/빅프로젝트_서비스_플로우.png` — 프로젝트 전체 서비스 흐름도(기획 단계 산출물). 화면 간 이동 순서·조건 분기 참고용. 레이아웃/컴포넌트 세부 근거는 여전히 figma-export가 우선.
+  - **Identity**: 운영기관 식별자, 공식 배너, 헤더(좌측 상단 로고 고정, 스크롤 시 상단 고정), 푸터(모든 화면 일관된 위치·순서)
+  - **탐색**: 건너뛰기(Skip) 링크, 메인 메뉴, 브레드크럼, 사이드 메뉴(하위 화면 많은 경우)
+  - **기본패턴**: 개인 식별정보 입력(기본값 미리 지정 금지), 도움말 패턴, 동의 패턴("동의하지 않음" 옵션 필수)
+  - **로그인**: 안내(모달) → 방식 선택 → 정보 입력 → 완료의 4단계 구조
+
+## API Mock 응답 구조 (확정)
+
+Agent 구조는 §4.2 텍스트 기준 **ERP 에이전트 + RAG 에이전트 병기**(2-에이전트, 4단계 아님)로 확정. 시황분석은 별도 에이전트가 아니라 Data Ingestion Layer 결과를 그대로 입력으로 흡수한다.
+
+```json
+{
+  "risk_event_id": "RISK-2026-0721-001",
+  "grade": "심각",
+  "confidence_label": "확정",
+  "market_context": { "source": "data_ingestion_layer", "material": "니켈", "event_summary": "..." },
+  "erp_view": { "safety_stock_days": 12, "affected_material_code": "NI-2201", "alt_sourcing_candidates": ["공급사A", "공급사B"] },
+  "quality_check": { "status": "pass", "criteria": ["IATF16949 인증", "PPAP 승인 이력"], "reason": "..." },
+  "rag_view": { "contract_clause_summary": "...", "negotiation_points": ["...", "..."] },
+  "output_artifacts": { "render_mode": "json", "file_url": null, "fallback_to_json": true }
+}
+```
+
+- `market_context`/`erp_view`/`rag_view`는 병기 — 하나로 합쳐진 "종합 결론" 필드는 없다. 브리핑 카드 컴포넌트는 이 세 구획을 나란히 렌더링한다.
+- Seq 21(산출물 다운로드): 데모 단계는 `output_artifacts.render_mode: "json"` 고정 — 화면 내 JSON 렌더링만 구현한다. 실제 파일(.pptx 등) 다운로드는 범위 밖.
+- 백엔드가 FastAPI 단독인지 FastAPI+SpringBoot 이중트랙인지는 FE 구현에 영향 없음 — API 계약(위 스키마)만 따르면 된다.
+- 2계층/3계층/인증 mock 스키마는 `docs/mock-schemas.md` 참고 (모두 제안 단계, 계속 변경될 수 있음을 전제로 설계됨).
+- ⚠️ `api/auth.api.ts`의 테스트 계정(mock 로그인)은 개발·데모 전용이다. 실제 백엔드 연동 시 이 mock 전체를 실제 API 호출로 교체하고, 테스트 계정 정보는 반드시 삭제한다 — 프로덕션 빌드에 포함되면 안 된다. 클라이언트 쪽 라우트 접근 제어는 UX 안내일 뿐 실제 보안 경계가 아니며, 진짜 접근 통제는 백엔드 토큰 검증이 맡는다.
+
+## 기술 스택 (확정)
+- React 19 + TypeScript + Vite (팀 기존 경험 스택과 동일)
+- react-router-dom
+- 서버 상태: TanStack Query (`useQuery` 중심, 대부분 조회 화면이므로 mutation은 최소화)
+- UI 상태: React 기본 `useState`/`Context`로 시작 — 여러 화면에 걸친 공유 상태가 실제로 필요해지기 전까지 별도 상태관리 라이브러리는 도입하지 않는다
+- 스타일: CSS Modules (`*.module.css`) — 색상·타이포·spacing 토큰은 `docs/design-tokens.md`에 근거와 함께 확정, `src/styles/tokens.css`로 전역 관리
+- 차트: Recharts
+
+## 질문 방식
+선택지를 제시해야 할 때 AskUserQuestion 같은 인터랙티브 위젯을 쓰지 말고, Plan 응답 텍스트 안에 번호 목록으로 질문·선택지를 적어라. (사용자가 스크린샷 없이 텍스트로 복사해 다른 곳에 전달해야 하는 경우가 있음.)
+
+## 개발 시 참고 원칙
+- 백엔드는 이중 트랙(FastAPI: AI 로직 / Spring Boot: 업무 로직·인증·통계)이므로, API 연동 시 어느 서버의 엔드포인트인지 구분해서 다룬다. (`docs/architecture.md` 참고, 단 architecture.md 내 미확정 이슈 확인 필요)
+- API 계약이 아직 확정되지 않았으므로 mock 함수로 우선 구현하고, 응답 타입(`types.ts`)을 먼저 정의해 BE 계약이 나오면 구현부만 교체한다.
+- `features/{screen}` 은 화면 단위 경계 — 여러 사람이 동시에 Claude Code를 돌려도 서로 다른 폴더만 건드리면 충돌이 없다.
+- `docs/`, `docs-ref/` 내 문서는 기획 단계 발췌본이며 세부 수치·화면 구성이 확정된 것이 아니므로, 변경 필요 시 원본을 먼저 재확인한다.
+- 구현 중 mock 스키마·요구사항과 실제 코드가 어긋나는 지점을 발견하면(필드 누락, 합성 데이터 사용, 필드 의미 변경 등), 코드 주석뿐 아니라 근거가 된 `docs/*.md` 파일도 같은 작업 안에서 함께 수정한다. 문서 동기화를 별도 요청으로 미루지 않는다.
+- 각 Phase(또는 그에 준하는 작업 단위)가 끝나면 `docs/timeline.md` 맨 아래에 완료 내용을 새 항목으로 추가한다 (append-only, 기존 항목 수정 금지).
+- `roadmap.md`의 Phase 항목만 "Phase N" 헤딩을 쓰고, 그 외 문서화/툴링 작업은 "부수 작업" 섹션에 기록한다.
+- `docs/naming-glossary.md`(physical name : logical name 사전)는 코드의 파일·컴포넌트·함수명이 바뀔 때마다 함께 갱신한다. 다른 `docs/*.md`와 동일하게 일반 커밋 대상이다(비공개 처리 불필요).
+- 새 컴포넌트를 만들 때, `api/types.ts`의 스키마 타입과 이름이 같아질 것 같으면(예: 컴포넌트 `Foo.tsx` vs 타입 `Foo`) 타입 쪽을 import할 때 `as FooData`처럼 별칭을 붙인다. 기존에 이미 만들어진 `CumulativeRiskKpi`/`SavingsSimulation` 컴포넌트-타입 쌍은 지금 리네이밍하지 않고 이 규칙만 새 컴포넌트부터 적용한다.
+- 코드 수정 전 항상 계획을 먼저 제시하고 승인 후 진행한다.
+- 요청받지 않은 기능·컴포넌트를 임의로 추가하지 않는다. 필요하다고 판단되면 제안만 하고 확인 후 진행한다.

@@ -177,6 +177,40 @@ export const hotspots: HotspotItem[] = [
   },
 ];
 
+export interface HotspotNewsItem {
+  title: string;
+  source: string;
+  time: string;
+  level: RiskLevel | "매우 높음";
+  url: string;
+}
+
+// url: 실제 기사 대신 데모용으로 각 매체의 공식 홈페이지로 연결됩니다.
+export const hotspotNews: Record<string, HotspotNewsItem[]> = {
+  "유럽 (EU)": [
+    { title: "EU, 배터리 원자재 공급망 실사 규정 초안 공개", source: "로이터", time: "08:40", level: "경고", url: "https://www.reuters.com" },
+    { title: "니켈·리튬 공급망 실사 의무화, 컴플라이언스 부담 증가 전망", source: "Fastmarkets", time: "어제", level: "주의", url: "https://www.fastmarkets.com" },
+  ],
+  우크라이나: [
+    { title: "동부 전선 교전 격화, 인근 인프라 피해 우려", source: "로이터", time: "09:50", level: "매우 높음", url: "https://www.reuters.com" },
+    { title: "현지 리튬 개발 프로젝트 일정 지연 가능성", source: "Bloomberg", time: "어제", level: "경고", url: "https://www.bloomberg.com" },
+  ],
+  중국: [
+    { title: "중국, 흑연 제품 수출 통제 강화 조치 발표", source: "로이터", time: "10:30", level: "매우 높음", url: "https://www.reuters.com" },
+    { title: "흑연 음극재 수출 허가제 전환, 즉시 시행", source: "Bloomberg", time: "10:30", level: "매우 높음", url: "https://www.bloomberg.com" },
+  ],
+  DRC: [
+    { title: "동부 지역 무장 충돌로 코발트 운송 차질", source: "로이터", time: "07:50", level: "경고", url: "https://www.reuters.com" },
+  ],
+  호주: [
+    { title: "WA 지역 사이클론으로 광산 운영 일시 중단", source: "로이터", time: "09:15", level: "경고", url: "https://www.reuters.com" },
+    { title: "필바라 지역 강풍·폭우로 리튬 광산 가동 중단", source: "Bloomberg", time: "09:15", level: "경고", url: "https://www.bloomberg.com" },
+  ],
+  칠레: [
+    { title: "북부 아타카마 지역 수자원 부족 심화", source: "S&P Global", time: "어제", level: "주의", url: "https://www.spglobal.com" },
+  ],
+};
+
 export const monitoringPrices = [
   { material: "리튬 (Li₂CO₃)", price: 10850, unit: "USD/MT", changeLabel: "▲ 1.8%", up: true, score: 72, level: "높음" as const },
   { material: "니켈 (Ni)", price: 16720, unit: "USD/MT", changeLabel: "▼ 0.7%", up: false, score: 58, level: "주의" as const },

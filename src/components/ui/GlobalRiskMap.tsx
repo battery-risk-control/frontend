@@ -1,13 +1,13 @@
-import { useMemo, useState } from "react";
-import { GeoJSON, MapContainer, TileLayer } from "react-leaflet";
-import type { Feature, Geometry } from "geojson";
-import type { Layer, LeafletMouseEvent, Path, PathOptions } from "leaflet";
+import { Fragment, useState } from "react";
+import { CircleMarker, GeoJSON, MapContainer, Marker, TileLayer, Tooltip } from "react-leaflet";
+import { divIcon } from "leaflet";
+import type { PathOptions } from "leaflet";
 import { feature } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
 import countriesTopology from "world-atlas/countries-110m.json";
 import "leaflet/dist/leaflet.css";
 import { Card } from "./Card";
-import { hotspots, type HotspotItem } from "../../data/mock";
+import { hotspots } from "../../data/mock";
 
 export const HOTSPOT_COLOR: Record<string, string> = {
   정상: "#16a34a",
@@ -23,62 +23,32 @@ export const MATERIAL_COLOR: Record<string, string> = {
   코발트: "#7c3aed",
 };
 
-// world-atlas country name -> our hotspot label
-const COUNTRY_TO_HOTSPOT: Record<string, string> = {
-  China: "중국",
-  Ukraine: "우크라이나",
-  Australia: "호주",
-  Chile: "칠레",
-  "Dem. Rep. Congo": "DRC",
-  Germany: "유럽 (EU)",
-};
+const BASE_STYLE: PathOptions = { fillColor: "#e2e8f0", fillOpacity: 1, color: "#f8fafc", weight: 0.6 };
 
 const countries = feature(
   countriesTopology as unknown as Topology,
   (countriesTopology as unknown as Topology).objects.countries as GeometryCollection,
 );
 
-export function GlobalRiskMap({ height = 300 }: { height?: number }) {
+function labelIcon(text: string, color: string) {
+  return divIcon({
+    className: "",
+    html: `<span style="position:relative;left:14px;top:-9px;display:inline-block;white-space:nowrap;background:#ffffff;border:1px solid ${color}55;color:#1e293b;font-weight:700;font-size:11px;line-height:1;padding:3px 7px;border-radius:6px;box-shadow:0 1px 3px rgba(15,23,42,0.15);">${text}</span>`,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  });
+}
+
+export function GlobalRiskMap({
+  height = 300,
+  selectedCountry = null,
+  onSelectCountry,
+}: {
+  height?: number;
+  selectedCountry?: string | null;
+  onSelectCountry?: (name: string) => void;
+}) {
   const [mapView, setMapView] = useState<"material" | "country">("material");
-
-  const hotspotByLabel = useMemo(() => {
-    const map = new Map<string, HotspotItem>();
-    hotspots.forEach((h) => map.set(h.name, h));
-    return map;
-  }, []);
-
-  const resolveHotspot = (f?: Feature<Geometry>) => {
-    const name = (f?.properties as { name?: string } | null)?.name;
-    const label = name ? COUNTRY_TO_HOTSPOT[name] : undefined;
-    return label ? hotspotByLabel.get(label) : undefined;
-  };
-
-  const style = (f?: Feature<Geometry>): PathOptions => {
-    const hotspot = resolveHotspot(f);
-    if (!hotspot) {
-      return { fillColor: "#e2e8f0", fillOpacity: 1, color: "#f8fafc", weight: 0.6 };
-    }
-    const color = mapView === "material" ? MATERIAL_COLOR[hotspot.material] : HOTSPOT_COLOR[hotspot.level];
-    return { fillColor: color, fillOpacity: 0.75, color: "#ffffff", weight: 1 };
-  };
-
-  const onEachFeature = (f: Feature<Geometry>, layer: Layer) => {
-    const hotspot = resolveHotspot(f);
-    if (!hotspot) return;
-    const color = mapView === "material" ? MATERIAL_COLOR[hotspot.material] : HOTSPOT_COLOR[hotspot.level];
-    layer.bindTooltip(
-      `<div style="min-width:180px">
-         <div style="font-weight:700;font-size:12px;color:#1e293b">${hotspot.name}</div>
-         <div style="font-size:10.5px;font-weight:600;margin:3px 0;color:${color}">${hotspot.levelDot} 리스크 · ${hotspot.material}</div>
-         <div style="font-size:11px;line-height:1.45;color:#475569">${hotspot.newsSummary}</div>
-       </div>`,
-      { sticky: true, direction: "top", opacity: 1, className: "risk-tooltip" },
-    );
-    layer.on({
-      mouseover: (e: LeafletMouseEvent) => (e.target as Path).setStyle({ weight: 2, fillOpacity: 0.92 }),
-      mouseout: (e: LeafletMouseEvent) => (e.target as Path).setStyle({ weight: 1, fillOpacity: 0.75 }),
-    });
-  };
 
   return (
     <Card
@@ -117,7 +87,50 @@ export function GlobalRiskMap({ height = 300 }: { height?: number }) {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           />
-          <GeoJSON key={mapView} data={countries} style={style} onEachFeature={onEachFeature} />
+          <GeoJSON data={countries} style={BASE_STYLE} interactive={false} />
+
+          {hotspots.map((h) => {
+            const color = mapView === "material" ? MATERIAL_COLOR[h.material] : HOTSPOT_COLOR[h.level];
+            const isSelected = h.name === selectedCountry;
+            return (
+              <Fragment key={h.name}>
+                <CircleMarker
+                  center={[h.lat, h.lon]}
+                  radius={isSelected ? 21 : 17}
+                  pathOptions={{ stroke: false, fillColor: color, fillOpacity: isSelected ? 0.32 : 0.22 }}
+                  interactive={false}
+                />
+                <CircleMarker
+                  center={[h.lat, h.lon]}
+                  radius={isSelected ? 10.5 : 9}
+                  pathOptions={{
+                    color: isSelected ? "#0f1b3d" : "#ffffff",
+                    weight: isSelected ? 3 : 2.5,
+                    fillColor: color,
+                    fillOpacity: 0.95,
+                  }}
+                  eventHandlers={{ click: () => onSelectCountry?.(h.name) }}
+                >
+                  <Tooltip sticky direction="top" opacity={1} className="risk-tooltip">
+                    <div style={{ minWidth: 180 }}>
+                      <div style={{ fontWeight: 700, fontSize: 12, color: "#1e293b" }}>{h.name}</div>
+                      <div style={{ fontSize: 10.5, fontWeight: 600, margin: "3px 0", color }}>
+                        {h.levelDot} 리스크 · {h.material}
+                      </div>
+                      <div style={{ fontSize: 11, lineHeight: 1.45, color: "#475569" }}>{h.newsSummary}</div>
+                      <div style={{ fontSize: 10, marginTop: 4, color: "#94a3b8" }}>클릭하면 관련 뉴스를 볼 수 있어요</div>
+                    </div>
+                  </Tooltip>
+                </CircleMarker>
+                <Marker
+                  position={[h.lat, h.lon]}
+                  icon={labelIcon(h.name, color)}
+                  interactive={true}
+                  eventHandlers={{ click: () => onSelectCountry?.(h.name) }}
+                />
+              </Fragment>
+            );
+          })}
         </MapContainer>
 
         <div className="absolute bottom-2 left-2 z-[1000] flex items-center gap-3 rounded-md bg-white/90 px-2 py-1 text-[10px] text-slate-500 shadow-sm">

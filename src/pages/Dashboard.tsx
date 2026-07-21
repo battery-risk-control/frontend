@@ -1,4 +1,5 @@
-import { AlertTriangle, Info } from "lucide-react";
+import { useRef, useState } from "react";
+import { AlertTriangle, ExternalLink, Info, Newspaper } from "lucide-react";
 import { Card } from "../components/ui/Card";
 import { RiskBadge, AlertLevelBadge, Tag } from "../components/ui/Badge";
 import { RiskStepGauge } from "../components/ui/RiskGauge";
@@ -7,6 +8,7 @@ import { GlobalRiskMap } from "../components/ui/GlobalRiskMap";
 import {
   dashboardAlerts,
   dataStatus,
+  hotspotNews,
   importDependency,
   materialRiskCards,
   priceTrend,
@@ -15,6 +17,14 @@ import {
 } from "../data/mock";
 
 export function Dashboard() {
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const newsPanelRef = useRef<HTMLDivElement>(null);
+
+  const handleSelectCountry = (name: string) => {
+    setSelectedCountry(name);
+    newsPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
+
   return (
     <div className="grid grid-cols-[1fr_320px] gap-5">
       <div className="space-y-5">
@@ -49,7 +59,7 @@ export function Dashboard() {
           />
         </div>
 
-        <GlobalRiskMap height={460} />
+        <GlobalRiskMap height={460} selectedCountry={selectedCountry} onSelectCountry={handleSelectCountry} />
 
         <div className="grid grid-cols-[340px_1fr] gap-5">
           <Card title="수입 의존도 (2024년 기준)" action={<LinkBtn>상세 보기</LinkBtn>}>
@@ -171,6 +181,50 @@ export function Dashboard() {
             ))}
           </ul>
         </Card>
+
+        <div ref={newsPanelRef}>
+          <Card
+            title={selectedCountry ? `주요 뉴스/이벤트 · ${selectedCountry}` : "주요 뉴스/이벤트"}
+            icon={<Newspaper size={15} className="text-slate-300" />}
+          >
+            {selectedCountry && hotspotNews[selectedCountry] ? (
+              <ul className="space-y-3">
+                {hotspotNews[selectedCountry].map((n, i) => (
+                  <li key={i}>
+                    <a
+                      href={n.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group block rounded-lg border border-transparent p-2 -m-2 hover:border-slate-100 hover:bg-slate-50/60"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-slate-400">{n.time}</span>
+                        <span
+                          className="rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold"
+                          style={{
+                            color: n.level === "매우 높음" ? "#dc2626" : n.level === "경고" ? "#ea580c" : "#d97706",
+                            backgroundColor: n.level === "매우 높음" ? "#fee2e2" : n.level === "경고" ? "#ffedd5" : "#fef3c7",
+                          }}
+                        >
+                          {n.level}
+                        </span>
+                      </div>
+                      <p className="mt-1 flex items-start gap-1 text-[13px] font-medium leading-snug text-slate-700 group-hover:text-blue-600">
+                        <span className="flex-1">{n.title}</span>
+                        <ExternalLink size={12} className="mt-0.5 shrink-0 text-slate-300 group-hover:text-blue-500" />
+                      </p>
+                      <p className="text-[11px] text-slate-400">{n.source}</p>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="py-2 text-[12.5px] leading-relaxed text-slate-400">
+                지도에서 국가 마커를 클릭하면 관련 뉴스/이벤트가 여기에 표시됩니다.
+              </p>
+            )}
+          </Card>
+        </div>
 
         <Card title="데이터 업데이트 상태" action={<LinkBtn>전체 보기</LinkBtn>}>
           <ul className="space-y-2.5">

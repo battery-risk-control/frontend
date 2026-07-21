@@ -1,4 +1,4 @@
-import type { RiskEvent } from './types'
+import type { RiskEvent, RiskEventBriefing } from './types'
 
 /**
  * 1계층 구매팀 대시보드 mock 데이터.
@@ -167,4 +167,25 @@ const MOCK_RISK_EVENTS: RiskEvent[] = [
  */
 export function fetchRiskEvents(): RiskEvent[] {
   return MOCK_RISK_EVENTS
+}
+
+/**
+ * 1계층 브리핑 자료 열람(Seq 24)용 mock 함수. risk_event_id로 찾은 이벤트의
+ * rag_view/output_artifacts만 추출해 반환한다 — 새 데이터를 만들지 않고 같은 근원에서 파생한다.
+ * 존재하지 않는 ID면 null을 반환한다.
+ *
+ * 사용 예:
+ *   const briefing = fetchRiskEventBriefing('RISK-2026-0721-001')
+ */
+export function fetchRiskEventBriefing(riskEventId: string): RiskEventBriefing | null {
+  const event = MOCK_RISK_EVENTS.find((candidate) => candidate.risk_event_id === riskEventId)
+  if (!event) return null
+  return {
+    risk_event_id: event.risk_event_id,
+    material: event.market_context.material,
+    grade: event.grade,
+    confidence_label: event.confidence_label,
+    rag_view: event.rag_view,
+    output_artifacts: event.output_artifacts,
+  }
 }

@@ -1,4 +1,5 @@
 import { fetchPlanningDashboard } from '../../../api/planning.api'
+import { Header } from '../../../components/layout/Header'
 import { SideNav } from '../../../components/layout/SideNav'
 import { KpiSummaryCards } from '../components/KpiSummaryCards'
 import { ComparisonChart } from '../components/ComparisonChart'
@@ -19,21 +20,24 @@ export function PlanningDashboardPage() {
 
   return (
     <div className={styles.page}>
-      <SideNav items={SIDE_NAV_ITEMS} />
-      <main id="main-content" className={styles.main}>
-        <header className={styles.topBar}>
-          <h1 className={styles.heading}>경영기획팀 대시보드</h1>
-          <div className={styles.filters}>
-            <span className={styles.filterPill}>사업부 전체</span>
-            <span className={styles.filterPill}>2026년 2분기</span>
-            <span className={styles.filterPill}>달력</span>
-            <span className={styles.filterPill}>알림</span>
-          </div>
-        </header>
-        <KpiSummaryCards items={dashboard.kpi_summary} />
-        <ComparisonChart items={dashboard.risk_exposure_by_unit} />
-        <VendorRiskHistory items={dashboard.vendor_risk_history} />
-      </main>
+      <Header />
+      <div className={styles.body}>
+        <SideNav items={SIDE_NAV_ITEMS} />
+        <main id="main-content" className={styles.main}>
+          <header className={styles.topBar}>
+            <h1 className={styles.heading}>경영기획팀 대시보드</h1>
+            <div className={styles.filters}>
+              <span className={styles.filterPill}>사업부 전체</span>
+              <span className={styles.filterPill}>2026년 2분기</span>
+              <span className={styles.filterPill}>달력</span>
+              <span className={styles.filterPill}>알림</span>
+            </div>
+          </header>
+          <KpiSummaryCards items={dashboard.kpi_summary} />
+          <ComparisonChart items={dashboard.risk_exposure_by_unit} />
+          <VendorRiskHistory items={dashboard.vendor_risk_history} />
+        </main>
+      </div>
     </div>
   )
 }

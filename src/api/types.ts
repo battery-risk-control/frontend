@@ -44,6 +44,19 @@ export interface RiskEvent {
   output_artifacts: OutputArtifacts
 }
 
+/**
+ * 1계층 브리핑 자료 열람(Seq 24). risk_event의 rag_view/output_artifacts만 추출한 상세 조회 응답 —
+ * 화면에 등급·신뢰도 배지를 표시하기 위해 material/grade/confidence_label도 함께 내려준다.
+ */
+export interface RiskEventBriefing {
+  risk_event_id: string
+  material: string
+  grade: RiskGrade
+  confidence_label: ConfidenceLabel
+  rag_view: RagView
+  output_artifacts: OutputArtifacts
+}
+
 /** mock-schemas.md "인증" — 3계층(구매팀/경영기획팀/경영진) 값 집합. */
 export type OrgTier = 'purchasing' | 'planning' | 'executive'
 

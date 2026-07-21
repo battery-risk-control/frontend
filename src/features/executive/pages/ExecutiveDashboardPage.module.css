@@ -1,8 +1,14 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
 .page {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  min-height: 100vh;
+  flex: 1;
   padding: var(--space-6);
   background: var(--color-bg);
 }

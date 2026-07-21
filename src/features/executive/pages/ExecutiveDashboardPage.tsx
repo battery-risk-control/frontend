@@ -1,4 +1,5 @@
 import { fetchExecutiveDashboard } from '../../../api/executive.api'
+import { Header } from '../../../components/layout/Header'
 import { CumulativeRiskKpi } from '../components/CumulativeRiskKpi'
 import { SavingsSimulation } from '../components/SavingsSimulation'
 import { EnterpriseRiskSummary } from '../components/EnterpriseRiskSummary'
@@ -12,12 +13,15 @@ export function ExecutiveDashboardPage() {
   const dashboard = fetchExecutiveDashboard()
 
   return (
-    <main id="main-content" className={styles.page}>
-      <CumulativeRiskKpi kpi={dashboard.cumulative_risk_kpi} />
-      <div className={styles.bottomRow}>
-        <SavingsSimulation simulation={dashboard.savings_simulation} />
-        <EnterpriseRiskSummary items={dashboard.enterprise_risk_summary} />
-      </div>
-    </main>
+    <div className={styles.wrapper}>
+      <Header />
+      <main id="main-content" className={styles.page}>
+        <CumulativeRiskKpi kpi={dashboard.cumulative_risk_kpi} />
+        <div className={styles.bottomRow}>
+          <SavingsSimulation simulation={dashboard.savings_simulation} />
+          <EnterpriseRiskSummary items={dashboard.enterprise_risk_summary} />
+        </div>
+      </main>
+    </div>
   )
 }

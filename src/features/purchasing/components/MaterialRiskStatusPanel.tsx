@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
 import type { RiskEvent } from '../../../api/types'
@@ -30,6 +31,9 @@ export function MaterialRiskStatusPanel({ events }: MaterialRiskStatusPanelProps
               <ConfidenceBadge label={event.confidence_label} />
             </div>
             <p className={styles.summary}>{event.market_context.event_summary}</p>
+            <Link to={`/purchasing/briefing/${event.risk_event_id}`} className={styles.briefingLink}>
+              브리핑 보기
+            </Link>
           </li>
         ))}
       </ul>

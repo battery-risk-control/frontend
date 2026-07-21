@@ -13,8 +13,9 @@ test.describe('공개 대시보드 상단 탭 내비게이션', () => {
     await expect(page).toHaveURL(/\/auth$/)
   })
 
-  test('로그인 상태에서는 로그인한 계층과 달라도 클릭한 탭의 대시보드로 이동한다', async ({ page }) => {
-    // purchasing 계정으로 로그인한 뒤에도 경영기획팀 탭으로 진입 가능해야 한다 — 계층 매칭은 이번 범위 밖.
+  test('로그인 상태에서 다른 계층 탭을 클릭하면 RequireAuth가 자신의 대시보드로 되돌린다', async ({ page }) => {
+    // Phase 8부터 RequireAuth가 org_tier까지 매칭한다 — purchasing 계정은 경영기획팀 탭을 눌러도 /planning이 아니라 /purchasing에 남는다.
+    // 계층별 조합 전체는 e2e/tier-access.spec.ts에서 검증한다.
     await loginAs(page, 'purchasing@test.local')
     await expect(page).toHaveURL(/\/purchasing$/)
 
@@ -23,7 +24,7 @@ test.describe('공개 대시보드 상단 탭 내비게이션', () => {
     await expect(page).toHaveURL(/\/$/)
 
     await page.getByRole('button', { name: '경영기획팀' }).click()
-    await expect(page).toHaveURL(/\/planning$/)
-    await expect(page.getByText('경영기획팀 대시보드')).toBeVisible()
+    await expect(page).toHaveURL(/\/purchasing$/)
+    await expect(page.getByText('구매팀 대시보드')).toBeVisible()
   })
 })

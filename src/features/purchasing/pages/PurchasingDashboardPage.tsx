@@ -10,8 +10,10 @@ import { AlertsPanel } from '../components/AlertsPanel'
 import styles from './PurchasingDashboardPage.module.css'
 
 const SIDE_NAV_ITEMS = [
-  { label: '리스크 현황판', href: '#risk-board' },
-  { label: '브리핑 자료', href: '#briefing' },
+  { label: '리스크 현황판', href: '/purchasing#risk-board' },
+  // 별도 목록 화면이 없어 대시보드 내 각 리스크 항목의 "브리핑 보기" 링크로 진입한다.
+  // href는 SideNav의 React key 중복을 피하기 위해 /purchasing 뒤에 서로 다른 해시를 붙였다.
+  { label: '브리핑 자료', href: '/purchasing#briefing' },
 ]
 
 /**

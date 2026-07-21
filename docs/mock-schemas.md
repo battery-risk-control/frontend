@@ -120,6 +120,28 @@
 - 실제 원자재 가격 피드/API 계약이 정해지기 전까지는 이 엔드포인트를 실 데이터처럼 취급하면 안 된다 — 계약이 나오면 이 스키마 전체(특히 `price_index`)를 교체해야 한다.
 - 통화 단위 절대값 대신 "기준일=100" 상대 지수를 쓰는 이유: 근거 없는 절대 가격 수치를 문서에 확정값처럼 남기지 않기 위함.
 
+## 5. 1계층 — 브리핑 자료 열람 (Seq 24)
+
+`GET /api/purchasing/risk-events/{risk_event_id}/briefing`
+```json
+{
+  "risk_event_id": "RISK-2026-0721-001",
+  "material": "니켈",
+  "grade": "심각",
+  "confidence_label": "확정",
+  "rag_view": {
+    "contract_clause_summary": "기존 계약서 8조(가격 조정) — 원자재가 15% 이상 변동 시 재협상 조항 존재",
+    "negotiation_points": ["재협상 조항 발동 요건 충족 여부 확인", "단기 물량 우선 확보 조건 제시"]
+  },
+  "output_artifacts": { "render_mode": "json", "file_url": null, "fallback_to_json": true }
+}
+```
+
+- 새 데이터가 아니라 1계층 `risk_event` 스키마(CLAUDE.md 참고)의 `rag_view`/`output_artifacts`만 추출한 상세 조회 응답이다 — `risk_event_id`로 원본 배열에서 찾아 파생한다.
+- `material`/`grade`/`confidence_label`은 화면에 RiskGradeBadge/ConfidenceBadge를 표시하기 위해 함께 내려준다 — 신뢰도 라벨 규칙(Seq 20)을 이 화면에도 동일 적용.
+- 존재하지 않는 `risk_event_id`로 조회하면 FE는 "해당 리스크 이벤트를 찾을 수 없습니다" 안내로 대체한다.
+- Seq 21(산출물 다운로드)과는 범위가 다르다. 이 화면은 Seq 24 "내부 브리핑 자료 열람 화면"이며, `output_artifacts`는 렌더 모드 등 메타 정보만 보여줄 뿐 JSON 렌더링/다운로드 UI 자체는 이 범위에서 구현하지 않는다(Seq 21 별도 범위).
+
 ## 확장 원칙
 - 새 화면·지표가 추가되면 기존 필드를 변경하지 말고 옆에 새 필드를 추가한다 (breaking change 최소화).
 - 계층 간 동일 개념(리스크 등급, 신뢰도 라벨, 사업부명)은 항상 동일한 값 집합·필드명을 재사용한다.

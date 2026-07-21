@@ -48,9 +48,11 @@
 | `features/purchasing/components/KpiSummaryPanel.tsx` | 상단 KPI 요약 패널 |
 | `features/purchasing/components/MaterialRiskStatusPanel.tsx` | 원자재 공급사 리스크 현황 패널 |
 | `features/purchasing/components/PurchasePriorityPanel.tsx` | 구매 대응 우선순위 패널 |
+| `features/purchasing/pages/BriefingDetailPage.tsx` | 1계층 브리핑 자료 열람 페이지 |
 | `features/purchasing/pages/PurchasingDashboardPage.tsx` | 1계층 구매팀 대시보드 페이지 |
 | `lib/AuthContext.ts` | 인증 상태 Context 객체 정의 |
 | `lib/AuthProvider.tsx` | 인증 상태 Provider 컴포넌트 |
+| `lib/dashboardPaths.ts` | org_tier별 대시보드 경로 매핑 |
 | `lib/riskEventId.ts` | risk_event_id 날짜 파싱 유틸 |
 | `lib/useAuthState.ts` | 인증 상태 접근 훅 |
 
@@ -91,6 +93,7 @@
 | physical | logical | 역할 |
 |---|---|---|
 | `fetchRiskEvents` | 리스크 이벤트 목록 조회 함수 | 1계층 mock `risk_event` 배열 반환 — 다른 계층 API들이 공유하는 원천 데이터 |
+| `fetchRiskEventBriefing` | 브리핑 자료 조회 함수 | risk_event_id로 찾은 이벤트의 rag_view/output_artifacts만 추출(Seq 24). 존재하지 않으면 `null` 반환 |
 
 ### `api/types.ts`
 | physical | logical | 역할 |
@@ -103,6 +106,7 @@
 | `RagView` | RAG(계약) 관점 타입 | 계약조항 요약/협상 포인트 |
 | `OutputArtifacts` | 산출물 메타 타입 | 렌더 모드/파일 URL/JSON 폴백 여부 |
 | `RiskEvent` | 리스크 이벤트 타입 | 1계층 원천 스키마(CLAUDE.md 기준) |
+| `RiskEventBriefing` | 브리핑 자료 열람 응답 타입 | risk_event의 rag_view/output_artifacts만 추출 + 배지 표시용 material/grade/confidence_label(Seq 24) |
 | `OrgTier` | 조직 계층 타입 | `'purchasing' \| 'planning' \| 'executive'` |
 | `LoginRequest` | 로그인 요청 타입 | 이메일/비밀번호 |
 | `LoginFormValues` | 로그인 폼 값 타입 | `LoginRequest` + 로그인 상태 유지 여부(UI 로컬 상태) |
@@ -129,7 +133,7 @@
 ### `app/routes.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `AppRoutes` | 최상위 라우트 컴포넌트 | `/`, `/auth`, `/purchasing`, `/planning`, `/executive` 라우트 정의. 뒤 3개는 내부 `RequireAuth`(비export) 가드 적용 |
+| `AppRoutes` | 최상위 라우트 컴포넌트 | `/`, `/auth`, `/purchasing`, `/purchasing/briefing/:riskEventId`, `/planning`, `/executive` 라우트 정의. 뒤 4개는 내부 `RequireAuth`(비export) 가드 적용 — `tier` prop으로 org_tier까지 매칭해 불일치 시 403 대신 자신의 실제 대시보드로 리다이렉트(Phase 8) |
 
 ### `components/layout/Breadcrumb.tsx`
 | physical | logical | 역할 |
@@ -145,7 +149,7 @@
 ### `components/layout/Header.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `Header` | 공통 헤더 컴포넌트 | 좌측 로고(클릭 시 "/" 이동, sticky 상단 고정) + 우측 액션 슬롯(children) |
+| `Header` | 공통 헤더 컴포넌트 | 좌측 로고(클릭 시 "/" 이동, sticky 상단 고정) + 우측 액션 슬롯(children). 로그인 상태면 계정 정보(이메일·계층)와 로그아웃 버튼 표시(Phase 8) — 로그아웃은 SPA navigate와 인증 상태 갱신 간 경쟁을 피하려 하드 리다이렉트(`window.location.href`) 사용 |
 
 ### `components/layout/SideNav.tsx`
 | physical | logical | 역할 |
@@ -199,7 +203,7 @@
 ### `features/auth/pages/AuthPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `AuthPage` | 로그인/회원가입 통합 페이지 | 좌:우 5:6 스플릿스크린. 로그인 성공 시 해당 계층 대시보드로 이동, PENDING 시 락 화면 전환 |
+| `AuthPage` | 로그인/회원가입 통합 페이지 | 좌:우 5:6 스플릿스크린. 로그인 성공 시 해당 계층 대시보드로 이동, PENDING 시 락 화면 전환. 이동은 `signIn()` 호출과 같은 핸들러에서 바로 `navigate()`하지 않고, orgTier가 실제로 커밋된 뒤 `useEffect`에서 수행한다 — 로그아웃과 같은 종류의 SPA navigate·인증 상태 경쟁을 막기 위함(Phase 8) |
 
 ### `features/executive/components/CumulativeRiskKpi.tsx`
 | physical | logical | 역할 |
@@ -291,6 +295,11 @@
 |---|---|---|
 | `PurchasePriorityPanel` | 구매 대응 우선순위 패널 컴포넌트 | 등급·재고 소진일 기준 파생 정렬 순위 리스트 |
 
+### `features/purchasing/pages/BriefingDetailPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `BriefingDetailPage` | 1계층 브리핑 자료 열람 페이지 | Seq 24 "내부 브리핑 자료 열람 화면". `/purchasing/briefing/:riskEventId` — 계약 조항 요약/협상 포인트/산출물 메타 표시, RiskGradeBadge/ConfidenceBadge·Breadcrumb 재사용(Breadcrumb 첫 실사용) |
+
 ### `features/purchasing/pages/PurchasingDashboardPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
@@ -299,13 +308,18 @@
 ### `lib/AuthContext.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `AuthContextValue` | 인증 Context 값 타입 | orgTier/signIn/signOut |
+| `AuthContextValue` | 인증 Context 값 타입 | orgTier/email/signIn/signOut — email은 Phase 8에서 Header 계정 정보 표시용으로 추가 |
 | `AuthContext` | 인증 Context 객체 | `AuthProvider`/`useAuthState`가 공유하는 React Context |
 
 ### `lib/AuthProvider.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `AuthProvider` | 인증 상태 Provider 컴포넌트 | 로그인 성공 시 orgTier를 메모리에만 저장(localStorage 미사용, 새로고침 시 소실) |
+| `AuthProvider` | 인증 상태 Provider 컴포넌트 | 로그인 성공 시 orgTier와 email을 메모리에만 저장(localStorage 미사용, 새로고침 시 소실) |
+
+### `lib/dashboardPaths.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `DASHBOARD_PATH_BY_TIER` | org_tier별 대시보드 경로 매핑 상수 | `AuthPage`(로그인 성공 후 이동)와 `app/routes.tsx`의 `RequireAuth`(계층 불일치 리다이렉트)가 공용으로 참조(Phase 8) |
 
 ### `lib/riskEventId.ts`
 | physical | logical | 역할 |
@@ -315,4 +329,4 @@
 ### `lib/useAuthState.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `useAuthState` | 인증 상태 접근 훅 | `AuthProvider` 내부에서 orgTier/signIn/signOut 제공, 범위 밖 사용 시 예외 발생 |
+| `useAuthState` | 인증 상태 접근 훅 | `AuthProvider` 내부에서 orgTier/email/signIn/signOut 제공, 범위 밖 사용 시 예외 발생 |

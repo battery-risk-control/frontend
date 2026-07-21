@@ -43,6 +43,11 @@ Figma "경영기획팀/경영진 대시보드" 프레임 확인 — 경영진 �
 ## Phase 6.5 — 페이지 간 내비게이션 + 최소 접근 제어
 공개 대시보드 탭 실제 연결, `AuthProvider`/`useAuthState`(메모리 전용) 도입, `RequireAuth` 가드, 테스트 계정 3종(DEV/DEMO 전용, 배포 전 삭제 명시), `SideNav`/`Breadcrumb` `<a>` → `Link` 전환, `authState` 3파일 분리(Context/Provider/훅).
 
+## Phase 8 — 접근 제어 보정 + 계정 UI + 1계층 하위 화면
+`RequireAuth`에 `org_tier` 매칭 추가 — 계층 불일치 시 403 대신 자신의 실제 대시보드로 리다이렉트. `AuthProvider`에 `email` 저장 추가. `Header`에 계정 정보(이메일·계층)와 로그아웃 버튼 추가, Planning/Executive 페이지에도 `Header` 적용(CSS를 Header+본문 2단 구조로 조정). 1계층 하위 화면 "브리핑 자료 열람"(`BriefingDetailPage`, `/purchasing/briefing/:riskEventId`) 신규 구현 — `api/purchasing.api.ts`에 `fetchRiskEventBriefing` 추가, `MaterialRiskStatusPanel`에 "브리핑 보기" 링크 추가, `SideNav` 플레이스홀더 해시(`#briefing` 등)를 실제 라우트로 교체(React key 중복을 피하려 자재 페이지 경로 뒤에 서로 다른 해시를 붙임), `mock-schemas.md` 5절에 브리핑 상세 조회 스키마 추가.
+**버그**: 로그아웃 시 `navigate('/')`와 `signOut()`을 같은 이벤트 핸들러에서 호출하면, react-router의 history 리스너가 인증 Context 갱신과 다른 타이밍에 위치를 반영하면서 현재 라우트의 `RequireAuth`가 먼저 `/auth`로 리다이렉트를 덮어써 버리는 경쟁 상태가 재현됨(호출 순서를 바꿔도, `setTimeout`으로 미뤄도 해결 안 됨) → 인증 상태가 애초에 메모리 전용(새로고침 시 소실)으로 설계된 점을 이용해 로그아웃을 하드 리다이렉트(`window.location.href = '/'`)로 전환해 경쟁 자체를 없앰.
+**e2e**: 새 시나리오(계층 불일치 리다이렉트 3계정, 로그아웃, 브리핑 상세) 5개 테스트를 추가하고, "계층 매칭 없음"을 전제로 작성됐던 기존 탭 내비게이션 테스트 1개를 새 동작에 맞게 수정 — 총 21개 테스트 통과.
+
 ## 부수 작업
 
 Phase 번호가 붙지 않는 문서화·툴링 작업 기록 (`docs/roadmap.md`의 Phase 항목과 1:1 대응하지 않음).

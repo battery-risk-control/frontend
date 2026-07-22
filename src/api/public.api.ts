@@ -74,6 +74,9 @@ export function fetchGlobalRiskBoard(): GlobalRiskBoardItem[] {
     grade: event.grade,
     confidence_label: event.confidence_label,
     event_summary: event.market_context.event_summary,
+    country_code: event.market_context.country_code,
+    country_name: event.market_context.country_name,
+    coordinates: event.market_context.coordinates,
   }))
 }
 

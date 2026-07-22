@@ -111,13 +111,19 @@ export interface SignupResponse {
   message: string
 }
 
-/** 비로그인 공개 대시보드(Seq 23) — 글로벌 리스크 관제 맵. Seq 20에 따라 confidence_label도 항상 함께 표시한다. */
+/**
+ * 비로그인 공개 대시보드(Seq 23) — 글로벌 리스크 관제 맵. Seq 20에 따라 confidence_label도 항상 함께 표시한다.
+ * country_code/coordinates는 market_context와 동일하게 국가 특정 불가 시 생략 가능(optional) — 지도 마커 표시용.
+ */
 export interface GlobalRiskBoardItem {
   risk_event_id: string
   material: string
   grade: RiskGrade
   confidence_label: ConfidenceLabel
   event_summary: string
+  country_code?: string
+  country_name?: string
+  coordinates?: { lat: number; lng: number }
 }
 
 /** AI 기반 권고 조치 리스트. 공개 화면이므로 ERP 내부 상세(재고일수, 공급사명)는 노출하지 않는다. */

@@ -41,7 +41,7 @@
 | `features/planning/components/VendorRiskHistory.tsx` | 협력사 리스크 이력 및 탐색 리스트 |
 | `features/planning/pages/PlanningDashboardPage.tsx` | 2계층 경영기획팀 대시보드 페이지 |
 | `features/public/components/AiPriorityList.tsx` | AI 기반 권고 조치 리스트 |
-| `features/public/components/GlobalRiskBoard.tsx` | 글로벌 리스크 관제 맵(리스트형) |
+| `features/public/components/GlobalRiskBoard.tsx` | 글로벌 리스크 관제 맵(인터랙티브 세계지도) |
 | `features/public/components/MaterialPriceTrend.tsx` | 원자재 가격 추이 차트 |
 | `features/public/components/SupplyNewsFeed.tsx` | 실시간 뉴스 속보 |
 | `features/public/pages/PublicDashboardPage.tsx` | 비로그인 공개 대시보드 페이지 |
@@ -87,7 +87,7 @@
 ### `api/public.api.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `fetchGlobalRiskBoard` | 글로벌 리스크 관제 맵 조회 함수 | `risk_event` 배열을 요약 리스트 항목으로 변환 |
+| `fetchGlobalRiskBoard` | 글로벌 리스크 관제 맵 조회 함수 | `risk_event` 배열을 요약 항목으로 변환, `market_context`의 country_code/country_name/coordinates도 함께 매핑(지도 마커용, Phase 9.1) |
 | `fetchAiRecommendations` | AI 권고 조치 조회 함수 | 등급 기반 일반 권고 문구 생성(ERP 내부 상세는 미노출) |
 | `fetchMaterialPriceTrends` | 원자재 가격 추이 조회 함수 | 자재별 합성 가격 지수(기준일=100) 시계열 반환 |
 | `fetchNewsFeed` | 실시간 뉴스 속보 조회 함수 | `risk_event`를 `risk_event_id` 기준 날짜 최신순으로 정렬 |
@@ -119,7 +119,7 @@
 | `SignupFormValues` | 회원가입 폼 값 타입 | 성명/이메일/비밀번호/조직계층(Figma 폼 필드 기준) |
 | `SignupRequest` | 회원가입 요청 타입 | `SignupFormValues` + 소속 회사명(api 계층 고정값) |
 | `SignupResponse` | 회원가입 응답 타입 | 사용자ID/승인 대기 표시(status, 항상 'PENDING' 고정값)/메시지 |
-| `GlobalRiskBoardItem` | 글로벌 리스크 관제 맵 항목 타입 | 리스크 이벤트ID(risk_event_id)/자재/등급/신뢰도/이벤트 요약 |
+| `GlobalRiskBoardItem` | 글로벌 리스크 관제 맵 항목 타입 | 리스크 이벤트ID(risk_event_id)/자재/등급/신뢰도/이벤트 요약/국가코드/국가명/좌표(Phase 9.1 — 지도 마커용, 국가 특정 불가 시 생략 가능) |
 | `AiRecommendation` | AI 권고 조치 항목 타입 | 리스크 이벤트ID(risk_event_id)/자재/등급/신뢰도/권고 문구 |
 | `MaterialPricePoint` | 원자재 가격 포인트 타입 | 날짜/가격지수 |
 | `MaterialPriceSeries` | 원자재 가격 시계열 타입 | 자재/단위/포인트 배열 |
@@ -261,7 +261,7 @@
 ### `features/public/components/GlobalRiskBoard.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `GlobalRiskBoard` | 글로벌 리스크 관제 맵 컴포넌트 | 지도 시각화 대신 리스트형 요약(맵 라이브러리 미도입) |
+| `GlobalRiskBoard` | 글로벌 리스크 관제 맵 컴포넌트 | Phase 9.1 — `react-leaflet`+`world-atlas`+`topojson-client` 기반 인터랙티브 세계지도. "이벤트뷰"(개별 좌표 마커)/"국가뷰"(country_code 기준 집계, 대표 이벤트=최고 심각도) 토글, 마커 클릭 시 컴포넌트 내부 상세 패널에 관련 risk_event 리스트 표시. country_code 없는 이벤트는 마커 제외 |
 
 ### `features/public/components/MaterialPriceTrend.tsx`
 | physical | logical | 역할 |

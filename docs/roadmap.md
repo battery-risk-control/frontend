@@ -26,7 +26,7 @@
 
 - [ ] Phase 9 — surin 브랜치 시각 요소 이식 (`dev-김영진_merge-test` 브랜치, git 히스토리 무관하므로 병합이 아닌 수동 이식)
   - 원칙: dev-김영진의 구조(3계층 분리+RequireAuth, 신뢰도 라벨, 공개 대시보드, PENDING 화면, api/types.ts 스키마, CSS Modules)는 유지. surin에서는 시각/위젯 구현만 가져온다. surin의 Tailwind·mock.ts·요구사항에 없는 추가 메뉴는 가져오지 않는다.
-  - 9.1 GlobalRiskBoard: surin의 react-leaflet 지도 이식 (최우선 — 격차 가장 큼)
+  - [x] 9.1 GlobalRiskBoard: surin의 react-leaflet 지도 이식 (최우선 — 격차 가장 큼)
   - 9.2 로그인/회원가입: surin AuthShell 비주얼 이식 (로직은 dev-김영진 유지)
   - 9.3 원자재 가격 추이 / 2·3계층 차트: surin 차트 스타일 이식
 

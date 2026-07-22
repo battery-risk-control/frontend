@@ -58,3 +58,4 @@
 ## 주의
 - 신뢰도 라벨 색상(`--color-confidence-*`)과 리스크 등급 색상(`--color-risk-*`)은 서로 다른 축이다. 화면에 함께 쓰일 때 혼동되지 않도록 컴포넌트명도 구분한다 (`ConfidenceBadge` vs `RiskGradeBadge`).
 - spacing/radius는 근거 자료가 없어 업계 관례로 채운 값이다. 실제 Figma 고해상도 스타일 가이드 프레임을 열람할 수 있게 되면(Figma 커넥터 연결 시) 가장 먼저 교체해야 한다.
+- GlobalRiskBoard 지도 마커(Leaflet SVG 렌더러)는 CSS 변수를 읽지 못해 리스크 등급 색상을 hex로 리터럴 미러링함 — 이 문서의 리스크 색상 토큰이 바뀌면 GlobalRiskBoard.tsx의 하드코딩된 값도 함께 갱신해야 함.

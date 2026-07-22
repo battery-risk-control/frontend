@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   fetchAiRecommendations,
   fetchGlobalRiskBoard,
@@ -6,6 +6,7 @@ import {
   fetchNewsFeed,
 } from '../../../api/public.api'
 import { useAuthState } from '../../../lib/useAuthState'
+import { Header } from '../../../components/layout/Header'
 import { GlobalRiskBoard } from '../components/GlobalRiskBoard'
 import { AiPriorityList } from '../components/AiPriorityList'
 import { MaterialPriceTrend } from '../components/MaterialPriceTrend'
@@ -37,7 +38,7 @@ export function PublicDashboardPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.topBar}>
+      <Header>
         <div className={styles.tierTabs}>
           {TIER_TABS.map((tab) => (
             <button
@@ -50,10 +51,7 @@ export function PublicDashboardPage() {
             </button>
           ))}
         </div>
-        <Link to="/auth" className={styles.authButton}>
-          로그인/회원가입
-        </Link>
-      </header>
+      </Header>
       <main id="main-content" className={styles.grid}>
         <GlobalRiskBoard items={riskBoardItems} />
         <AiPriorityList recommendations={recommendations} />

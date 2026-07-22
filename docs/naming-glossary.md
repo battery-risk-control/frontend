@@ -23,6 +23,7 @@
 | `components/layout/SideNav.tsx` | 사이드 메뉴 내비게이션 |
 | `components/layout/SkipLink.tsx` | 본문 바로가기 링크(접근성) |
 | `components/ui/ConfidenceBadge.tsx` | 리스크 판단 신뢰도 라벨 배지 |
+| `components/ui/ConfirmModal.tsx` | 확인/취소 모달 |
 | `components/ui/RiskGradeBadge.tsx` | 리스크 등급 배지 |
 | `features/auth/components/AuthTabs.tsx` | 로그인/권한 신청 탭 토글 |
 | `features/auth/components/LoginForm.tsx` | 로그인 폼 |
@@ -54,6 +55,7 @@
 | `lib/AuthProvider.tsx` | 인증 상태 Provider 컴포넌트 |
 | `lib/dashboardPaths.ts` | org_tier별 대시보드 경로 매핑 |
 | `lib/riskEventId.ts` | risk_event_id 날짜 파싱 유틸 |
+| `lib/tierLabels.ts` | org_tier별 한글 라벨 매핑 |
 | `lib/useAuthState.ts` | 인증 상태 접근 훅 |
 
 ## 2. 상세 — 파일별 export 목록
@@ -133,7 +135,7 @@
 ### `app/routes.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `AppRoutes` | 최상위 라우트 컴포넌트 | `/`, `/auth`, `/purchasing`, `/purchasing/briefing/:riskEventId`, `/planning`, `/executive` 라우트 정의. 뒤 4개는 내부 `RequireAuth`(비export) 가드 적용 — `tier` prop으로 org_tier까지 매칭해 불일치 시 403 대신 자신의 실제 대시보드로 리다이렉트(Phase 8) |
+| `AppRoutes` | 최상위 라우트 컴포넌트 | `/`, `/auth`, `/purchasing`, `/purchasing/briefing/:riskEventId`, `/planning`, `/executive` 라우트 정의. 뒤 4개는 내부 `RequireAuth`(비export) 가드 적용 — `tier` prop으로 org_tier까지 매칭. 미로그인이면 무음으로 `/auth` 리다이렉트하지만, 계층 불일치는 무음 리다이렉트 대신 `ConfirmModal`로 안내 후 사용자가 "내 화면으로 이동"을 선택해야 이동한다(Phase 8.5, qa-checklist.md C) |
 
 ### `components/layout/Breadcrumb.tsx`
 | physical | logical | 역할 |
@@ -149,7 +151,7 @@
 ### `components/layout/Header.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `Header` | 공통 헤더 컴포넌트 | 좌측 로고(클릭 시 "/" 이동, sticky 상단 고정) + 우측 액션 슬롯(children). 로그인 상태면 계정 정보(이메일·계층)와 로그아웃 버튼 표시(Phase 8) — 로그아웃은 SPA navigate와 인증 상태 갱신 간 경쟁을 피하려 하드 리다이렉트(`window.location.href`) 사용 |
+| `Header` | 공통 헤더 컴포넌트 | 좌측에 홈 아이콘 링크(브랜드 텍스트 링크와 별개)+브랜드 텍스트 링크(둘 다 "/" 이동, sticky 상단 고정) + 우측 액션 슬롯(children). 로그인 상태면 계정 정보(이메일·계층)와 로그아웃 버튼, 미로그인 상태면 로그인/회원가입 버튼을 표시(Phase 8.5부터 모든 화면·비로그인 공개 대시보드 포함 대칭 적용) — 로그아웃은 SPA navigate와 인증 상태 갱신 간 경쟁을 피하려 하드 리다이렉트(`window.location.href`) 사용 |
 
 ### `components/layout/SideNav.tsx`
 | physical | logical | 역할 |
@@ -167,6 +169,11 @@
 |---|---|---|
 | `ConfidenceLabel` | 신뢰도 라벨 타입 | `'확정' \| '참고' \| '경고'` |
 | `ConfidenceBadge` | 신뢰도 라벨 배지 컴포넌트 | Seq 20 — 전 화면 공통 필수 표시 |
+
+### `components/ui/ConfirmModal.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ConfirmModal` | 확인/취소 모달 컴포넌트 | qa-checklist.md "C. 접근 제어·리다이렉트의 사용자 피드백" 대응 — 무음 리다이렉트 대신 이유를 알리고 선택지를 준다. `cancelLabel` 버튼이 기본 포커스+주 버튼(강조) 스타일, `confirmLabel` 버튼은 보조 스타일(안전한 선택지가 기본이어야 한다는 원칙을 컴포넌트가 강제). `role="dialog"` + `aria-modal="true"`, Esc 키는 취소와 동일하게 동작, Tab/Shift+Tab은 라이브러리 없이 순수 React로 모달 내부 요소끼리만 순환(포커스 트랩). 현재 `app/routes.tsx`의 `RequireAuth` 계층 불일치 안내에서 사용 |
 
 ### `components/ui/RiskGradeBadge.tsx`
 | physical | logical | 역할 |
@@ -268,7 +275,7 @@
 ### `features/public/pages/PublicDashboardPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `PublicDashboardPage` | 비로그인 공개 대시보드 페이지 | 상단 3계층 탭 + 로그인/회원가입 버튼, 4개 패널 2x2 그리드. 탭 클릭 시 인증 상태에 따라 대시보드 또는 /auth로 이동 |
+| `PublicDashboardPage` | 비로그인 공개 대시보드 페이지 | 공통 `Header`(3계층 탭을 children으로 전달) + 4개 패널 2x2 그리드. 탭 클릭 시 인증 상태에 따라 대시보드 또는 /auth로 이동. Phase 8.5 전에는 `Header`를 쓰지 않고 로그인 여부와 무관하게 로그인 버튼을 무조건 노출하는 자체 상단바를 갖고 있었음(버그, qa-checklist.md A/B 계기) |
 
 ### `features/purchasing/components/AlertsPanel.tsx`
 | physical | logical | 역할 |
@@ -325,6 +332,11 @@
 | physical | logical | 역할 |
 |---|---|---|
 | `parseRiskEventDate` | risk_event_id 날짜 파싱 함수 | `'RISK-YYYY-MMDD-NNN'` → `'YYYY-MM-DD'` |
+
+### `lib/tierLabels.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `TIER_LABEL` | org_tier별 한글 라벨 매핑 상수 | `Header`(계정 정보 표시)와 `app/routes.tsx`의 `RequireAuth`(계층 불일치 모달 메시지)가 공용으로 참조(Phase 8.5) — 이전엔 `Header.tsx`에 로컬 상수로 중복 정의돼 있었음 |
 
 ### `lib/useAuthState.ts`
 | physical | logical | 역할 |

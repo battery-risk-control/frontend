@@ -10,6 +10,7 @@
 @docs/mock-schemas.md
 @docs/design-tokens.md
 @docs/roadmap.md
+@docs/qa-checklist.md
 
 ## 화면 구조 (requirements-frontend.md 기준)
 

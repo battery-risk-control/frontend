@@ -1,27 +1,42 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthState } from '../../lib/useAuthState'
-import type { OrgTier } from '../../api/types'
+import { TIER_LABEL } from '../../lib/tierLabels'
 import styles from './Header.module.css'
 
 interface HeaderProps {
   children?: ReactNode
 }
 
-const TIER_LABEL: Record<OrgTier, string> = {
-  purchasing: '구매팀',
-  planning: '경영기획팀',
-  executive: '경영진',
+function HomeIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 9.5 12 3l9 6.5" />
+      <path d="M5 9.5V21h14V9.5" />
+    </svg>
+  )
 }
 
 /**
  * 대시보드 공통 Head 영역 (Seq 22). 좌측 상단 로고 고정, 스크롤 시 상단 고정(sticky).
- * 로고(브랜드 텍스트) 클릭 시 "/"(홈)로 이동한다. 로그인 상태면 우측에 계정 정보(이메일·계층)와
- * 로그아웃 버튼을 표시한다 — 로그아웃 시 인증 상태를 초기화하고 "/"로 이동한다.
- * children으로 그 외 우측 영역(추가 액션 등)을 전달할 수 있다.
+ * 로고 왼쪽에 별도 홈 아이콘 링크를 두고, 로고 텍스트 링크와 함께 각각 독립적으로 "/"(홈)로 이동한다.
+ * 로그인 상태면 우측에 계정 정보(이메일·계층)와 로그아웃 버튼을, 미로그인 상태면 로그인/회원가입
+ * 버튼을 표시한다 — 모든 화면(비로그인 공개 대시보드 포함)이 이 컴포넌트를 통해 동일하게 표시되어야 한다.
+ * 로그아웃 시 인증 상태를 초기화하고 "/"로 이동한다. children으로 그 외 우측 영역(추가 액션 등)을 전달할 수 있다.
  *
  * 사용 예:
  *   <Header />
+ *   <Header><MyTabs /></Header>
  */
 export function Header({ children }: HeaderProps) {
   const { orgTier, email, signOut } = useAuthState()
@@ -36,28 +51,33 @@ export function Header({ children }: HeaderProps) {
     window.location.href = '/'
   }
 
-  const hasActions = Boolean(children) || Boolean(orgTier)
-
   return (
     <header className={styles.header}>
-      <Link to="/" className={styles.brand}>
-        배터리 원자재 공급망 리스크 관제
-      </Link>
-      {hasActions && (
-        <div className={styles.actions}>
-          {children}
-          {orgTier && (
-            <div className={styles.account}>
-              <span className={styles.accountInfo}>
-                {email ? `${email} · ${TIER_LABEL[orgTier]}` : TIER_LABEL[orgTier]}
-              </span>
-              <button type="button" className={styles.logoutButton} onClick={handleLogout}>
-                로그아웃
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      <div className={styles.left}>
+        <Link to="/" className={styles.homeIconLink} aria-label="홈으로 이동">
+          <HomeIcon />
+        </Link>
+        <Link to="/" className={styles.brand}>
+          배터리 원자재 공급망 리스크 관제
+        </Link>
+      </div>
+      <div className={styles.actions}>
+        {children}
+        {orgTier ? (
+          <div className={styles.account}>
+            <span className={styles.accountInfo}>
+              {email ? `${email} · ${TIER_LABEL[orgTier]}` : TIER_LABEL[orgTier]}
+            </span>
+            <button type="button" className={styles.logoutButton} onClick={handleLogout}>
+              로그아웃
+            </button>
+          </div>
+        ) : (
+          <Link to="/auth" className={styles.authButton}>
+            로그인/회원가입
+          </Link>
+        )}
+      </div>
     </header>
   )
 }

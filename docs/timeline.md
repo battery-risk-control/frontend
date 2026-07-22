@@ -69,3 +69,8 @@ Phase 번호가 붙지 않는 문서화·툴링 작업 기록 (`docs/roadmap.md`
 
 ## Phase 7 — 예정
 git remote 연결 및 첫 커밋 (미착수)
+
+## Phase 8.5 — 발견된 UX/일관성 오류 수정
+`docs/qa-checklist.md` 신설 계기가 된 버그(공용 컴포넌트 변경 시 일부 화면이 누락되는 패턴) 수정. `PublicDashboardPage`가 `Header`를 쓰지 않고 자체 `<header>`를 구현하고 있었고, 로그인 여부와 무관하게 "로그인/회원가입" 링크를 무조건 렌더링하고 있었음 — `Header`로 교체하고, `Header` 자체에도 `orgTier`가 없을 때의 로그인 버튼 폴백을 추가해 양방향 대칭을 맞춤. `Header`에 브랜드 텍스트 링크와 별개로 인라인 SVG 홈 아이콘 링크 추가(qa-checklist D). `RequireAuth`의 계층 불일치 처리를 무음 리다이렉트에서 확인 모달(`components/ui/ConfirmModal` 신규)로 변경 — "취소"가 기본 포커스+주 버튼(홈으로 이동), "내 화면으로 이동"이 보조 버튼(자기 계층 대시보드로 이동). `TIER_LABEL`을 `Header.tsx`에서 `lib/tierLabels.ts`로 분리해 `Header`/`RequireAuth` 양쪽에서 공유.
+**재현·검증**: 로그인 상태에서 `/auth`에 SPA로 재진입할 때 `AuthPage`의 기존 `useEffect` 기반 리다이렉트가 실제로 동작하는지, 수정 전 코드로 임시 롤백(`git stash`) 후 Playwright로 실제 브라우저에서 재현 — 정상 작동 확인(버그 아님). 이 코드 경로는 1번 수정으로 로그인 상태일 때 `/auth` 링크 자체가 사라지므로 이후 UI에서 도달 불가능해짐.
+**e2e**: `tab-navigation.spec.ts`/`tier-access.spec.ts`를 무음 리다이렉트 기대에서 모달 상호작용(등장 확인 → 버튼 클릭 → 결과 확인) 검증으로 수정하고, Header 로그인 상태 표시(공개 대시보드 포함) 신규 케이스 3개 추가 — 총 24개 테스트 통과.

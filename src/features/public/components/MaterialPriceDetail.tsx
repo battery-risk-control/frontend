@@ -15,8 +15,8 @@ interface ChartRow {
 }
 
 const PERIOD_OPTIONS = ['1주', '1개월', '3개월', '6개월', '사용자 설정']
-const MATERIAL_FILTER_OPTIONS = ['전체', '니켈', '리튬', '코발트']
-// GlobalRiskBoard mock에 등장하는 5개국을 그대로 재사용한 표시용 목록(실제 필터링 로직 없음).
+// GlobalRiskBoard mock에 등장하는 5개국을 그대로 재사용한 표시용 목록 — 국가·지역 필터는
+// 의도적으로 표시 전용이라(사용자 확인 완료) 실제 자재-국가 연결 데이터가 아니어도 무방하다.
 const COUNTRY_FILTER_OPTIONS = ['전체', '인도네시아', '칠레', '콩고민주공화국', '필리핀', '호주']
 const SERIES_VARS = ['--mpd-series-1', '--mpd-series-2', '--mpd-series-3']
 
@@ -50,12 +50,14 @@ function toChartRows(series: MaterialPriceSeries[]): ChartRow[] {
 }
 
 /**
- * 원자재 가격 추이 "상세보기"(Phase 9.3) — surin RiskMonitoring.tsx의 가격 섹션(필터
- * 드롭다운/요약 카드/기간 버튼/멀티라인 차트)을 시각적으로 이식한 컴포넌트. 이번 단계의
- * 최우선 목표는 시각 이식이고 데이터 정합성은 2차 목표 — 필터 드롭다운과 기간 버튼은
- * 실제로 열리고 선택 상태가 바뀌지만(표시 전용), 차트/카드 데이터를 실제로 바꾸지는
- * 않는다. 요약 카드의 가격만 MaterialPriceSeries 마지막 포인트에서 직접 유도해 항상
- * 일치시키고, 등락률/리스크 지수/등급은 mock 임시값(fetchMaterialPriceSummaries)이다.
+ * 원자재 가격 추이(Phase 9.3) — surin RiskMonitoring.tsx의 가격 섹션(필터 드롭다운/
+ * 요약 카드/기간 버튼/멀티라인 차트)을 시각적으로 이식한 컴포넌트. "원자재" 드롭다운은
+ * 실제로 차트 계열을 필터링한다(특정 자재 선택 시 그 계열만 표시, "전체"면 전부 표시) —
+ * 단 요약 카드 3장은 필터와 무관하게 항상 전체 자재를 보여준다(사용자 확인 완료).
+ * "국가·지역" 드롭다운과 기간 버튼은 선택 상태만 바뀔 뿐 의도적으로 미구현 —
+ * 표시 전용이며 후속 작업이 아니라 확정된 범위 결정이다(사용자 확인 완료).
+ * 요약 카드의 가격만 MaterialPriceSeries 마지막 포인트에서 직접 유도해 항상 일치시키고,
+ * 등락률/리스크 지수/등급은 mock 임시값(fetchMaterialPriceSummaries)이다.
  *
  * 사용 예:
  *   <MaterialPriceDetail series={series} summaries={summaries} />
@@ -67,22 +69,32 @@ export function MaterialPriceDetail({ series, summaries }: MaterialPriceDetailPr
   const [countryFilterOpen, setCountryFilterOpen] = useState(false)
   const [countryFilterLabel, setCountryFilterLabel] = useState('전체')
 
-  const rows = toChartRows(series)
+  const materialFilterOptions = ['전체', ...series.map((materialSeries) => materialSeries.material)]
+  const filteredSeries =
+    materialFilterLabel === '전체' ? series : series.filter((s) => s.material === materialFilterLabel)
+  const rows = toChartRows(filteredSeries)
+  // 자재별 색상은 필터와 무관하게 전체 series 기준 순서로 고정 — 니켈만 필터링해도
+  // "전체" 상태에서 보이던 것과 같은 색으로 표시되도록 한다.
+  const materialColorVar = new Map(
+    series.map((materialSeries, index) => [materialSeries.material, SERIES_VARS[index % SERIES_VARS.length]]),
+  )
 
-  // 표시 전용 — 실제 필터링 로직은 후속 작업. 선택한 라벨만 버튼에 반영하고 차트/카드는 그대로 둔다.
   function handleSelectMaterialFilter(option: string) {
     setMaterialFilterLabel(option)
     setMaterialFilterOpen(false)
   }
 
-  // 표시 전용 — 실제 필터링 로직은 후속 작업.
+  // 표시 전용 — 의도적으로 미구현(사용자 확인 완료). 실제 자재-국가 필터링 로직을 추가하지 않는다.
   function handleSelectCountryFilter(option: string) {
     setCountryFilterLabel(option)
     setCountryFilterOpen(false)
   }
 
   return (
-    <div className={styles.panel}>
+    <section className={styles.panel} aria-labelledby="material-price-detail-heading">
+      <h2 id="material-price-detail-heading" className={styles.title}>
+        원자재 가격 추이
+      </h2>
       <div className={styles.filterRow}>
         <div className={styles.dropdownWrap}>
           <button
@@ -96,7 +108,7 @@ export function MaterialPriceDetail({ series, summaries }: MaterialPriceDetailPr
           </button>
           {materialFilterOpen && (
             <ul className={styles.dropdownMenu}>
-              {MATERIAL_FILTER_OPTIONS.map((option) => (
+              {materialFilterOptions.map((option) => (
                 <li key={option}>
                   <button
                     type="button"
@@ -208,12 +220,12 @@ export function MaterialPriceDetail({ series, summaries }: MaterialPriceDetailPr
               }}
               labelStyle={{ color: 'var(--color-text)', fontWeight: 'var(--font-weight-bold)' }}
             />
-            {series.map((materialSeries, index) => (
+            {filteredSeries.map((materialSeries) => (
               <Line
                 key={materialSeries.material}
                 type="monotone"
                 dataKey={materialSeries.material}
-                stroke={`var(${SERIES_VARS[index % SERIES_VARS.length]})`}
+                stroke={`var(${materialColorVar.get(materialSeries.material)})`}
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4 }}
@@ -222,6 +234,6 @@ export function MaterialPriceDetail({ series, summaries }: MaterialPriceDetailPr
           </LineChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </section>
   )
 }

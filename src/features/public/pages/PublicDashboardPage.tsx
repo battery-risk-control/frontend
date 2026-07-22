@@ -10,7 +10,7 @@ import { useAuthState } from '../../../lib/useAuthState'
 import { Header } from '../../../components/layout/Header'
 import { GlobalRiskBoard } from '../components/GlobalRiskBoard'
 import { AiPriorityList } from '../components/AiPriorityList'
-import { MaterialPriceSection } from '../components/MaterialPriceSection'
+import { MaterialPriceDetail } from '../components/MaterialPriceDetail'
 import { SupplyNewsFeed } from '../components/SupplyNewsFeed'
 import styles from './PublicDashboardPage.module.css'
 
@@ -57,7 +57,7 @@ export function PublicDashboardPage() {
       <main id="main-content" className={styles.grid}>
         <GlobalRiskBoard items={riskBoardItems} />
         <AiPriorityList recommendations={recommendations} />
-        <MaterialPriceSection series={priceSeries} summaries={priceSummaries} />
+        <MaterialPriceDetail series={priceSeries} summaries={priceSummaries} />
         <SupplyNewsFeed items={newsItems} />
       </main>
     </div>

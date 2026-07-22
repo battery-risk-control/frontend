@@ -34,11 +34,19 @@ interface SelectedDetail {
   events: GlobalRiskBoardItem[]
 }
 
+interface EventMarkerPosition {
+  lat: number
+  lng: number
+  labelDirection: 'top' | 'bottom'
+}
+
 const GRADE_SEVERITY: Record<RiskGrade, number> = {
   심각: 3,
   주의: 2,
   정상: 1,
 }
+
+const GRADE_LEGEND_ORDER: RiskGrade[] = ['정상', '주의', '심각']
 
 // Leaflet의 SVG 렌더러는 path 색상을 style이 아닌 presentation attribute로 설정해
 // CSS 커스텀 프로퍼티(var(--color-risk-*))를 해석하지 못한다 — tokens.css의 값과
@@ -58,6 +66,31 @@ const countries = feature(
 
 function isLocated(item: GlobalRiskBoardItem): item is LocatedItem {
   return Boolean(item.country_code && item.coordinates)
+}
+
+// mock 데이터의 좌표는 국가 단위 근사치라, 같은 나라에 이벤트가 2건 이상이면(예: 콩고민주공화국
+// 코발트 2건) 이벤트뷰 마커가 완전히 겹친다. 완전 자동 배치 알고리즘 대신 같은 국가 그룹 안에서만
+// 마커를 원형으로 살짝 벌리고, 라벨도 상/하로 번갈아 배치해 최소한의 겹침만 방지한다.
+function computeEventMarkerPositions(items: LocatedItem[]): Map<string, EventMarkerPosition> {
+  const byCountry = new Map<string, LocatedItem[]>()
+  for (const item of items) {
+    const group = byCountry.get(item.country_code) ?? []
+    group.push(item)
+    byCountry.set(item.country_code, group)
+  }
+  const positions = new Map<string, EventMarkerPosition>()
+  for (const group of byCountry.values()) {
+    const spread = group.length > 1 ? 1.4 : 0
+    group.forEach((item, index) => {
+      const angle = (index / group.length) * 2 * Math.PI
+      positions.set(item.risk_event_id, {
+        lat: item.coordinates.lat + Math.sin(angle) * spread,
+        lng: item.coordinates.lng + Math.cos(angle) * spread,
+        labelDirection: index % 2 === 0 ? 'top' : 'bottom',
+      })
+    })
+  }
+  return positions
 }
 
 function groupByCountry(items: LocatedItem[]): CountryGroup[] {
@@ -88,7 +121,9 @@ function groupByCountry(items: LocatedItem[]): CountryGroup[] {
  * 마커 1개(대표 이벤트 = grade 최고 심각도, 동률이면 배열상 먼저 나오는 이벤트 —
  * AiPriorityList의 GRADE_SEVERITY와 동일 기준)를 표시한다. country_code가 없는
  * 이벤트는 두 뷰 모두 지도에서 제외한다. 마커 클릭 시 컴포넌트 내부 상태로 선택
- * 국가/이벤트를 관리하고, 하단 패널에 관련 risk_event 리스트를 보여준다.
+ * 국가/이벤트를 관리하고, 하단 패널에 관련 risk_event 리스트를 보여준다. 마커 라벨(국가명,
+ * 이벤트뷰는 자재명 병기)은 hover 없이 상시 표시되며(Leaflet `<Tooltip permanent>`), 지도
+ * 우측 상단에는 RiskGradeBadge와 동일한 색상의 등급 범례를 고정 표시한다.
  *
  * 사용 예:
  *   <GlobalRiskBoard items={items} />
@@ -99,6 +134,7 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
 
   const locatedItems = items.filter(isLocated)
   const countryGroups = groupByCountry(locatedItems)
+  const eventMarkerPositions = computeEventMarkerPositions(locatedItems)
 
   function handleViewModeChange(mode: ViewMode) {
     setViewMode(mode)
@@ -154,24 +190,33 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
           <GeoJSON data={countries} style={BASE_STYLE} interactive={false} />
 
           {viewMode === 'event'
-            ? locatedItems.map((item) => (
-                <CircleMarker
-                  key={item.risk_event_id}
-                  center={[item.coordinates.lat, item.coordinates.lng]}
-                  radius={9}
-                  pathOptions={{
-                    color: '#FFFFFF',
-                    weight: 2,
-                    fillColor: GRADE_COLOR[item.grade],
-                    fillOpacity: 0.9,
-                  }}
-                  eventHandlers={{ click: () => handleSelectEvent(item) }}
-                >
-                  <Tooltip direction="top" opacity={1}>
-                    {item.material} · {item.grade}
-                  </Tooltip>
-                </CircleMarker>
-              ))
+            ? locatedItems.map((item) => {
+                const position = eventMarkerPositions.get(item.risk_event_id)!
+                return (
+                  <CircleMarker
+                    key={item.risk_event_id}
+                    center={[position.lat, position.lng]}
+                    radius={9}
+                    pathOptions={{
+                      color: '#FFFFFF',
+                      weight: 2,
+                      fillColor: GRADE_COLOR[item.grade],
+                      fillOpacity: 0.9,
+                    }}
+                    eventHandlers={{ click: () => handleSelectEvent(item) }}
+                  >
+                    <Tooltip
+                      permanent
+                      direction={position.labelDirection}
+                      offset={[0, position.labelDirection === 'top' ? -6 : 6]}
+                      opacity={0.95}
+                      className={styles.markerLabel}
+                    >
+                      {item.country_name ?? item.country_code} · {item.material}
+                    </Tooltip>
+                  </CircleMarker>
+                )
+              })
             : countryGroups.map((group) => (
                 <CircleMarker
                   key={group.countryCode}
@@ -185,17 +230,23 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
                   }}
                   eventHandlers={{ click: () => handleSelectCountry(group) }}
                 >
-                  <Tooltip direction="top" opacity={1}>
+                  {/* react-leaflet은 레이어 하나에 <Tooltip>을 여러 개 붙이면 bindTooltip이
+                      마지막 호출만 유지해 이전 것을 덮어쓴다 — 라벨과 건수를 반드시 하나의
+                      Tooltip으로 합쳐야 한다(둘로 나누면 이벤트 2건 이상 국가에서 라벨이 사라짐). */}
+                  <Tooltip permanent direction="top" offset={[0, -6]} opacity={0.95} className={styles.markerLabel}>
                     {group.countryName} · {group.representative.grade}
+                    {group.events.length > 1 && ` ×${group.events.length}`}
                   </Tooltip>
-                  {group.events.length > 1 && (
-                    <Tooltip permanent direction="right" offset={[8, 0]} className={styles.countBadge}>
-                      ×{group.events.length}
-                    </Tooltip>
-                  )}
                 </CircleMarker>
               ))}
         </MapContainer>
+
+        <div className={styles.legend}>
+          <span className={styles.legendTitle}>등급</span>
+          {GRADE_LEGEND_ORDER.map((grade) => (
+            <RiskGradeBadge key={grade} grade={grade} />
+          ))}
+        </div>
       </div>
 
       <div className={styles.detailPanel}>

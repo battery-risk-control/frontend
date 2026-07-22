@@ -66,18 +66,39 @@
   overflow: hidden;
 }
 
-.countBadge {
-  background: var(--color-primary) !important;
-  color: var(--color-surface) !important;
-  border: none !important;
+.markerLabel {
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: var(--color-text) !important;
+  border: 1px solid var(--color-border) !important;
   font-size: 10px !important;
-  font-weight: var(--font-weight-bold);
-  padding: 1px 5px !important;
+  font-weight: var(--font-weight-medium);
+  padding: 1px 6px !important;
   box-shadow: none !important;
+  white-space: nowrap;
 }
 
-.countBadge::before {
+.markerLabel::before {
   display: none;
+}
+
+.legend {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.legendTitle {
+  margin-right: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
 }
 
 .detailPanel {

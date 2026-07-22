@@ -147,6 +147,19 @@ export interface MaterialPriceSeries {
   points: MaterialPricePoint[]
 }
 
+/**
+ * 원자재 가격 상세보기(Phase 9.3, surin RiskMonitoring 스타일 이식) 요약 카드용.
+ * change_label/risk_score/grade는 실제 계산 로직이 없는 mock 임시값이다 — docs/mock-schemas.md
+ * "임시 mock 값(후속 정리 필요)" 섹션 참고. 가격 자체는 이 타입에 없고, MaterialPriceSeries의
+ * 마지막 포인트에서 화면이 직접 유도한다(별도 필드로 중복 저장하지 않음).
+ */
+export interface MaterialPriceSummary {
+  material: string
+  change_label: string
+  risk_score: number
+  grade: RiskGrade
+}
+
 /** 실시간 뉴스 속보. risk_event_id(RISK-YYYY-MMDD-NNN)에서 날짜를 추출해 최신순으로 정렬한다. */
 export interface NewsFeedItem {
   risk_event_id: string

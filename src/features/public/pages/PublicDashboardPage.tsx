@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   fetchAiRecommendations,
   fetchGlobalRiskBoard,
+  fetchMaterialPriceSummaries,
   fetchMaterialPriceTrends,
   fetchNewsFeed,
 } from '../../../api/public.api'
@@ -9,7 +10,7 @@ import { useAuthState } from '../../../lib/useAuthState'
 import { Header } from '../../../components/layout/Header'
 import { GlobalRiskBoard } from '../components/GlobalRiskBoard'
 import { AiPriorityList } from '../components/AiPriorityList'
-import { MaterialPriceTrend } from '../components/MaterialPriceTrend'
+import { MaterialPriceSection } from '../components/MaterialPriceSection'
 import { SupplyNewsFeed } from '../components/SupplyNewsFeed'
 import styles from './PublicDashboardPage.module.css'
 
@@ -30,6 +31,7 @@ export function PublicDashboardPage() {
   const riskBoardItems = fetchGlobalRiskBoard()
   const recommendations = fetchAiRecommendations()
   const priceSeries = fetchMaterialPriceTrends()
+  const priceSummaries = fetchMaterialPriceSummaries()
   const newsItems = fetchNewsFeed()
 
   function handleTierTabClick(path: string) {
@@ -55,7 +57,7 @@ export function PublicDashboardPage() {
       <main id="main-content" className={styles.grid}>
         <GlobalRiskBoard items={riskBoardItems} />
         <AiPriorityList recommendations={recommendations} />
-        <MaterialPriceTrend series={priceSeries} />
+        <MaterialPriceSection series={priceSeries} summaries={priceSummaries} />
         <SupplyNewsFeed items={newsItems} />
       </main>
     </div>

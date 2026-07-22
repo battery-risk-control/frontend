@@ -1,0 +1,188 @@
+.panel {
+  /* MaterialPriceTrend.module.css의 검증된 팔레트(node validate_palette.js "#2a78d6,#008300,#e87ba4")와
+     동일한 값을 재사용한다 — 로컬 스코프 커스텀 프로퍼티는 컴포넌트 간 상속되지 않아 값만 복제. */
+  --mpd-series-1: #2a78d6;
+  --mpd-series-2: #008300;
+  --mpd-series-3: #e87ba4;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow-y: auto;
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dropdownWrap {
+  position: relative;
+}
+
+.filterButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.filterButton:hover {
+  background: var(--color-bg);
+}
+
+.filterLabel {
+  color: var(--color-text-muted);
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  z-index: 10;
+  min-width: 140px;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dropdownItem {
+  display: block;
+  width: 100%;
+  padding: var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  text-align: left;
+  cursor: pointer;
+}
+
+.dropdownItem:hover {
+  background: var(--color-bg);
+}
+
+.periodGroup {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.periodButton,
+.periodButtonActive {
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.periodButton {
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.periodButton:hover {
+  color: var(--color-text);
+}
+
+.periodButtonActive {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.summaryCard {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.summaryMaterial {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.summaryPrice {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.summaryUnit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.summaryChangeUp {
+  color: var(--color-risk-critical);
+}
+
+.summaryChangeDown {
+  color: var(--color-confidence-reference);
+}
+
+.summaryScoreRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-2);
+}
+
+.summaryScoreLabel {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.summaryScore {
+  margin-top: var(--space-1);
+  text-align: right;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.summaryScoreMax {
+  font-size: 10px;
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.chartArea {
+  flex: 1;
+  min-height: 180px;
+}

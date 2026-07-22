@@ -142,6 +142,18 @@
 - 존재하지 않는 `risk_event_id`로 조회하면 FE는 "해당 리스크 이벤트를 찾을 수 없습니다" 안내로 대체한다.
 - Seq 21(산출물 다운로드)과는 범위가 다르다. 이 화면은 Seq 24 "내부 브리핑 자료 열람 화면"이며, `output_artifacts`는 렌더 모드 등 메타 정보만 보여줄 뿐 JSON 렌더링/다운로드 UI 자체는 이 범위에서 구현하지 않는다(Seq 21 별도 범위).
 
+## 임시 mock 값 (후속 정리 필요)
+
+Phase 9.3(원자재 가격 추이 "상세보기", surin `RiskMonitoring.tsx` 시각 이식)에서 시각 구성을 우선하기 위해 실제 계산 로직 없이 하드코딩한 필드 목록. 각 필드는 코드에도 `// mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요` 주석이 달려 있다.
+
+| 필드 | 위치 | 쓰이는 곳 | 왜 임시값인가 |
+|---|---|---|---|
+| `MaterialPriceSummary.change_label` | `api/types.ts`, `api/public.api.ts`의 `fetchMaterialPriceSummaries()` | `features/public/components/MaterialPriceDetail.tsx` 요약 카드 | `MaterialPriceSeries`의 실제 등락률을 계산하지 않고 surin 화면과 비슷한 톤의 값을 직접 지정했다. 가격(`price_index`)만 `MaterialPriceSeries` 마지막 포인트에서 실제로 유도해 항상 일치한다 — 등락률은 그 값과 무관하다. |
+| `MaterialPriceSummary.risk_score` | 〃 | 〃 | `risk_event`의 등급·신뢰도와 연결된 계산이 아니라 surin `monitoringPrices`의 점수를 참고해 임의로 지정한 값이다. |
+| `MaterialPriceSummary.grade` | 〃 | 〃 | 같은 자재의 실제 `risk_event.grade` 집계(예: 최고 심각도)가 아니라 화면 구성을 위해 직접 지정했다. `RiskGradeBadge` 표시 자체는 기존 컴포넌트를 그대로 재사용한다. |
+| 필터 드롭다운 선택값(원자재/국가·지역) | `MaterialPriceDetail.tsx` 내부 `useState` | 〃 | 열림/닫힘과 선택된 라벨 표시는 실제로 동작하지만, 선택해도 차트·카드 데이터는 바뀌지 않는다(표시 전용). "국가·지역" 옵션 목록도 실제 자재-국가 연결 데이터가 아니라 `GlobalRiskBoard` mock에 등장하는 5개국을 그대로 나열한 것이다. |
+| 기간 버튼(1주/1개월/3개월/6개월/사용자 설정) | 〃 | 〃 | 선택 상태와 활성 스타일은 실제로 전환되지만, mock `MaterialPriceSeries.points`가 짧은 고정 시계열(7일치)뿐이라 기간별로 다른 데이터를 보여주지 못한다. |
+
 ## 확장 원칙
 - 새 화면·지표가 추가되면 기존 필드를 변경하지 말고 옆에 새 필드를 추가한다 (breaking change 최소화).
 - 계층 간 동일 개념(리스크 등급, 신뢰도 라벨, 사업부명)은 항상 동일한 값 집합·필드명을 재사용한다.

@@ -4,6 +4,7 @@ import type {
   AiRecommendation,
   GlobalRiskBoardItem,
   MaterialPriceSeries,
+  MaterialPriceSummary,
   NewsFeedItem,
   RiskGrade,
 } from './types'
@@ -108,6 +109,22 @@ export function fetchMaterialPriceTrends(): MaterialPriceSeries[] {
   return Array.from(materials)
     .map((material) => MOCK_PRICE_SERIES[material])
     .filter((series): series is MaterialPriceSeries => Boolean(series))
+}
+
+/**
+ * 원자재 가격 상세보기(Phase 9.3) 요약 카드용 mock 함수. change_label/risk_score/grade는
+ * MaterialPriceSeries나 risk_event에서 계산한 값이 아니라 surin RiskMonitoring 화면의
+ * 시각 구성을 이식하기 위한 임시값이다 — docs/mock-schemas.md 참고, 후속 검증 필요.
+ *
+ * 사용 예:
+ *   const summaries = fetchMaterialPriceSummaries()
+ */
+export function fetchMaterialPriceSummaries(): MaterialPriceSummary[] {
+  return [
+    { material: '니켈', change_label: '▲ 1.7%', risk_score: 72, grade: '주의' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
+    { material: '리튬', change_label: '▲ 1.0%', risk_score: 58, grade: '주의' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
+    { material: '코발트', change_label: '▲ 4.8%', risk_score: 66, grade: '심각' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
+  ]
 }
 
 /**

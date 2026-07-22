@@ -14,6 +14,9 @@ const MOCK_RISK_EVENTS: RiskEvent[] = [
       source: 'data_ingestion_layer',
       material: '니켈',
       event_summary: '인도네시아 니켈 수출 관세 인상 발표로 현물가 18% 급등',
+      country_code: 'ID',
+      country_name: '인도네시아',
+      coordinates: { lat: -6.2088, lng: 106.8456 },
     },
     erp_view: {
       safety_stock_days: 6,
@@ -39,6 +42,9 @@ const MOCK_RISK_EVENTS: RiskEvent[] = [
       source: 'data_ingestion_layer',
       material: '리튬',
       event_summary: '칠레 리튬 광산 노조 파업 예고 보도, 공급 차질 가능성 제기',
+      country_code: 'CL',
+      country_name: '칠레',
+      coordinates: { lat: -33.4489, lng: -70.6693 },
     },
     erp_view: {
       safety_stock_days: 21,
@@ -64,6 +70,9 @@ const MOCK_RISK_EVENTS: RiskEvent[] = [
       source: 'data_ingestion_layer',
       material: '코발트',
       event_summary: '콩고민주공화국 코발트 광산 관련 뉴스, 출처 교차검증 실패',
+      country_code: 'CD',
+      country_name: '콩고민주공화국',
+      coordinates: { lat: -4.4419, lng: 15.2663 },
     },
     erp_view: {
       safety_stock_days: 34,
@@ -89,6 +98,9 @@ const MOCK_RISK_EVENTS: RiskEvent[] = [
       source: 'data_ingestion_layer',
       material: '니켈',
       event_summary: '필리핀 니켈 광산 정기 점검 완료, 공급 일정 정상 유지',
+      country_code: 'PH',
+      country_name: '필리핀',
+      coordinates: { lat: 14.5995, lng: 120.9842 },
     },
     erp_view: {
       safety_stock_days: 45,
@@ -114,6 +126,9 @@ const MOCK_RISK_EVENTS: RiskEvent[] = [
       source: 'data_ingestion_layer',
       material: '리튬',
       event_summary: '호주 리튬 정광 해상 운임 상승, 리드타임 5일 지연 반영',
+      country_code: 'AU',
+      country_name: '호주',
+      coordinates: { lat: -35.2809, lng: 149.1300 },
     },
     erp_view: {
       safety_stock_days: 15,
@@ -139,6 +154,9 @@ const MOCK_RISK_EVENTS: RiskEvent[] = [
       source: 'data_ingestion_layer',
       material: '코발트',
       event_summary: '코발트 최대 생산국 수출 쿼터 축소 뉴스 확산, ERP 미반영 상태',
+      country_code: 'CD',
+      country_name: '콩고민주공화국',
+      coordinates: { lat: -4.4419, lng: 15.2663 },
     },
     erp_view: {
       safety_stock_days: 9,

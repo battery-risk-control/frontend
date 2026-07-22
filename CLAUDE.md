@@ -48,13 +48,15 @@ Agent 구조는 §4.2 텍스트 기준 **ERP 에이전트 + RAG 에이전트 병
   "risk_event_id": "RISK-2026-0721-001",
   "grade": "심각",
   "confidence_label": "확정",
-  "market_context": { "source": "data_ingestion_layer", "material": "니켈", "event_summary": "..." },
+  "market_context": { "source": "data_ingestion_layer", "material": "니켈", "event_summary": "...", "country_code": "ID", "country_name": "인도네시아", "coordinates": { "lat": -6.2088, "lng": 106.8456 } },
   "erp_view": { "safety_stock_days": 12, "affected_material_code": "NI-2201", "alt_sourcing_candidates": ["공급사A", "공급사B"] },
   "quality_check": { "status": "pass", "criteria": ["IATF16949 인증", "PPAP 승인 이력"], "reason": "..." },
   "rag_view": { "contract_clause_summary": "...", "negotiation_points": ["...", "..."] },
   "output_artifacts": { "render_mode": "json", "file_url": null, "fallback_to_json": true }
 }
 ```
+
+> coordinates는 현재 mock 단계 근사 좌표이며, 배포 시 백엔드 실측 좌표로 교체될 예정. country_code/country_name/coordinates는 국가 특정이 불가능한 이벤트의 경우 생략 가능(optional).
 
 - `market_context`/`erp_view`/`rag_view`는 병기 — 하나로 합쳐진 "종합 결론" 필드는 없다. 브리핑 카드 컴포넌트는 이 세 구획을 나란히 렌더링한다.
 - Seq 21(산출물 다운로드): 데모 단계는 `output_artifacts.render_mode: "json"` 고정 — 화면 내 JSON 렌더링만 구현한다. 실제 파일(.pptx 등) 다운로드는 범위 밖.

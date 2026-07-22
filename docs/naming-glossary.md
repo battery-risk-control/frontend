@@ -102,7 +102,7 @@
 |---|---|---|
 | `ConfidenceLabel` *(재노출)* | 신뢰도 라벨 타입 | `'확정' \| '참고' \| '경고'` — 원본은 `components/ui/ConfidenceBadge.tsx` |
 | `RiskGrade` *(재노출)* | 리스크 등급 타입 | `'정상' \| '주의' \| '심각'` — 원본은 `components/ui/RiskGradeBadge.tsx` |
-| `MarketContext` | 시황 컨텍스트 타입 | risk_event의 출처/자재/이벤트 요약 |
+| `MarketContext` | 시황 컨텍스트 타입 | 출처/자재/이벤트 요약/국가코드/국가명/좌표 |
 | `ErpView` | ERP 관점 타입 | 안전재고일수/자재코드/대체 조달처 |
 | `QualityCheck` | 품질 검증 타입 | 검증 상태/기준/사유 |
 | `RagView` | RAG(계약) 관점 타입 | 계약조항 요약/협상 포인트 |

@@ -7,6 +7,12 @@ export interface MarketContext {
   source: string
   material: string
   event_summary: string
+  /** ISO 3166-1 alpha-2. 국가 특정이 불가능한 이벤트는 생략 가능 */
+  country_code?: string
+  /** 한글 표기. 국가 특정이 불가능한 이벤트는 생략 가능 */
+  country_name?: string
+  /** 국가 특정이 불가능한 이벤트는 생략 가능 */
+  coordinates?: { lat: number; lng: number }
 }
 
 export interface ErpView {

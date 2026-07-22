@@ -3,6 +3,7 @@
 > `src/` 전체(.ts/.tsx)를 스캔해 작성한 파일·컴포넌트·함수/훅·타입의 영문(physical)-한글(logical) 대응표다.
 > `*.module.css`, `tokens.css`, `index.css` 등 스타일 파일은 export되는 JS 심볼이 없어 범위에서 제외했다.
 > 코드가 바뀌면 이 문서도 같이 갱신해야 정확하다 — 스냅샷 문서다.
+> 같은 물리 필드명(예: email, label, material)은 타입이 달라도 동일한 한글 표현을 원칙으로 한다. 단, 물리 필드명은 같지만 논리적 의미가 다른 경우(예: status가 실제 가변 상태값인지, 항상 고정값만 갖는 응답 태그인지 등 문맥상 다른 개념인 경우)는 실제 타입 정의와 사용처를 코드에서 먼저 확인한 뒤, 그 의미에 맞는 수식어를 붙이고 물리 필드명을 괄호로 병기해 검색 가능하게 한다. 타입 설명에는 export된 인터페이스의 모든 필드를 빠짐없이 반영한다(첫 필드 누락 금지).
 
 ## 1. 요약 표 (파일 단위)
 
@@ -104,33 +105,33 @@
 | `RiskGrade` *(재노출)* | 리스크 등급 타입 | `'정상' \| '주의' \| '심각'` — 원본은 `components/ui/RiskGradeBadge.tsx` |
 | `MarketContext` | 시황 컨텍스트 타입 | 출처/자재/이벤트 요약/국가코드/국가명/좌표 |
 | `ErpView` | ERP 관점 타입 | 안전재고일수/자재코드/대체 조달처 |
-| `QualityCheck` | 품질 검증 타입 | 검증 상태/기준/사유 |
+| `QualityCheck` | 품질 검증 타입 | 검증 상태(status)/기준/사유 |
 | `RagView` | RAG(계약) 관점 타입 | 계약조항 요약/협상 포인트 |
 | `OutputArtifacts` | 산출물 메타 타입 | 렌더 모드/파일 URL/JSON 폴백 여부 |
 | `RiskEvent` | 리스크 이벤트 타입 | 1계층 원천 스키마(CLAUDE.md 기준) |
-| `RiskEventBriefing` | 브리핑 자료 열람 응답 타입 | risk_event의 rag_view/output_artifacts만 추출 + 배지 표시용 material/grade/confidence_label(Seq 24) |
+| `RiskEventBriefing` | 브리핑 자료 열람 응답 타입 | risk_event_id + risk_event의 rag_view/output_artifacts만 추출 + 배지 표시용 material/grade/confidence_label(Seq 24) |
 | `OrgTier` | 조직 계층 타입 | `'purchasing' \| 'planning' \| 'executive'` |
 | `LoginRequest` | 로그인 요청 타입 | 이메일/비밀번호 |
 | `LoginFormValues` | 로그인 폼 값 타입 | `LoginRequest` + 로그인 상태 유지 여부(UI 로컬 상태) |
-| `LoginSuccessResponse` | 로그인 성공 응답 타입 | 액세스 토큰/조직계층/상태 |
+| `LoginSuccessResponse` | 로그인 성공 응답 타입 | 액세스 토큰/조직계층/승인 완료 표시(status, 항상 'APPROVED' 고정값) |
 | `LoginPendingErrorResponse` | 로그인 승인대기 응답 타입 | 에러 코드/메시지 |
 | `LoginResponse` | 로그인 응답 유니언 타입 | 성공 또는 승인대기 응답 |
 | `SignupFormValues` | 회원가입 폼 값 타입 | 성명/이메일/비밀번호/조직계층(Figma 폼 필드 기준) |
 | `SignupRequest` | 회원가입 요청 타입 | `SignupFormValues` + 소속 회사명(api 계층 고정값) |
-| `SignupResponse` | 회원가입 응답 타입 | 사용자ID/상태/메시지 |
-| `GlobalRiskBoardItem` | 글로벌 리스크 관제 맵 항목 타입 | 자재/등급/신뢰도/이벤트 요약 |
-| `AiRecommendation` | AI 권고 조치 항목 타입 | 자재/등급/신뢰도/권고 문구 |
+| `SignupResponse` | 회원가입 응답 타입 | 사용자ID/승인 대기 표시(status, 항상 'PENDING' 고정값)/메시지 |
+| `GlobalRiskBoardItem` | 글로벌 리스크 관제 맵 항목 타입 | 리스크 이벤트ID(risk_event_id)/자재/등급/신뢰도/이벤트 요약 |
+| `AiRecommendation` | AI 권고 조치 항목 타입 | 리스크 이벤트ID(risk_event_id)/자재/등급/신뢰도/권고 문구 |
 | `MaterialPricePoint` | 원자재 가격 포인트 타입 | 날짜/가격지수 |
-| `MaterialPriceSeries` | 원자재 가격 시계열 타입 | 자재명/단위/포인트 배열 |
-| `NewsFeedItem` | 뉴스 속보 항목 타입 | 날짜/자재/출처/헤드라인/신뢰도 |
+| `MaterialPriceSeries` | 원자재 가격 시계열 타입 | 자재/단위/포인트 배열 |
+| `NewsFeedItem` | 뉴스 속보 항목 타입 | 리스크 이벤트ID(risk_event_id)/날짜/자재/출처/헤드라인/신뢰도 |
 | `KpiSummaryItem` | KPI 요약 카드 항목 타입 | 라벨/값/단위 |
 | `RiskExposureByUnit` | 사업부별 리스크 노출도 타입 | 사업부명/노출도 점수 |
 | `VendorRiskHistoryItem` | 협력사 리스크 이력 항목 타입 | 공급사ID/명/90일 이력 건수/최신 등급·신뢰도 |
-| `PlanningDashboardResponse` | 2계층 대시보드 응답 타입 | kpi_summary + risk_exposure_by_unit + vendor_risk_history |
+| `PlanningDashboardResponse` | 2계층 대시보드 응답 타입 | business_unit + period + kpi_summary + risk_exposure_by_unit + vendor_risk_history |
 | `CumulativeRiskKpi` | 누적 리스크 KPI 타입 | 탐지/응답 건수·비율, 심각 건수, 평균 대응 소요 |
 | `SavingsSimulation` | 절감 시뮬레이션 타입 | is_simulation(항상 true)/예상 절감액/가정 |
 | `EnterpriseRiskSummaryItem` | 전사 리스크 요약 항목 타입 | 사업부명/노출도 점수/추세 |
-| `ExecutiveDashboardResponse` | 3계층 대시보드 응답 타입 | cumulative_risk_kpi + savings_simulation + enterprise_risk_summary |
+| `ExecutiveDashboardResponse` | 3계층 대시보드 응답 타입 | period + cumulative_risk_kpi + savings_simulation + enterprise_risk_summary |
 
 ### `app/routes.tsx`
 | physical | logical | 역할 |
@@ -140,7 +141,7 @@
 ### `components/layout/Breadcrumb.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `BreadcrumbItem` | 브레드크럼 항목 타입 | label/href(선택) |
+| `BreadcrumbItem` | 브레드크럼 항목 타입 | 라벨/href(선택) |
 | `Breadcrumb` | 브레드크럼 컴포넌트 | 탐색 위치 안내, 마지막 항목은 링크 없이 현재 페이지로 표시 |
 
 ### `components/layout/Footer.tsx`
@@ -156,7 +157,7 @@
 ### `components/layout/SideNav.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `SideNavItem` | 사이드 메뉴 항목 타입 | label/href |
+| `SideNavItem` | 사이드 메뉴 항목 타입 | 라벨/href |
 | `SideNav` | 사이드 메뉴 컴포넌트 | 하위 화면이 많은 대시보드용 좌측 내비게이션(`Link` 기반) |
 
 ### `components/layout/SkipLink.tsx`
@@ -315,13 +316,13 @@
 ### `lib/AuthContext.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `AuthContextValue` | 인증 Context 값 타입 | orgTier/email/signIn/signOut — email은 Phase 8에서 Header 계정 정보 표시용으로 추가 |
+| `AuthContextValue` | 인증 Context 값 타입 | orgTier/이메일/signIn/signOut — 이메일(email)은 Phase 8에서 Header 계정 정보 표시용으로 추가 |
 | `AuthContext` | 인증 Context 객체 | `AuthProvider`/`useAuthState`가 공유하는 React Context |
 
 ### `lib/AuthProvider.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `AuthProvider` | 인증 상태 Provider 컴포넌트 | 로그인 성공 시 orgTier와 email을 메모리에만 저장(localStorage 미사용, 새로고침 시 소실) |
+| `AuthProvider` | 인증 상태 Provider 컴포넌트 | 로그인 성공 시 orgTier와 이메일을 메모리에만 저장(localStorage 미사용, 새로고침 시 소실) |
 
 ### `lib/dashboardPaths.ts`
 | physical | logical | 역할 |
@@ -341,4 +342,4 @@
 ### `lib/useAuthState.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `useAuthState` | 인증 상태 접근 훅 | `AuthProvider` 내부에서 orgTier/email/signIn/signOut 제공, 범위 밖 사용 시 예외 발생 |
+| `useAuthState` | 인증 상태 접근 훅 | `AuthProvider` 내부에서 orgTier/이메일/signIn/signOut 제공, 범위 밖 사용 시 예외 발생 |

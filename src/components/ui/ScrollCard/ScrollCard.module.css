@@ -41,6 +41,10 @@
   overflow-y: auto;
 }
 
+.noScroll {
+  overflow: visible;
+}
+
 .footer {
   flex-shrink: 0;
   margin-top: var(--space-2);

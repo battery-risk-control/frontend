@@ -8,17 +8,21 @@ interface ScrollCardProps {
   caption?: ReactNode
   pinnedTop?: ReactNode
   fillHeight?: boolean
+  scrollable?: boolean
   footer?: ReactNode
   children: ReactNode
 }
 
 /**
- * 카드형 UI 공통 컨테이너. 본문(`.body`)에 항상 `min-height:0` + `overflow-y:auto`를 걸어,
+ * 카드형 UI 공통 컨테이너. 본문(`.body`)에 기본적으로 `min-height:0` + `overflow-y:auto`를 걸어,
  * 부모 레이아웃(예: 비로그인 공개 대시보드 2x2 그리드)이 카드 높이를 제약하는 경우에만
  * 내부 스크롤이 실제로 발동하고, 제약이 없는 화면에서는 카드가 그냥 자유롭게 늘어난다 —
  * 컴포넌트마다 "스크롤 필요 여부"를 개별 판단하지 않아도 된다.
  * `pinnedTop`은 지도처럼 스크롤 영역 밖에 항상 고정돼야 하는 콘텐츠용,
  * `actions`는 제목 옆 헤더 컨트롤(뷰토글 등)용, `footer`는 스크롤 밖 하단 고정 안내용이다.
+ * `scrollable`(기본 `true`)을 `false`로 주면 본문 스크롤을 배제한다(`overflow: visible`) —
+ * Recharts `ResponsiveContainer`처럼 스크롤 컨테이너 안에서 폭 재측정 이슈가 생기는
+ * 콘텐츠용. `flex:1`/`min-height:0` 등 레이아웃 속성은 그대로 유지된다.
  *
  * 사용 예:
  *   <ScrollCard headingId="foo-heading" title="제목">
@@ -32,6 +36,7 @@ export function ScrollCard({
   caption,
   pinnedTop,
   fillHeight = false,
+  scrollable = true,
   footer,
   children,
 }: ScrollCardProps) {
@@ -48,7 +53,7 @@ export function ScrollCard({
       </div>
       {caption && <p className={styles.caption}>{caption}</p>}
       {pinnedTop}
-      <div className={styles.body}>{children}</div>
+      <div className={scrollable ? styles.body : `${styles.body} ${styles.noScroll}`}>{children}</div>
       {footer && <div className={styles.footer}>{footer}</div>}
     </section>
   )

@@ -9,7 +9,7 @@
 
 | 파일 경로 (physical) | 논리명 (logical) |
 |---|---|
-| `App.tsx` | 앱 루트 컴포넌트 — AuthProvider로 라우트 트리 감싸기 |
+| `App.tsx` | 앱 루트 컴포넌트 — AuthProvider·SideNavProvider로 라우트 트리 감싸기(Phase 9.4에서 SideNavProvider 추가) |
 | `main.tsx` | 앱 진입점 — ReactDOM 렌더링, BrowserRouter 연결 |
 | `api/auth.api.ts` | 인증(로그인/회원가입) mock API |
 | `api/executive.api.ts` | 3계층 경영진 대시보드 mock API |
@@ -21,7 +21,8 @@
 | `components/layout/Breadcrumb.tsx` | 브레드크럼(탐색 위치 안내) |
 | `components/layout/Footer.tsx` | 공통 하단 푸터 |
 | `components/layout/Header.tsx` | 공통 상단 헤더(로고 = 홈 링크) |
-| `components/layout/SideNav.tsx` | 사이드 메뉴 내비게이션 |
+| `components/layout/SideNav.tsx` | 사이드 메뉴 내비게이션(Phase 9.4부터 SideNavContext의 collapsed 상태 반영) |
+| `components/layout/SideNavToggleButton.tsx` | SideNav 접기/펼치기 토글 버튼(Phase 9.4 신규) — SideNav 바깥에 위치 |
 | `components/layout/SkipLink.tsx` | 본문 바로가기 링크(접근성) |
 | `components/ui/ConfidenceBadge.tsx` | 리스크 판단 신뢰도 라벨 배지 |
 | `components/ui/ConfirmModal.tsx` | 확인/취소 모달 |
@@ -62,8 +63,11 @@
 | `lib/AuthProvider.tsx` | 인증 상태 Provider 컴포넌트 |
 | `lib/dashboardPaths.ts` | org_tier별 대시보드 경로 매핑 |
 | `lib/riskEventId.ts` | risk_event_id 날짜 파싱 유틸 |
+| `lib/SideNavContext.ts` | SideNav 접기/펼치기 상태 Context 객체 정의(Phase 9.4 신규) |
+| `lib/SideNavProvider.tsx` | SideNav 접기/펼치기 상태 Provider 컴포넌트(Phase 9.4 신규) |
 | `lib/tierLabels.ts` | org_tier별 한글 라벨 매핑 |
 | `lib/useAuthState.ts` | 인증 상태 접근 훅 |
+| `lib/useSideNavState.ts` | SideNav 접기/펼치기 상태 접근 훅(Phase 9.4 신규) |
 
 ## 2. 상세 — 파일별 export 목록
 
@@ -72,7 +76,7 @@
 ### `App.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `App` (default export) | 앱 루트 컴포넌트 | `AuthProvider`로 `AppRoutes`를 감싸 렌더링 |
+| `App` (default export) | 앱 루트 컴포넌트 | `AuthProvider`→`SideNavProvider`로 `AppRoutes`를 감싸 렌더링(Phase 9.4에서 `SideNavProvider` 추가) |
 
 ### `api/auth.api.ts`
 | physical | logical | 역할 |
@@ -175,7 +179,12 @@
 | physical | logical | 역할 |
 |---|---|---|
 | `SideNavItem` | 사이드 메뉴 항목 타입 | 라벨/href |
-| `SideNav` | 사이드 메뉴 컴포넌트 | 하위 화면이 많은 대시보드용 좌측 내비게이션(`Link` 기반) |
+| `SideNav` | 사이드 메뉴 컴포넌트 | 하위 화면이 많은 대시보드용 좌측 내비게이션(`Link` 기반). Phase 9.4부터 `useSideNavState()`의 `collapsed`를 읽어 폭 0으로 접힘(내부 `<Link>`에 `tabIndex={-1}`, `<nav>`에 `aria-hidden` 적용) |
+
+### `components/layout/SideNavToggleButton.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `SideNavToggleButton` | SideNav 접기/펼치기 토글 버튼 컴포넌트 | Phase 9.4 신규. `useSideNavState()`의 `collapsed`/`toggle` 사용, 인라인 SVG 쉐브론(`aria-label`/`aria-expanded`). SideNav가 접히면 폭이 0이 돼 내부 요소가 클릭 불가능해지므로 SideNav 바깥(각 페이지 `.body`, `<SideNav>` 바로 앞)에 별도로 둔다 |
 
 ### `components/layout/SkipLink.tsx`
 | physical | logical | 역할 |
@@ -353,12 +362,12 @@
 ### `features/purchasing/pages/BriefingDetailPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `BriefingDetailPage` | 1계층 브리핑 자료 열람 페이지 | Seq 24 "내부 브리핑 자료 열람 화면". `/purchasing/briefing/:riskEventId` — 계약 조항 요약/협상 포인트/산출물 메타 표시, RiskGradeBadge/ConfidenceBadge·Breadcrumb 재사용(Breadcrumb 첫 실사용) |
+| `BriefingDetailPage` | 1계층 브리핑 자료 열람 페이지 | Seq 24 "내부 브리핑 자료 열람 화면". `/purchasing/briefing/:riskEventId` — 계약 조항 요약/협상 포인트/산출물 메타 표시, RiskGradeBadge/ConfidenceBadge·Breadcrumb 재사용(Breadcrumb 첫 실사용). Phase 9.4부터 `SideNavToggleButton` 추가 |
 
 ### `features/purchasing/pages/PurchasingDashboardPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바 + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역 3종(`MaterialRiskOverviewRow` → 승격된 `GlobalRiskBoard` → `ImportDependencyRow`)을 기존 4단 패널 위에 추가 |
+| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바(+`SideNavToggleButton`) + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역 3종(`MaterialRiskOverviewRow` → 승격된 `GlobalRiskBoard` → `ImportDependencyRow`)을 기존 4단 패널 위에 추가 |
 
 ### `lib/AuthContext.ts`
 | physical | logical | 역할 |
@@ -381,6 +390,17 @@
 |---|---|---|
 | `parseRiskEventDate` | risk_event_id 날짜 파싱 함수 | `'RISK-YYYY-MMDD-NNN'` → `'YYYY-MM-DD'` |
 
+### `lib/SideNavContext.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `SideNavContextValue` | SideNav Context 값 타입 | Phase 9.4 신규. `collapsed`(접힘 여부)/`toggle`(토글 함수) |
+| `SideNavContext` | SideNav Context 객체 | `SideNavProvider`/`useSideNavState`가 공유하는 React Context — `AuthContext.ts`와 동일 패턴 |
+
+### `lib/SideNavProvider.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `SideNavProvider` | SideNav 접기/펼치기 상태 Provider 컴포넌트 | Phase 9.4 신규. `App.tsx`에서 `AuthProvider` 안·`AppRoutes` 바깥에 래핑 — Purchasing/BriefingDetail/Planning 3개 페이지가 공유해 페이지 이동 간에도 접힘 상태 유지 |
+
 ### `lib/tierLabels.ts`
 | physical | logical | 역할 |
 |---|---|---|
@@ -390,3 +410,8 @@
 | physical | logical | 역할 |
 |---|---|---|
 | `useAuthState` | 인증 상태 접근 훅 | `AuthProvider` 내부에서 orgTier/이메일/signIn/signOut 제공, 범위 밖 사용 시 예외 발생 |
+
+### `lib/useSideNavState.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `useSideNavState` | SideNav 접기/펼치기 상태 접근 훅 | Phase 9.4 신규. `SideNavProvider` 내부에서 `collapsed`/`toggle` 제공, 범위 밖 사용 시 예외 발생 |

@@ -3,6 +3,7 @@ import { fetchRiskEventBriefing } from '../../../api/purchasing.api'
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
+import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { Breadcrumb } from '../../../components/layout/Breadcrumb'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
@@ -27,6 +28,7 @@ export function BriefingDetailPage() {
     <div className={styles.page}>
       <Header />
       <div className={styles.body}>
+        <SideNavToggleButton />
         <SideNav items={SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <Breadcrumb items={[{ label: '구매팀 대시보드', href: '/purchasing' }, { label: '브리핑 자료' }]} />

@@ -1,6 +1,7 @@
 import { fetchPlanningDashboard } from '../../../api/planning.api'
 import { Header } from '../../../components/layout/Header'
 import { SideNav } from '../../../components/layout/SideNav'
+import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { KpiSummaryCards } from '../components/KpiSummaryCards'
 import { ComparisonChart } from '../components/ComparisonChart'
 import { VendorRiskHistory } from '../components/VendorRiskHistory'
@@ -22,6 +23,7 @@ export function PlanningDashboardPage() {
     <div className={styles.page}>
       <Header />
       <div className={styles.body}>
+        <SideNavToggleButton />
         <SideNav items={SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <header className={styles.topBar}>

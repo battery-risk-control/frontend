@@ -10,6 +10,7 @@ import {
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
+import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
 import { KpiSummaryPanel } from '../components/KpiSummaryPanel'
 import { MaterialRiskOverviewRow } from '../components/MaterialRiskOverviewRow'
@@ -45,6 +46,7 @@ export function PurchasingDashboardPage() {
     <div className={styles.page}>
       <Header />
       <div className={styles.body}>
+        <SideNavToggleButton />
         <SideNav items={SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <h1 className={styles.heading}>구매팀 대시보드</h1>

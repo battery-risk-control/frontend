@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useSideNavState } from '../../lib/useSideNavState'
 import styles from './SideNav.module.css'
 
 export interface SideNavItem {
@@ -22,12 +23,18 @@ interface SideNavProps {
  *   />
  */
 export function SideNav({ items }: SideNavProps) {
+  const { collapsed } = useSideNavState()
+
   return (
-    <nav className={styles.sideNav} aria-label="사이드 메뉴">
+    <nav
+      className={collapsed ? `${styles.sideNav} ${styles.collapsed}` : styles.sideNav}
+      aria-label="사이드 메뉴"
+      aria-hidden={collapsed}
+    >
       <ul className={styles.list}>
         {items.map((item) => (
           <li key={item.href}>
-            <Link to={item.href} className={styles.link}>
+            <Link to={item.href} className={styles.link} tabIndex={collapsed ? -1 : undefined}>
               {item.label}
             </Link>
           </li>

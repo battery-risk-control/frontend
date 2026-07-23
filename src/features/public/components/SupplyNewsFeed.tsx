@@ -1,3 +1,4 @@
+import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
 import type { NewsFeedItem } from '../../../api/types'
 import styles from './SupplyNewsFeed.module.css'
@@ -14,10 +15,7 @@ interface SupplyNewsFeedProps {
  */
 export function SupplyNewsFeed({ items }: SupplyNewsFeedProps) {
   return (
-    <section className={styles.panel} aria-labelledby="supply-news-feed-heading">
-      <h2 id="supply-news-feed-heading" className={styles.title}>
-        실시간 뉴스 속보
-      </h2>
+    <ScrollCard headingId="supply-news-feed-heading" title="실시간 뉴스 속보">
       <ul className={styles.list}>
         {items.map((item) => (
           <li key={item.risk_event_id} className={styles.item}>
@@ -31,6 +29,6 @@ export function SupplyNewsFeed({ items }: SupplyNewsFeedProps) {
           </li>
         ))}
       </ul>
-    </section>
+    </ScrollCard>
   )
 }

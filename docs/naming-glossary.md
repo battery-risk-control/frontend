@@ -26,6 +26,7 @@
 | `components/ui/ConfidenceBadge.tsx` | 리스크 판단 신뢰도 라벨 배지 |
 | `components/ui/ConfirmModal.tsx` | 확인/취소 모달 |
 | `components/ui/RiskGradeBadge.tsx` | 리스크 등급 배지 |
+| `components/ui/ScrollCard/ScrollCard.tsx` | 카드형 UI 공통 컨테이너(스크롤 캡슐화) |
 | `features/auth/components/AuthTabs.tsx` | 로그인/권한 신청 탭 토글 |
 | `features/auth/components/LoginForm.tsx` | 로그인 폼 |
 | `features/auth/components/PendingApprovalScreen.tsx` | 승인 대기 보안 락 화면 |
@@ -182,6 +183,11 @@
 | `RiskGrade` | 리스크 등급 타입 | `'정상' \| '주의' \| '심각'` |
 | `RiskGradeBadge` | 리스크 등급 배지 컴포넌트 | 등급별 색상(`--color-risk-*`) 배지 |
 
+### `components/ui/ScrollCard/ScrollCard.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ScrollCard` | 카드형 UI 공통 컨테이너 컴포넌트 | 제목(`title`)+헤더 우측 컨트롤(`actions`)+부제(`caption`)+스크롤 영역 밖 고정 콘텐츠(`pinnedTop`)+스크롤 본문(`children`)+하단 고정 안내(`footer`) 슬롯 구조. 본문에 항상 `min-height:0`+`overflow-y:auto`를 캡슐화해, 부모 레이아웃이 카드 높이를 제약하는 경우(예: 비로그인 공개 대시보드 2x2 그리드)에만 내부 스크롤이 실제로 발동하고 그 외에는 자유롭게 늘어난다. `fillHeight`는 형제와 높이를 맞춰야 하는 카드용(`height:100%`). 신규 카드형 컴포넌트는 이 컴포넌트를 사용하고 자체 `.panel`/`.title` 스타일을 새로 만들지 않는다(CLAUDE.md) |
+
 ### `features/auth/components/AuthTabs.tsx`
 | physical | logical | 역할 |
 |---|---|---|
@@ -256,12 +262,12 @@
 ### `features/public/components/AiPriorityList.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `AiPriorityList` | AI 기반 권고 조치 리스트 컴포넌트 | 등급(심각>주의>정상) 순 정렬 |
+| `AiPriorityList` | AI 기반 권고 조치 리스트 컴포넌트 | 등급(심각>주의>정상) 순 정렬. `ScrollCard` 도입(리스트가 `children`) |
 
 ### `features/public/components/GlobalRiskBoard.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `GlobalRiskBoard` | 글로벌 리스크 관제 맵 컴포넌트 | Phase 9.1 — `react-leaflet`+`world-atlas`+`topojson-client` 기반 인터랙티브 세계지도. "이벤트뷰"(개별 좌표 마커)/"국가뷰"(country_code 기준 집계, 대표 이벤트=최고 심각도) 토글, 마커 클릭 시 컴포넌트 내부 상세 패널에 관련 risk_event 리스트 표시. country_code 없는 이벤트는 마커 제외 |
+| `GlobalRiskBoard` | 글로벌 리스크 관제 맵 컴포넌트 | Phase 9.1 — `react-leaflet`+`world-atlas`+`topojson-client` 기반 인터랙티브 세계지도. "이벤트뷰"(개별 좌표 마커)/"국가뷰"(country_code 기준 집계, 대표 이벤트=최고 심각도) 토글, 마커 클릭 시 컴포넌트 내부 상세 패널에 관련 risk_event 리스트 표시. country_code 없는 이벤트는 마커 제외. `ScrollCard` 도입(지도는 `pinnedTop`으로 항상 고정 노출, 뷰토글은 `actions`, 클릭 시 상세 리스트만 스크롤 영역인 `children`) |
 
 ### `features/public/components/MaterialPriceTrend.tsx`
 | physical | logical | 역할 |
@@ -271,7 +277,7 @@
 ### `features/public/components/SupplyNewsFeed.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `SupplyNewsFeed` | 실시간 뉴스 속보 컴포넌트 | risk_event 기반 최신순 뉴스 리스트 |
+| `SupplyNewsFeed` | 실시간 뉴스 속보 컴포넌트 | risk_event 기반 최신순 뉴스 리스트. `ScrollCard` 도입(리스트가 `children`) |
 
 ### `features/public/pages/PublicDashboardPage.tsx`
 | physical | logical | 역할 |

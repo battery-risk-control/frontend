@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import type { MaterialPriceSeries, MaterialPriceSummary } from '../../../api/types'
 import styles from './MaterialPriceDetail.module.css'
@@ -58,6 +59,8 @@ function toChartRows(series: MaterialPriceSeries[]): ChartRow[] {
  * 표시 전용이며 후속 작업이 아니라 확정된 범위 결정이다(사용자 확인 완료).
  * 요약 카드의 가격만 MaterialPriceSeries 마지막 포인트에서 직접 유도해 항상 일치시키고,
  * 등락률/리스크 지수/등급은 mock 임시값(fetchMaterialPriceSummaries)이다.
+ * 필터行/요약카드는 ScrollCard의 pinnedTop(스크롤 밖 고정)에 배치해, 카드가 좁아져도
+ * 필터·요약이 스크롤 뒤로 가려지지 않고 차트만 스크롤되도록 한다.
  *
  * 사용 예:
  *   <MaterialPriceDetail series={series} summaries={summaries} />
@@ -91,114 +94,119 @@ export function MaterialPriceDetail({ series, summaries }: MaterialPriceDetailPr
   }
 
   return (
-    <section className={styles.panel} aria-labelledby="material-price-detail-heading">
-      <h2 id="material-price-detail-heading" className={styles.title}>
-        원자재 가격 추이
-      </h2>
-      <div className={styles.filterRow}>
-        <div className={styles.dropdownWrap}>
-          <button
-            type="button"
-            className={styles.filterButton}
-            onClick={() => setMaterialFilterOpen((open) => !open)}
-          >
-            <span className={styles.filterLabel}>원자재</span>
-            {materialFilterLabel}
-            <ChevronIcon />
-          </button>
-          {materialFilterOpen && (
-            <ul className={styles.dropdownMenu}>
-              {materialFilterOptions.map((option) => (
-                <li key={option}>
-                  <button
-                    type="button"
-                    className={styles.dropdownItem}
-                    onClick={() => handleSelectMaterialFilter(option)}
-                  >
-                    {option}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className={styles.dropdownWrap}>
-          <button
-            type="button"
-            className={styles.filterButton}
-            onClick={() => setCountryFilterOpen((open) => !open)}
-          >
-            <span className={styles.filterLabel}>국가·지역</span>
-            {countryFilterLabel}
-            <ChevronIcon />
-          </button>
-          {countryFilterOpen && (
-            <ul className={styles.dropdownMenu}>
-              {COUNTRY_FILTER_OPTIONS.map((option) => (
-                <li key={option}>
-                  <button
-                    type="button"
-                    className={styles.dropdownItem}
-                    onClick={() => handleSelectCountryFilter(option)}
-                  >
-                    {option}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className={styles.periodGroup}>
-          {PERIOD_OPTIONS.map((label) => (
-            <button
-              key={label}
-              type="button"
-              className={label === period ? styles.periodButtonActive : styles.periodButton}
-              onClick={() => setPeriod(label)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className={styles.summaryGrid}>
-        {series.map((materialSeries) => {
-          const summary = summaries.find((item) => item.material === materialSeries.material)
-          const lastPoint = materialSeries.points.at(-1)
-          return (
-            <div key={materialSeries.material} className={styles.summaryCard}>
-              <div className={styles.summaryMaterial}>{materialSeries.material}</div>
-              <div className={styles.summaryPrice}>{lastPoint?.price_index ?? '—'}</div>
-              <div className={styles.summaryUnit}>
-                {materialSeries.unit}
-                {summary && (
-                  <span
-                    className={summary.change_label.startsWith('▲') ? styles.summaryChangeUp : styles.summaryChangeDown}
-                  >
-                    {summary.change_label}
-                  </span>
-                )}
-              </div>
-              {summary && (
-                <>
-                  <div className={styles.summaryScoreRow}>
-                    <span className={styles.summaryScoreLabel}>리스크 지수</span>
-                    <RiskGradeBadge grade={summary.grade} />
-                  </div>
-                  <div className={styles.summaryScore}>
-                    {summary.risk_score}
-                    <span className={styles.summaryScoreMax}>/100</span>
-                  </div>
-                </>
+    <ScrollCard
+      headingId="material-price-detail-heading"
+      title="원자재 가격 추이"
+      pinnedTop={
+        <>
+          <div className={styles.filterRow}>
+            <div className={styles.dropdownWrap}>
+              <button
+                type="button"
+                className={styles.filterButton}
+                onClick={() => setMaterialFilterOpen((open) => !open)}
+              >
+                <span className={styles.filterLabel}>원자재</span>
+                {materialFilterLabel}
+                <ChevronIcon />
+              </button>
+              {materialFilterOpen && (
+                <ul className={styles.dropdownMenu}>
+                  {materialFilterOptions.map((option) => (
+                    <li key={option}>
+                      <button
+                        type="button"
+                        className={styles.dropdownItem}
+                        onClick={() => handleSelectMaterialFilter(option)}
+                      >
+                        {option}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
-          )
-        })}
-      </div>
 
+            <div className={styles.dropdownWrap}>
+              <button
+                type="button"
+                className={styles.filterButton}
+                onClick={() => setCountryFilterOpen((open) => !open)}
+              >
+                <span className={styles.filterLabel}>국가·지역</span>
+                {countryFilterLabel}
+                <ChevronIcon />
+              </button>
+              {countryFilterOpen && (
+                <ul className={styles.dropdownMenu}>
+                  {COUNTRY_FILTER_OPTIONS.map((option) => (
+                    <li key={option}>
+                      <button
+                        type="button"
+                        className={styles.dropdownItem}
+                        onClick={() => handleSelectCountryFilter(option)}
+                      >
+                        {option}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className={styles.periodGroup}>
+              {PERIOD_OPTIONS.map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  className={label === period ? styles.periodButtonActive : styles.periodButton}
+                  onClick={() => setPeriod(label)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.summaryGrid}>
+            {series.map((materialSeries) => {
+              const summary = summaries.find((item) => item.material === materialSeries.material)
+              const lastPoint = materialSeries.points.at(-1)
+              return (
+                <div key={materialSeries.material} className={styles.summaryCard}>
+                  <div className={styles.summaryMaterial}>{materialSeries.material}</div>
+                  <div className={styles.summaryPrice}>{lastPoint?.price_index ?? '—'}</div>
+                  <div className={styles.summaryUnit}>
+                    {materialSeries.unit}
+                    {summary && (
+                      <span
+                        className={
+                          summary.change_label.startsWith('▲') ? styles.summaryChangeUp : styles.summaryChangeDown
+                        }
+                      >
+                        {summary.change_label}
+                      </span>
+                    )}
+                  </div>
+                  {summary && (
+                    <>
+                      <div className={styles.summaryScoreRow}>
+                        <span className={styles.summaryScoreLabel}>리스크 지수</span>
+                        <RiskGradeBadge grade={summary.grade} />
+                      </div>
+                      <div className={styles.summaryScore}>
+                        {summary.risk_score}
+                        <span className={styles.summaryScoreMax}>/100</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </>
+      }
+    >
       <div className={styles.chartArea}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
@@ -234,6 +242,6 @@ export function MaterialPriceDetail({ series, summaries }: MaterialPriceDetailPr
           </LineChart>
         </ResponsiveContainer>
       </div>
-    </section>
+    </ScrollCard>
   )
 }

@@ -5,6 +5,7 @@ import { feature } from 'topojson-client'
 import type { GeometryCollection, Topology } from 'topojson-specification'
 import countriesTopology from 'world-atlas/countries-110m.json'
 import 'leaflet/dist/leaflet.css'
+import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
 import type { GlobalRiskBoardItem, RiskGrade } from '../../../api/types'
@@ -123,7 +124,9 @@ function groupByCountry(items: LocatedItem[]): CountryGroup[] {
  * 이벤트는 두 뷰 모두 지도에서 제외한다. 마커 클릭 시 컴포넌트 내부 상태로 선택
  * 국가/이벤트를 관리하고, 하단 패널에 관련 risk_event 리스트를 보여준다. 마커 라벨(국가명,
  * 이벤트뷰는 자재명 병기)은 hover 없이 상시 표시되며(Leaflet `<Tooltip permanent>`), 지도
- * 우측 상단에는 RiskGradeBadge와 동일한 색상의 등급 범례를 고정 표시한다.
+ * 우측 상단에는 RiskGradeBadge와 동일한 색상의 등급 범례를 고정 표시한다. 지도(+범례)는
+ * ScrollCard의 pinnedTop(스크롤 밖 고정)에, 뷰토글은 actions에, 클릭 시 나타나는 상세
+ * 리스트만 children(스크롤 영역)에 둔다 — 지도가 항상 보이는 상태를 유지하기 위함이다.
  *
  * 사용 예:
  *   <GlobalRiskBoard items={items} />
@@ -150,11 +153,10 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
   }
 
   return (
-    <section className={styles.panel} aria-labelledby="global-risk-board-heading">
-      <div className={styles.headerRow}>
-        <h2 id="global-risk-board-heading" className={styles.title}>
-          글로벌 리스크 관제 맵
-        </h2>
+    <ScrollCard
+      headingId="global-risk-board-heading"
+      title="글로벌 리스크 관제 맵"
+      actions={
         <div className={styles.viewToggle}>
           <button
             type="button"
@@ -171,110 +173,109 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
             국가뷰
           </button>
         </div>
-      </div>
+      }
+      pinnedTop={
+        <div className={styles.mapWrapper}>
+          <MapContainer
+            center={[20, 10]}
+            zoom={1.4}
+            minZoom={1}
+            maxZoom={6}
+            scrollWheelZoom={false}
+            worldCopyJump
+            style={{ height: '100%', width: '100%' }}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            />
+            <GeoJSON data={countries} style={BASE_STYLE} interactive={false} />
 
-      <div className={styles.mapWrapper}>
-        <MapContainer
-          center={[20, 10]}
-          zoom={1.4}
-          minZoom={1}
-          maxZoom={6}
-          scrollWheelZoom={false}
-          worldCopyJump
-          style={{ height: '100%', width: '100%' }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          />
-          <GeoJSON data={countries} style={BASE_STYLE} interactive={false} />
-
-          {viewMode === 'event'
-            ? locatedItems.map((item) => {
-                const position = eventMarkerPositions.get(item.risk_event_id)!
-                return (
+            {viewMode === 'event'
+              ? locatedItems.map((item) => {
+                  const position = eventMarkerPositions.get(item.risk_event_id)!
+                  return (
+                    <CircleMarker
+                      key={item.risk_event_id}
+                      center={[position.lat, position.lng]}
+                      radius={9}
+                      pathOptions={{
+                        color: '#FFFFFF',
+                        weight: 2,
+                        fillColor: GRADE_COLOR[item.grade],
+                        fillOpacity: 0.9,
+                      }}
+                      eventHandlers={{ click: () => handleSelectEvent(item) }}
+                    >
+                      <Tooltip
+                        permanent
+                        direction={position.labelDirection}
+                        offset={[0, position.labelDirection === 'top' ? -6 : 6]}
+                        opacity={0.95}
+                        className={styles.markerLabel}
+                      >
+                        {item.country_name ?? item.country_code} · {item.material}
+                      </Tooltip>
+                    </CircleMarker>
+                  )
+                })
+              : countryGroups.map((group) => (
                   <CircleMarker
-                    key={item.risk_event_id}
-                    center={[position.lat, position.lng]}
-                    radius={9}
+                    key={group.countryCode}
+                    center={[group.coordinates.lat, group.coordinates.lng]}
+                    radius={10}
                     pathOptions={{
                       color: '#FFFFFF',
                       weight: 2,
-                      fillColor: GRADE_COLOR[item.grade],
+                      fillColor: GRADE_COLOR[group.representative.grade],
                       fillOpacity: 0.9,
                     }}
-                    eventHandlers={{ click: () => handleSelectEvent(item) }}
+                    eventHandlers={{ click: () => handleSelectCountry(group) }}
                   >
-                    <Tooltip
-                      permanent
-                      direction={position.labelDirection}
-                      offset={[0, position.labelDirection === 'top' ? -6 : 6]}
-                      opacity={0.95}
-                      className={styles.markerLabel}
-                    >
-                      {item.country_name ?? item.country_code} · {item.material}
+                    {/* react-leaflet은 레이어 하나에 <Tooltip>을 여러 개 붙이면 bindTooltip이
+                        마지막 호출만 유지해 이전 것을 덮어쓴다 — 라벨과 건수를 반드시 하나의
+                        Tooltip으로 합쳐야 한다(둘로 나누면 이벤트 2건 이상 국가에서 라벨이 사라짐). */}
+                    <Tooltip permanent direction="top" offset={[0, -6]} opacity={0.95} className={styles.markerLabel}>
+                      {group.countryName} · {group.representative.grade}
+                      {group.events.length > 1 && ` ×${group.events.length}`}
                     </Tooltip>
                   </CircleMarker>
-                )
-              })
-            : countryGroups.map((group) => (
-                <CircleMarker
-                  key={group.countryCode}
-                  center={[group.coordinates.lat, group.coordinates.lng]}
-                  radius={10}
-                  pathOptions={{
-                    color: '#FFFFFF',
-                    weight: 2,
-                    fillColor: GRADE_COLOR[group.representative.grade],
-                    fillOpacity: 0.9,
-                  }}
-                  eventHandlers={{ click: () => handleSelectCountry(group) }}
-                >
-                  {/* react-leaflet은 레이어 하나에 <Tooltip>을 여러 개 붙이면 bindTooltip이
-                      마지막 호출만 유지해 이전 것을 덮어쓴다 — 라벨과 건수를 반드시 하나의
-                      Tooltip으로 합쳐야 한다(둘로 나누면 이벤트 2건 이상 국가에서 라벨이 사라짐). */}
-                  <Tooltip permanent direction="top" offset={[0, -6]} opacity={0.95} className={styles.markerLabel}>
-                    {group.countryName} · {group.representative.grade}
-                    {group.events.length > 1 && ` ×${group.events.length}`}
-                  </Tooltip>
-                </CircleMarker>
-              ))}
-        </MapContainer>
+                ))}
+          </MapContainer>
 
-        <div className={styles.legend}>
-          <span className={styles.legendTitle}>등급</span>
-          {GRADE_LEGEND_ORDER.map((grade) => (
-            <RiskGradeBadge key={grade} grade={grade} />
-          ))}
+          <div className={styles.legend}>
+            <span className={styles.legendTitle}>등급</span>
+            {GRADE_LEGEND_ORDER.map((grade) => (
+              <RiskGradeBadge key={grade} grade={grade} />
+            ))}
+          </div>
         </div>
-      </div>
-
-      <div className={styles.detailPanel}>
-        {selected ? (
-          <>
-            <div className={styles.detailHeader}>
-              <span className={styles.detailLabel}>{selected.label}</span>
-              <button type="button" className={styles.closeButton} onClick={() => setSelected(null)}>
-                닫기
-              </button>
-            </div>
-            <ul className={styles.list}>
-              {selected.events.map((item) => (
-                <li key={item.risk_event_id} className={styles.item}>
-                  <div className={styles.itemHeader}>
-                    <span className={styles.material}>{item.material}</span>
-                    <RiskGradeBadge grade={item.grade} />
-                    <ConfidenceBadge label={item.confidence_label} />
-                  </div>
-                  <p className={styles.summary}>{item.event_summary}</p>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p className={styles.placeholder}>지도에서 마커를 클릭하면 관련 리스크 정보가 여기에 표시됩니다.</p>
-        )}
-      </div>
-    </section>
+      }
+    >
+      {selected ? (
+        <>
+          <div className={styles.detailHeader}>
+            <span className={styles.detailLabel}>{selected.label}</span>
+            <button type="button" className={styles.closeButton} onClick={() => setSelected(null)}>
+              닫기
+            </button>
+          </div>
+          <ul className={styles.list}>
+            {selected.events.map((item) => (
+              <li key={item.risk_event_id} className={styles.item}>
+                <div className={styles.itemHeader}>
+                  <span className={styles.material}>{item.material}</span>
+                  <RiskGradeBadge grade={item.grade} />
+                  <ConfidenceBadge label={item.confidence_label} />
+                </div>
+                <p className={styles.summary}>{item.event_summary}</p>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p className={styles.placeholder}>지도에서 마커를 클릭하면 관련 리스크 정보가 여기에 표시됩니다.</p>
+      )}
+    </ScrollCard>
   )
 }

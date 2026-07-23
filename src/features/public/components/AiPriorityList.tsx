@@ -1,3 +1,4 @@
+import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
 import type { AiRecommendation, RiskGrade } from '../../../api/types'
@@ -25,10 +26,7 @@ export function AiPriorityList({ recommendations }: AiPriorityListProps) {
   )
 
   return (
-    <section className={styles.panel} aria-labelledby="ai-priority-list-heading">
-      <h2 id="ai-priority-list-heading" className={styles.title}>
-        AI 기반 권고 조치 리스트
-      </h2>
+    <ScrollCard headingId="ai-priority-list-heading" title="AI 기반 권고 조치 리스트">
       <ol className={styles.list}>
         {ranked.map((item) => (
           <li key={item.risk_event_id} className={styles.item}>
@@ -41,6 +39,6 @@ export function AiPriorityList({ recommendations }: AiPriorityListProps) {
           </li>
         ))}
       </ol>
-    </section>
+    </ScrollCard>
   )
 }

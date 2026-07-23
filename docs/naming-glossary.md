@@ -43,7 +43,7 @@
 | `features/planning/pages/PlanningDashboardPage.tsx` | 2계층 경영기획팀 대시보드 페이지 |
 | `features/public/components/AiPriorityList.tsx` | AI 기반 권고 조치 리스트 |
 | `features/public/components/GlobalRiskBoard.tsx` | 글로벌 리스크 관제 맵(인터랙티브 세계지도) |
-| `features/public/components/MaterialPriceTrend.tsx` | 원자재 가격 추이 차트 |
+| `features/public/components/MaterialPriceDetail.tsx` | 원자재 가격 추이(필터+요약카드+차트) |
 | `features/public/components/SupplyNewsFeed.tsx` | 실시간 뉴스 속보 |
 | `features/public/pages/PublicDashboardPage.tsx` | 비로그인 공개 대시보드 페이지 |
 | `features/purchasing/components/AlertsPanel.tsx` | 주요 알림 및 빠른 작업 패널 |
@@ -91,6 +91,7 @@
 | `fetchGlobalRiskBoard` | 글로벌 리스크 관제 맵 조회 함수 | `risk_event` 배열을 요약 항목으로 변환, `market_context`의 country_code/country_name/coordinates도 함께 매핑(지도 마커용, Phase 9.1) |
 | `fetchAiRecommendations` | AI 권고 조치 조회 함수 | 등급 기반 일반 권고 문구 생성(ERP 내부 상세는 미노출) |
 | `fetchMaterialPriceTrends` | 원자재 가격 추이 조회 함수 | 자재별 합성 가격 지수(기준일=100) 시계열 반환 |
+| `fetchMaterialPriceSummaries` | 원자재 가격 요약 카드 조회 함수 | 자재별 등락률/리스크 지수/등급 반환 — `change_label`/`risk_score`/`grade`는 mock 임시값(`docs/mock-schemas.md` 참고), `material`만 실제 연동 키 |
 | `fetchNewsFeed` | 실시간 뉴스 속보 조회 함수 | `risk_event`를 `risk_event_id` 기준 날짜 최신순으로 정렬 |
 
 ### `api/purchasing.api.ts`
@@ -269,10 +270,10 @@
 |---|---|---|
 | `GlobalRiskBoard` | 글로벌 리스크 관제 맵 컴포넌트 | Phase 9.1 — `react-leaflet`+`world-atlas`+`topojson-client` 기반 인터랙티브 세계지도. "이벤트뷰"(개별 좌표 마커)/"국가뷰"(country_code 기준 집계, 대표 이벤트=최고 심각도) 토글, 마커 클릭 시 컴포넌트 내부 상세 패널에 관련 risk_event 리스트 표시. country_code 없는 이벤트는 마커 제외. `ScrollCard` 도입(지도는 `pinnedTop`으로 항상 고정 노출, 뷰토글은 `actions`, 클릭 시 상세 리스트만 스크롤 영역인 `children`) |
 
-### `features/public/components/MaterialPriceTrend.tsx`
+### `features/public/components/MaterialPriceDetail.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `MaterialPriceTrend` | 원자재 가격 추이 차트 컴포넌트 | Recharts 라인차트, 합성 지수(기준일=100), 카테고리 팔레트 검증 완료 |
+| `MaterialPriceDetail` | 원자재 가격 추이 컴포넌트 | Phase 9.3 — surin RiskMonitoring.tsx 시각 이식(필터行/요약카드 3장/기간버튼/Recharts 멀티라인 차트). "원자재" 드롭다운만 실제로 차트 계열을 필터링, "국가·지역"과 기간 버튼은 의도적으로 표시 전용(확정된 범위). `ScrollCard` 도입(필터行+요약카드는 `pinnedTop`으로 항상 고정 노출, 차트만 스크롤 영역인 `children`) |
 
 ### `features/public/components/SupplyNewsFeed.tsx`
 | physical | logical | 역할 |

@@ -237,6 +237,7 @@ export function MaterialPriceDetail({ series, summaries }: MaterialPriceDetailPr
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4 }}
+                isAnimationActive={false}
               />
             ))}
           </LineChart>

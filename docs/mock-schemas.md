@@ -142,17 +142,63 @@
 - 존재하지 않는 `risk_event_id`로 조회하면 FE는 "해당 리스크 이벤트를 찾을 수 없습니다" 안내로 대체한다.
 - Seq 21(산출물 다운로드)과는 범위가 다르다. 이 화면은 Seq 24 "내부 브리핑 자료 열람 화면"이며, `output_artifacts`는 렌더 모드 등 메타 정보만 보여줄 뿐 JSON 렌더링/다운로드 UI 자체는 이 범위에서 구현하지 않는다(Seq 21 별도 범위).
 
+## 6. 1계층 — 구매팀 대시보드 확장(원자재 리스크 개요/수입 의존도, Phase 9.4, surin 이식)
+
+`risk_event` 스키마를 원천으로 하지 않는, 데모(화면ID UX-01-DB) 상단 요약 영역 전용 mock —
+`api/purchasing.api.ts`의 `fetchMaterialRiskGauges()`/`fetchScoreCards()`/`fetchImportDependency()`.
+
+```json
+// fetchMaterialRiskGauges()
+[
+  { "name": "리튬", "basis": "(탄산리튬 기준)", "grade": "심각", "changeLabel": "전일 대비 ▲ 4" },
+  { "name": "니켈", "basis": "(황산니켈 기준)", "grade": "주의", "changeLabel": "전일 대비 ▼ 2" },
+  { "name": "흑연", "basis": "(구형흑연 기준)", "grade": "심각", "changeLabel": "전일 대비 ▲ 6" }
+]
+
+// fetchScoreCards()
+[
+  { "label": "외부 리스크 종합 점수", "score": 72, "grade": "심각", "diffLabel": "전일 대비 ▲ +8p" },
+  { "label": "ERP 영향 점수", "score": 65, "grade": "주의", "diffLabel": "전일 대비 ▲ +6p" }
+]
+
+// fetchImportDependency()
+{
+  "total": 82.3,
+  "year": "2024년 기준",
+  "breakdown": [
+    { "label": "중국", "value": 54.1, "color": "#2f5adb" },
+    { "label": "인도네시아", "value": 12.8, "color": "#22c55e" },
+    { "label": "호주", "value": 8.7, "color": "#a855f7" },
+    { "label": "모잠비크", "value": 6.3, "color": "#f59e0b" },
+    { "label": "브라질", "value": 5.2, "color": "#38bdf8" },
+    { "label": "기타", "value": 12.9, "color": "#cbd5e1" }
+  ]
+}
+```
+
+- `grade`는 surin 원본의 4단계(정상/주의/경고/심각) 대신 기존 3단계 `RiskGrade`(정상/주의/심각)로
+  매핑했다 — `ConfidenceLabel`의 "경고"(신뢰도 검증 실패)와 같은 화면에서 동시에 다른 의미로
+  노출되는 걸 피하기 위함. 매핑: 리튬(경고→심각), 니켈(주의→주의), 흑연(경고→심각), 외부 리스크
+  종합 점수(높음→심각), ERP 영향 점수(주의→주의 그대로).
+- `fetchMaterialRiskGauges()`는 surin 값을 그대로 가져와 자재 구성이 리튬/니켈/**흑연**이지만,
+  같은 화면의 다른 패널(`MaterialRiskStatusPanel` 등)이 쓰는 `risk_event` mock 6건에는 흑연이
+  없고 대신 **코발트**가 있다 — 두 영역의 자재 구성이 서로 다르다는 뜻이며, 아래 "임시 mock 값"
+  표에도 등재해 둔다.
+
 ## 임시 mock 값 (후속 정리 필요)
 
 Phase 9.3(원자재 가격 추이 "상세보기", surin `RiskMonitoring.tsx` 시각 이식)에서 시각 구성을 우선하기 위해 실제 계산 로직 없이 하드코딩한 필드 목록. 각 필드는 코드에도 `// mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요` 주석이 달려 있다. 앞으로도 실제 계산 로직 없이 mock 값으로 구현하는 필드가 생기면, 이 섹션에 반드시 등재하고 코드에도 `// mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요` 주석을 남긴다.
 
 | 필드 | 위치 | 쓰이는 곳 | 왜 임시값인가 |
 |---|---|---|---|
-| `MaterialPriceSummary.change_label` | `api/types.ts`, `api/public.api.ts`의 `fetchMaterialPriceSummaries()` | `features/public/components/MaterialPriceDetail.tsx` 요약 카드 | `MaterialPriceSeries`의 실제 등락률을 계산하지 않고 surin 화면과 비슷한 톤의 값을 직접 지정했다. 가격(`price_index`)만 `MaterialPriceSeries` 마지막 포인트에서 실제로 유도해 항상 일치한다 — 등락률은 그 값과 무관하다. |
+| `MaterialPriceSummary.change_label` | `api/types.ts`, `api/purchasing.api.ts`의 `fetchMaterialPriceSummaries()`(Phase 9.4에서 `public.api.ts`→`purchasing.api.ts`로 이동, `public.api.ts`는 재수출만) | `components/widgets/MaterialPriceDetail.tsx`(Phase 9.4에서 `features/public/components/`→`components/widgets/`로 승격) 요약 카드 | `MaterialPriceSeries`의 실제 등락률을 계산하지 않고 surin 화면과 비슷한 톤의 값을 직접 지정했다. 가격(`price_index`)만 `MaterialPriceSeries` 마지막 포인트에서 실제로 유도해 항상 일치한다 — 등락률은 그 값과 무관하다. |
 | `MaterialPriceSummary.risk_score` | 〃 | 〃 | `risk_event`의 등급·신뢰도와 연결된 계산이 아니라 surin `monitoringPrices`의 점수를 참고해 임의로 지정한 값이다. |
 | `MaterialPriceSummary.grade` | 〃 | 〃 | 같은 자재의 실제 `risk_event.grade` 집계(예: 최고 심각도)가 아니라 화면 구성을 위해 직접 지정했다. `RiskGradeBadge` 표시 자체는 기존 컴포넌트를 그대로 재사용한다. |
 | 필터 드롭다운 선택값(원자재/국가·지역) | `MaterialPriceDetail.tsx` 내부 `useState` | 〃 | 열림/닫힘과 선택된 라벨 표시는 실제로 동작하지만, 선택해도 차트·카드 데이터는 바뀌지 않는다(표시 전용). "국가·지역" 옵션 목록도 실제 자재-국가 연결 데이터가 아니라 `GlobalRiskBoard` mock에 등장하는 5개국을 그대로 나열한 것이다. |
 | 기간 버튼(1주/1개월/3개월/6개월/사용자 설정) | 〃 | 〃 | 선택 상태와 활성 스타일은 실제로 전환되지만, mock `MaterialPriceSeries.points`가 짧은 고정 시계열(7일치)뿐이라 기간별로 다른 데이터를 보여주지 못한다. |
+| `MaterialRiskGaugeItem`(전체 필드) | `api/types.ts`, `api/purchasing.api.ts`의 `fetchMaterialRiskGauges()`(Phase 9.4, surin `materialRiskGauges` 이식) | `features/purchasing/components/MaterialRiskOverviewRow.tsx` 게이지 카드 3장 | surin 값을 그대로 가져왔다. 자재 구성이 리튬/니켈/**흑연**인데, 같은 페이지의 `risk_event` mock 6건(다른 패널이 쓰는 원천 데이터)에는 흑연이 없고 코발트가 있어 — 이 5칸 그리드만 다른 패널과 자재 구성이 어긋난다. `grade`도 surin 4단계를 3단계 `RiskGrade`로 매핑(경고→심각)한 값이라 실제 계산 로직은 없다. |
+| `ScoreCardItem`(전체 필드) | `api/types.ts`, `api/purchasing.api.ts`의 `fetchScoreCards()`(Phase 9.4, surin `summaryScores` 이식) | `features/purchasing/components/MaterialRiskOverviewRow.tsx` 점수 카드 2장 | surin `summaryScores`(외부 리스크 종합 점수 72/ERP 영향 점수 65)를 그대로 가져왔다. `grade`도 surin 원본 문구("높음"/"주의")를 3단계 `RiskGrade`로 매핑(높음→심각)한 값이라 실제 계산 로직은 없다. |
+| `ImportDependencyData`(전체 필드) | `api/types.ts`, `api/purchasing.api.ts`의 `fetchImportDependency()`(Phase 9.4, surin `importDependency` 이식) | `features/purchasing/components/ImportDependencyPanel.tsx` 도넛차트+범례 | `risk_event` 스키마에는 없는 개념(국가별 수입 비중)이라 surin 값을 그대로 가져왔다. 국가별 `color`(hex)도 surin 원본을 그대로 썼다. |
 
 ## 확장 원칙
 - 새 화면·지표가 추가되면 기존 필드를 변경하지 말고 옆에 새 필드를 추가한다 (breaking change 최소화).

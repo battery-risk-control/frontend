@@ -14,8 +14,8 @@
 | `api/auth.api.ts` | 인증(로그인/회원가입) mock API |
 | `api/executive.api.ts` | 3계층 경영진 대시보드 mock API |
 | `api/planning.api.ts` | 2계층 경영기획팀 대시보드 mock API |
-| `api/public.api.ts` | 비로그인 공개 대시보드 mock API |
-| `api/purchasing.api.ts` | 1계층 구매팀 대시보드 mock API — risk_event 원천 데이터 |
+| `api/public.api.ts` | 비로그인 공개 대시보드 mock API(Phase 9.4에서 fetchGlobalRiskBoard/fetchMaterialPriceTrends/fetchMaterialPriceSummaries를 purchasing.api.ts로 옮기고 재수출만 함) |
+| `api/purchasing.api.ts` | 1계층 구매팀 대시보드 mock API — risk_event 원천 데이터 + Phase 9.4에서 이동된 글로벌 리스크 맵/가격 추이 mock + 신규 원자재 리스크 개요/수입 의존도 mock |
 | `api/types.ts` | 전 화면 공용 API 응답 타입 정의 |
 | `app/routes.tsx` | 최상위 라우트 정의 및 로그인 가드 |
 | `components/layout/Breadcrumb.tsx` | 브레드크럼(탐색 위치 안내) |
@@ -25,8 +25,12 @@
 | `components/layout/SkipLink.tsx` | 본문 바로가기 링크(접근성) |
 | `components/ui/ConfidenceBadge.tsx` | 리스크 판단 신뢰도 라벨 배지 |
 | `components/ui/ConfirmModal.tsx` | 확인/취소 모달 |
+| `components/ui/DonutChart.tsx` | 도넛 차트(Phase 9.4 신규, surin DonutChart 이식) |
+| `components/ui/RiskGauge.tsx` | 3단계 리스크 게이지(Phase 9.4 신규, surin RiskStepGauge 이식) |
 | `components/ui/RiskGradeBadge.tsx` | 리스크 등급 배지 |
 | `components/ui/ScrollCard/ScrollCard.tsx` | 카드형 UI 공통 컨테이너(스크롤 캡슐화) |
+| `components/widgets/GlobalRiskBoard.tsx` | 글로벌 리스크 관제 맵(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용) |
+| `components/widgets/MaterialPriceDetail.tsx` | 원자재 가격 추이(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용) |
 | `features/auth/components/AuthTabs.tsx` | 로그인/권한 신청 탭 토글 |
 | `features/auth/components/LoginForm.tsx` | 로그인 폼 |
 | `features/auth/components/PendingApprovalScreen.tsx` | 승인 대기 보안 락 화면 |
@@ -42,13 +46,14 @@
 | `features/planning/components/VendorRiskHistory.tsx` | 협력사 리스크 이력 및 탐색 리스트 |
 | `features/planning/pages/PlanningDashboardPage.tsx` | 2계층 경영기획팀 대시보드 페이지 |
 | `features/public/components/AiPriorityList.tsx` | AI 기반 권고 조치 리스트 |
-| `features/public/components/GlobalRiskBoard.tsx` | 글로벌 리스크 관제 맵(인터랙티브 세계지도) |
-| `features/public/components/MaterialPriceDetail.tsx` | 원자재 가격 추이(필터+요약카드+차트) |
 | `features/public/components/SupplyNewsFeed.tsx` | 실시간 뉴스 속보 |
 | `features/public/pages/PublicDashboardPage.tsx` | 비로그인 공개 대시보드 페이지 |
 | `features/purchasing/components/AlertsPanel.tsx` | 주요 알림 및 빠른 작업 패널 |
 | `features/purchasing/components/ErpImpactPanel.tsx` | ERP 영향 자재 재고 계약 분석 패널 |
+| `features/purchasing/components/ImportDependencyPanel.tsx` | 수입 의존도 도넛차트 패널(Phase 9.4 신규) |
+| `features/purchasing/components/ImportDependencyRow.tsx` | 수입 의존도+원자재 가격 추이 2컬럼 행(Phase 9.4 신규) |
 | `features/purchasing/components/KpiSummaryPanel.tsx` | 상단 KPI 요약 패널 |
+| `features/purchasing/components/MaterialRiskOverviewRow.tsx` | 원자재 리스크 개요 5칸 그리드(게이지 3+점수 2, Phase 9.4 신규) |
 | `features/purchasing/components/MaterialRiskStatusPanel.tsx` | 원자재 공급사 리스크 현황 패널 |
 | `features/purchasing/components/PurchasePriorityPanel.tsx` | 구매 대응 우선순위 패널 |
 | `features/purchasing/pages/BriefingDetailPage.tsx` | 1계층 브리핑 자료 열람 페이지 |
@@ -88,10 +93,10 @@
 ### `api/public.api.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `fetchGlobalRiskBoard` | 글로벌 리스크 관제 맵 조회 함수 | `risk_event` 배열을 요약 항목으로 변환, `market_context`의 country_code/country_name/coordinates도 함께 매핑(지도 마커용, Phase 9.1) |
+| `fetchGlobalRiskBoard` *(재수출)* | 글로벌 리스크 관제 맵 조회 함수 | Phase 9.4에서 `api/purchasing.api.ts`로 이동, 여기서는 재수출만(기존 import 경로 호환용) |
+| `fetchMaterialPriceTrends` *(재수출)* | 원자재 가격 추이 조회 함수 | Phase 9.4에서 `api/purchasing.api.ts`로 이동, 여기서는 재수출만 |
+| `fetchMaterialPriceSummaries` *(재수출)* | 원자재 가격 요약 카드 조회 함수 | Phase 9.4에서 `api/purchasing.api.ts`로 이동, 여기서는 재수출만 |
 | `fetchAiRecommendations` | AI 권고 조치 조회 함수 | 등급 기반 일반 권고 문구 생성(ERP 내부 상세는 미노출) |
-| `fetchMaterialPriceTrends` | 원자재 가격 추이 조회 함수 | 자재별 합성 가격 지수(기준일=100) 시계열 반환 |
-| `fetchMaterialPriceSummaries` | 원자재 가격 요약 카드 조회 함수 | 자재별 등락률/리스크 지수/등급 반환 — `change_label`/`risk_score`/`grade`는 mock 임시값(`docs/mock-schemas.md` 참고), `material`만 실제 연동 키 |
 | `fetchNewsFeed` | 실시간 뉴스 속보 조회 함수 | `risk_event`를 `risk_event_id` 기준 날짜 최신순으로 정렬 |
 
 ### `api/purchasing.api.ts`
@@ -99,6 +104,12 @@
 |---|---|---|
 | `fetchRiskEvents` | 리스크 이벤트 목록 조회 함수 | 1계층 mock `risk_event` 배열 반환 — 다른 계층 API들이 공유하는 원천 데이터 |
 | `fetchRiskEventBriefing` | 브리핑 자료 조회 함수 | risk_event_id로 찾은 이벤트의 rag_view/output_artifacts만 추출(Seq 24). 존재하지 않으면 `null` 반환 |
+| `fetchGlobalRiskBoard` | 글로벌 리스크 관제 맵 조회 함수 | Phase 9.4에서 `api/public.api.ts`→이 파일로 이동(로직 변경 없음). `risk_event` 배열을 요약 항목으로 변환, `market_context`의 country_code/country_name/coordinates도 함께 매핑(지도 마커용) |
+| `fetchMaterialPriceTrends` | 원자재 가격 추이 조회 함수 | Phase 9.4에서 이동. 자재별 합성 가격 지수(기준일=100) 시계열 반환 |
+| `fetchMaterialPriceSummaries` | 원자재 가격 요약 카드 조회 함수 | Phase 9.4에서 이동. 자재별 등락률/리스크 지수/등급 반환 — `change_label`/`risk_score`/`grade`는 mock 임시값(`docs/mock-schemas.md` 참고), `material`만 실제 연동 키 |
+| `fetchMaterialRiskGauges` | 원자재 리스크 개요 게이지 카드 조회 함수 | Phase 9.4 신규, surin `materialRiskGauges` 이식. 리튬/니켈/흑연 3종 반환(전 필드 mock 임시값, `grade`는 3단계 `RiskGrade`로 매핑) |
+| `fetchScoreCards` | 원자재 리스크 개요 점수 카드 조회 함수 | Phase 9.4 신규, surin `summaryScores` 이식. 외부 리스크 종합 점수/ERP 영향 점수 2종 반환(전 필드 mock 임시값) |
+| `fetchImportDependency` | 수입 의존도 조회 함수 | Phase 9.4 신규, surin `importDependency` 이식. 국가별 수입 비중 반환(전 필드 mock 임시값) |
 
 ### `api/types.ts`
 | physical | logical | 역할 |
@@ -134,6 +145,10 @@
 | `SavingsSimulation` | 절감 시뮬레이션 타입 | is_simulation(항상 true)/예상 절감액/가정 |
 | `EnterpriseRiskSummaryItem` | 전사 리스크 요약 항목 타입 | 사업부명/노출도 점수/추세 |
 | `ExecutiveDashboardResponse` | 3계층 대시보드 응답 타입 | period + cumulative_risk_kpi + savings_simulation + enterprise_risk_summary |
+| `MaterialRiskGaugeItem` | 원자재 리스크 게이지 카드 타입 | Phase 9.4 신규 — name/basis/grade/changeLabel(선택) |
+| `ScoreCardItem` | 점수 카드 타입 | Phase 9.4 신규 — label/score/grade/diffLabel(선택) |
+| `ImportDependencyBreakdownItem` | 수입 의존도 국가별 비중 항목 타입 | Phase 9.4 신규 — label/value/color |
+| `ImportDependencyData` | 수입 의존도 타입 | Phase 9.4 신규 — total/year(선택)/breakdown |
 
 ### `app/routes.tsx`
 | physical | logical | 역할 |
@@ -178,6 +193,16 @@
 |---|---|---|
 | `ConfirmModal` | 확인/취소 모달 컴포넌트 | qa-checklist.md "C. 접근 제어·리다이렉트의 사용자 피드백" 대응 — 무음 리다이렉트 대신 이유를 알리고 선택지를 준다. `cancelLabel` 버튼이 기본 포커스+주 버튼(강조) 스타일, `confirmLabel` 버튼은 보조 스타일(안전한 선택지가 기본이어야 한다는 원칙을 컴포넌트가 강제). `role="dialog"` + `aria-modal="true"`, Esc 키는 취소와 동일하게 동작, Tab/Shift+Tab은 라이브러리 없이 순수 React로 모달 내부 요소끼리만 순환(포커스 트랩). 현재 `app/routes.tsx`의 `RequireAuth` 계층 불일치 안내에서 사용 |
 
+### `components/ui/DonutChart.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `DonutChart` | 도넛 차트 컴포넌트 | Phase 9.4 신규, surin `DonutChart` 이식(recharts `Pie`/`Cell`). 고정 180x180px 컨테이너라 `ScrollCard` 기본 `scrollable`(true) 상태에서도 `ResponsiveContainer` 되먹임 리사이즈가 재현되지 않는다(사전 실측 확인) |
+
+### `components/ui/RiskGauge.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `RiskGauge` | 3단계 리스크 게이지 컴포넌트 | Phase 9.4 신규, surin `RiskStepGauge` 이식. surin의 4단계 대신 기존 3단계 `RiskGrade`(`components/ui/RiskGradeBadge.tsx`)를 재사용하고, 점 색상도 리터럴 hex 대신 `--color-risk-*` 토큰을 사용 |
+
 ### `components/ui/RiskGradeBadge.tsx`
 | physical | logical | 역할 |
 |---|---|---|
@@ -188,6 +213,16 @@
 | physical | logical | 역할 |
 |---|---|---|
 | `ScrollCard` | 카드형 UI 공통 컨테이너 컴포넌트 | 제목(`title`)+헤더 우측 컨트롤(`actions`)+부제(`caption`)+스크롤 영역 밖 고정 콘텐츠(`pinnedTop`)+스크롤 본문(`children`)+하단 고정 안내(`footer`) 슬롯 구조. 본문에 기본적으로 `min-height:0`+`overflow-y:auto`를 캡슐화해, 부모 레이아웃이 카드 높이를 제약하는 경우(예: 비로그인 공개 대시보드 2x2 그리드)에만 내부 스크롤이 실제로 발동하고 그 외에는 자유롭게 늘어난다. `fillHeight`는 형제와 높이를 맞춰야 하는 카드용(`height:100%`). `scrollable`(기본 `true`)을 `false`로 주면 본문에 `overflow: visible`이 적용돼 스크롤이 배제된다(레이아웃 속성인 `flex:1`/`min-height:0`은 유지) — Recharts `ResponsiveContainer`처럼 스크롤 컨테이너 안에서 폭을 잘못 재측정하는 콘텐츠용(MaterialPriceDetail에서 실사용, 트러블슈팅으로 확인). 신규 카드형 컴포넌트는 이 컴포넌트를 사용하고 자체 `.panel`/`.title` 스타일을 새로 만들지 않는다(CLAUDE.md) |
+
+### `components/widgets/GlobalRiskBoard.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `GlobalRiskBoard` | 글로벌 리스크 관제 맵 컴포넌트 | Phase 9.1 구현, Phase 9.4에서 `features/public/components/`→여기로 승격(구매팀 대시보드도 재사용, 로직 변경 없음). `react-leaflet`+`world-atlas`+`topojson-client` 기반 인터랙티브 세계지도. "이벤트뷰"(개별 좌표 마커)/"국가뷰"(country_code 기준 집계, 대표 이벤트=최고 심각도) 토글, 마커 클릭 시 컴포넌트 내부 상세 패널에 관련 risk_event 리스트 표시. country_code 없는 이벤트는 마커 제외. `ScrollCard` 도입(지도는 `pinnedTop`으로 항상 고정 노출, 뷰토글은 `actions`, 클릭 시 상세 리스트만 스크롤 영역인 `children`) |
+
+### `components/widgets/MaterialPriceDetail.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `MaterialPriceDetail` | 원자재 가격 추이 컴포넌트 | Phase 9.3 구현, Phase 9.4에서 `features/public/components/`→여기로 승격(구매팀 대시보드도 재사용, 로직 변경 없음). surin RiskMonitoring.tsx 시각 이식(필터行/요약카드 3장/기간버튼/Recharts 멀티라인 차트). "원자재" 드롭다운만 실제로 차트 계열을 필터링, "국가·지역"과 기간 버튼은 의도적으로 표시 전용(확정된 범위). `ScrollCard` 도입(필터行+요약카드는 `pinnedTop`으로 항상 고정 노출). 차트 영역은 `scrollable={false}`로 스크롤 제외 |
 
 ### `features/auth/components/AuthTabs.tsx`
 | physical | logical | 역할 |
@@ -265,16 +300,6 @@
 |---|---|---|
 | `AiPriorityList` | AI 기반 권고 조치 리스트 컴포넌트 | 등급(심각>주의>정상) 순 정렬. `ScrollCard` 도입(리스트가 `children`) |
 
-### `features/public/components/GlobalRiskBoard.tsx`
-| physical | logical | 역할 |
-|---|---|---|
-| `GlobalRiskBoard` | 글로벌 리스크 관제 맵 컴포넌트 | Phase 9.1 — `react-leaflet`+`world-atlas`+`topojson-client` 기반 인터랙티브 세계지도. "이벤트뷰"(개별 좌표 마커)/"국가뷰"(country_code 기준 집계, 대표 이벤트=최고 심각도) 토글, 마커 클릭 시 컴포넌트 내부 상세 패널에 관련 risk_event 리스트 표시. country_code 없는 이벤트는 마커 제외. `ScrollCard` 도입(지도는 `pinnedTop`으로 항상 고정 노출, 뷰토글은 `actions`, 클릭 시 상세 리스트만 스크롤 영역인 `children`) |
-
-### `features/public/components/MaterialPriceDetail.tsx`
-| physical | logical | 역할 |
-|---|---|---|
-| `MaterialPriceDetail` | 원자재 가격 추이 컴포넌트 | Phase 9.3 — surin RiskMonitoring.tsx 시각 이식(필터行/요약카드 3장/기간버튼/Recharts 멀티라인 차트). "원자재" 드롭다운만 실제로 차트 계열을 필터링, "국가·지역"과 기간 버튼은 의도적으로 표시 전용(확정된 범위). `ScrollCard` 도입(필터行+요약카드는 `pinnedTop`으로 항상 고정 노출). 차트 영역은 `scrollable={false}`로 스크롤 제외 — Recharts `ResponsiveContainer`가 `overflow:auto` 스크롤 컨테이너 안에 있으면 폭을 재측정하며 카드가 계속 확장되는 문제가 확인돼 스크롤 없이 자유 높이로 렌더링한다 |
-
 ### `features/public/components/SupplyNewsFeed.tsx`
 | physical | logical | 역할 |
 |---|---|---|
@@ -293,22 +318,37 @@
 ### `features/purchasing/components/ErpImpactPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `ErpImpactPanel` | ERP 영향 자재 재고 계약 분석 패널 컴포넌트 | 재고 소진일수/대체 공급사/품질 검증 결과 |
+| `ErpImpactPanel` | ERP 영향 자재 재고 계약 분석 패널 컴포넌트 | 재고 소진일수/대체 공급사/품질 검증 결과. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
+
+### `features/purchasing/components/ImportDependencyPanel.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ImportDependencyPanel` | 수입 의존도 도넛차트 패널 컴포넌트 | Phase 9.4 신규(데모 화면ID UX-01-DB, surin `importDependency` 이식). `ScrollCard`+`DonutChart`+범례 리스트. `DonutChart`는 고정 180x180px라 `ScrollCard` 기본 `scrollable`(true) 유지 |
+
+### `features/purchasing/components/ImportDependencyRow.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ImportDependencyRow` | 수입 의존도+원자재 가격 추이 2컬럼 행 컴포넌트 | Phase 9.4 신규. `340px 1fr` grid(surin 비율 그대로) — `ImportDependencyPanel` + 승격된 `components/widgets/MaterialPriceDetail` |
 
 ### `features/purchasing/components/KpiSummaryPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `KpiSummaryPanel` | 상단 KPI 요약 패널 컴포넌트 | 전체/심각/주의/정상 건수 집계 |
+| `KpiSummaryPanel` | 상단 KPI 요약 패널 컴포넌트 | 전체/심각/주의/정상 건수 집계. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
+
+### `features/purchasing/components/MaterialRiskOverviewRow.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `MaterialRiskOverviewRow` | 원자재 리스크 개요 5칸 그리드 컴포넌트 | Phase 9.4 신규(데모 화면ID UX-01-DB, surin 이식). 게이지 카드 3장(`RiskGauge`+`RiskGradeBadge`) + 점수 카드 2장(파일 내부 헬퍼 `ScoreCard`, 별도 export 안 함) — 5개 전부 개별 `ScrollCard`로 감쌈 |
 
 ### `features/purchasing/components/MaterialRiskStatusPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `MaterialRiskStatusPanel` | 원자재 공급사 리스크 현황 패널 컴포넌트 | risk_event 리스트, 등급/신뢰도 배지 포함 |
+| `MaterialRiskStatusPanel` | 원자재 공급사 리스크 현황 패널 컴포넌트 | risk_event 리스트, 등급/신뢰도 배지 포함. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
 
 ### `features/purchasing/components/PurchasePriorityPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `PurchasePriorityPanel` | 구매 대응 우선순위 패널 컴포넌트 | 등급·재고 소진일 기준 파생 정렬 순위 리스트 |
+| `PurchasePriorityPanel` | 구매 대응 우선순위 패널 컴포넌트 | 등급·재고 소진일 기준 파생 정렬 순위 리스트. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
 
 ### `features/purchasing/pages/BriefingDetailPage.tsx`
 | physical | logical | 역할 |
@@ -318,7 +358,7 @@
 ### `features/purchasing/pages/PurchasingDashboardPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바 + 단일 컬럼 4단 패널 + 우측 알림 패널(Figma 프레임 기준) |
+| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바 + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역 3종(`MaterialRiskOverviewRow` → 승격된 `GlobalRiskBoard` → `ImportDependencyRow`)을 기존 4단 패널 위에 추가 |
 
 ### `lib/AuthContext.ts`
 | physical | logical | 역할 |

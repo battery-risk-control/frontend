@@ -1,3 +1,4 @@
+import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import type { RiskEvent, RiskGrade } from '../../../api/types'
 import styles from './PurchasePriorityPanel.module.css'
 
@@ -26,10 +27,7 @@ export function PurchasePriorityPanel({ events }: PurchasePriorityPanelProps) {
   })
 
   return (
-    <section className={styles.panel} aria-labelledby="purchase-priority-heading">
-      <h2 id="purchase-priority-heading" className={styles.title}>
-        구매 대응 우선순위
-      </h2>
+    <ScrollCard headingId="purchase-priority-heading" title="구매 대응 우선순위">
       <ol className={styles.list}>
         {ranked.map((event, index) => (
           <li key={event.risk_event_id} className={styles.item}>
@@ -46,6 +44,6 @@ export function PurchasePriorityPanel({ events }: PurchasePriorityPanelProps) {
           </li>
         ))}
       </ol>
-    </section>
+    </ScrollCard>
   )
 }

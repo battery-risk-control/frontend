@@ -1,3 +1,4 @@
+import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import type { RiskEvent } from '../../../api/types'
 import styles from './ErpImpactPanel.module.css'
 
@@ -14,10 +15,7 @@ interface ErpImpactPanelProps {
  */
 export function ErpImpactPanel({ events }: ErpImpactPanelProps) {
   return (
-    <section className={styles.panel} aria-labelledby="erp-impact-heading">
-      <h2 id="erp-impact-heading" className={styles.title}>
-        ERP 영향 자재 재고 계약 분석
-      </h2>
+    <ScrollCard headingId="erp-impact-heading" title="ERP 영향 자재 재고 계약 분석">
       <ul className={styles.list}>
         {events.map((event) => (
           <li key={event.risk_event_id} className={styles.item}>
@@ -41,6 +39,6 @@ export function ErpImpactPanel({ events }: ErpImpactPanelProps) {
           </li>
         ))}
       </ul>
-    </section>
+    </ScrollCard>
   )
 }

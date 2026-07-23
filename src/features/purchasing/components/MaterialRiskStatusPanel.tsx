@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
+import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import type { RiskEvent } from '../../../api/types'
 import styles from './MaterialRiskStatusPanel.module.css'
 
@@ -17,10 +18,7 @@ interface MaterialRiskStatusPanelProps {
  */
 export function MaterialRiskStatusPanel({ events }: MaterialRiskStatusPanelProps) {
   return (
-    <section className={styles.panel} aria-labelledby="material-risk-heading">
-      <h2 id="material-risk-heading" className={styles.title}>
-        원자재 공급사 리스크 현황
-      </h2>
+    <ScrollCard headingId="material-risk-heading" title="원자재 공급사 리스크 현황">
       <ul className={styles.list}>
         {events.map((event) => (
           <li key={event.risk_event_id} className={styles.item}>
@@ -37,6 +35,6 @@ export function MaterialRiskStatusPanel({ events }: MaterialRiskStatusPanelProps
           </li>
         ))}
       </ul>
-    </section>
+    </ScrollCard>
   )
 }

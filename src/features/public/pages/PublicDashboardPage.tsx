@@ -9,9 +9,9 @@ import {
 import { useAuthState } from '../../../lib/useAuthState'
 import { Header } from '../../../components/layout/Header'
 import { ScrollHint } from '../../../components/ui/ScrollHint/ScrollHint'
-import { GlobalRiskBoard } from '../components/GlobalRiskBoard'
+import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
 import { AiPriorityList } from '../components/AiPriorityList'
-import { MaterialPriceDetail } from '../components/MaterialPriceDetail'
+import { MaterialPriceDetail } from '../../../components/widgets/MaterialPriceDetail'
 import { SupplyNewsFeed } from '../components/SupplyNewsFeed'
 import styles from './PublicDashboardPage.module.css'
 

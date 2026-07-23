@@ -1,3 +1,4 @@
+import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import type { RiskEvent } from '../../../api/types'
 import styles from './KpiSummaryPanel.module.css'
 
@@ -17,10 +18,7 @@ export function KpiSummaryPanel({ events }: KpiSummaryPanelProps) {
   const normalCount = events.filter((event) => event.grade === '정상').length
 
   return (
-    <section className={styles.panel} aria-labelledby="kpi-summary-heading">
-      <h2 id="kpi-summary-heading" className={styles.title}>
-        상단 KPI 요약
-      </h2>
+    <ScrollCard headingId="kpi-summary-heading" title="상단 KPI 요약">
       <dl className={styles.stats}>
         <div className={styles.stat}>
           <dt className={styles.label}>전체 리스크</dt>
@@ -39,6 +37,6 @@ export function KpiSummaryPanel({ events }: KpiSummaryPanelProps) {
           <dd className={`${styles.value} ${styles.normal}`}>{normalCount}건</dd>
         </div>
       </dl>
-    </section>
+    </ScrollCard>
   )
 }

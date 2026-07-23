@@ -1,4 +1,13 @@
-import type { RiskEvent, RiskEventBriefing } from './types'
+import type {
+  GlobalRiskBoardItem,
+  ImportDependencyData,
+  MaterialPriceSeries,
+  MaterialPriceSummary,
+  MaterialRiskGaugeItem,
+  RiskEvent,
+  RiskEventBriefing,
+  ScoreCardItem,
+} from './types'
 
 /**
  * 1계층 구매팀 대시보드 mock 데이터.
@@ -205,5 +214,158 @@ export function fetchRiskEventBriefing(riskEventId: string): RiskEventBriefing |
     confidence_label: event.confidence_label,
     rag_view: event.rag_view,
     output_artifacts: event.output_artifacts,
+  }
+}
+
+/**
+ * 글로벌 리스크 관제 맵 mock 함수. 원래 api/public.api.ts에 있었으나, 구매팀 대시보드(Phase 9.4)도
+ * 같은 지도를 재사용하게 되면서 원천 데이터(MOCK_RISK_EVENTS) 허브인 이 파일로 옮겼다.
+ * public.api.ts는 이 함수를 재수출만 한다(로직 변경 없음, 기존 import 경로 그대로 동작).
+ *
+ * 사용 예:
+ *   const items = fetchGlobalRiskBoard()
+ */
+export function fetchGlobalRiskBoard(): GlobalRiskBoardItem[] {
+  return fetchRiskEvents().map((event) => ({
+    risk_event_id: event.risk_event_id,
+    material: event.market_context.material,
+    grade: event.grade,
+    confidence_label: event.confidence_label,
+    event_summary: event.market_context.event_summary,
+    country_code: event.market_context.country_code,
+    country_name: event.market_context.country_name,
+    coordinates: event.market_context.coordinates,
+  }))
+}
+
+/**
+ * 원자재 가격 추이 데모 데이터. risk_event 스키마에는 가격 필드가 없어 대상 자재만
+ * market_context.material에서 가져오고, 지수 값은 데모용으로 합성했다(기준일=100).
+ * 원래 api/public.api.ts에 있었으나 fetchGlobalRiskBoard와 같은 이유로 이 파일로 옮겼다.
+ */
+const MOCK_PRICE_SERIES: Record<string, MaterialPriceSeries> = {
+  니켈: {
+    material: '니켈',
+    unit: '지수(기준일=100)',
+    points: [
+      { date: '2026-07-15', price_index: 100 },
+      { date: '2026-07-16', price_index: 101 },
+      { date: '2026-07-17', price_index: 103 },
+      { date: '2026-07-18', price_index: 106 },
+      { date: '2026-07-19', price_index: 112 },
+      { date: '2026-07-20', price_index: 116 },
+      { date: '2026-07-21', price_index: 118 },
+    ],
+  },
+  리튬: {
+    material: '리튬',
+    unit: '지수(기준일=100)',
+    points: [
+      { date: '2026-07-15', price_index: 100 },
+      { date: '2026-07-16', price_index: 99 },
+      { date: '2026-07-17', price_index: 98 },
+      { date: '2026-07-18', price_index: 100 },
+      { date: '2026-07-19', price_index: 103 },
+      { date: '2026-07-20', price_index: 104 },
+      { date: '2026-07-21', price_index: 105 },
+    ],
+  },
+  코발트: {
+    material: '코발트',
+    unit: '지수(기준일=100)',
+    points: [
+      { date: '2026-07-15', price_index: 100 },
+      { date: '2026-07-16', price_index: 100 },
+      { date: '2026-07-17', price_index: 102 },
+      { date: '2026-07-18', price_index: 101 },
+      { date: '2026-07-19', price_index: 104 },
+      { date: '2026-07-20', price_index: 108 },
+      { date: '2026-07-21', price_index: 109 },
+    ],
+  },
+}
+
+/**
+ * 원자재 가격 추이 mock 함수. 현재 risk_event mock에 등장하는 자재(니켈/리튬/코발트)만 반환한다.
+ *
+ * 사용 예:
+ *   const series = fetchMaterialPriceTrends()
+ */
+export function fetchMaterialPriceTrends(): MaterialPriceSeries[] {
+  const materials = new Set(fetchRiskEvents().map((event) => event.market_context.material))
+  return Array.from(materials)
+    .map((material) => MOCK_PRICE_SERIES[material])
+    .filter((series): series is MaterialPriceSeries => Boolean(series))
+}
+
+/**
+ * 원자재 가격 상세보기(Phase 9.3) 요약 카드용 mock 함수. change_label/risk_score/grade는
+ * MaterialPriceSeries나 risk_event에서 계산한 값이 아니라 surin RiskMonitoring 화면의
+ * 시각 구성을 이식하기 위한 임시값이다 — docs/mock-schemas.md 참고, 후속 검증 필요.
+ *
+ * 사용 예:
+ *   const summaries = fetchMaterialPriceSummaries()
+ */
+export function fetchMaterialPriceSummaries(): MaterialPriceSummary[] {
+  return [
+    { material: '니켈', change_label: '▲ 1.7%', risk_score: 72, grade: '주의' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
+    { material: '리튬', change_label: '▲ 1.0%', risk_score: 58, grade: '주의' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
+    { material: '코발트', change_label: '▲ 4.8%', risk_score: 66, grade: '심각' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
+  ]
+}
+
+/**
+ * 구매팀 대시보드 확장(Phase 9.4, surin materialRiskGauges 이식) — 원자재 리스크 개요
+ * 5칸 그리드 중 게이지 카드 3장. surin은 리튬/니켈/흑연 3종을 쓰지만, 우리 risk_event mock에는
+ * 흑연이 없고(코발트만 존재) surin 값을 그대로 가져오라는 지시에 따라 그대로 사용한다 —
+ * docs/mock-schemas.md "임시 mock 값" 표에 흑연 불일치를 등재해 둔다. grade는 surin의 4단계
+ * (정상/주의/경고/심각) 대신 기존 3단계 RiskGrade로 매핑했다(경고→심각).
+ *
+ * 사용 예:
+ *   const gauges = fetchMaterialRiskGauges()
+ */
+export function fetchMaterialRiskGauges(): MaterialRiskGaugeItem[] {
+  return [
+    { name: '리튬', basis: '(탄산리튬 기준)', grade: '심각', changeLabel: '전일 대비 ▲ 4' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요. surin 원본 level="경고"를 3단계 RiskGrade로 매핑
+    { name: '니켈', basis: '(황산니켈 기준)', grade: '주의', changeLabel: '전일 대비 ▼ 2' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
+    { name: '흑연', basis: '(구형흑연 기준)', grade: '심각', changeLabel: '전일 대비 ▲ 6' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요. surin 원본 level="경고"를 3단계 RiskGrade로 매핑. risk_event mock에는 흑연이 없어(코발트만 존재) 다른 패널과 자재 구성이 어긋난다 — docs/mock-schemas.md 참고
+  ]
+}
+
+/**
+ * 구매팀 대시보드 확장(Phase 9.4, surin summaryScores 이식) — 원자재 리스크 개요 5칸 그리드 중
+ * 점수 카드 2장. score/grade 모두 mock 임시값이다 — docs/mock-schemas.md 참고, 후속 검증 필요.
+ * grade는 surin 원본 문구("높음"/"주의")를 기존 3단계 RiskGrade로 매핑했다(높음→심각).
+ *
+ * 사용 예:
+ *   const cards = fetchScoreCards()
+ */
+export function fetchScoreCards(): ScoreCardItem[] {
+  return [
+    { label: '외부 리스크 종합 점수', score: 72, grade: '심각', diffLabel: '전일 대비 ▲ +8p' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요. surin 원본 level="높음"을 3단계 RiskGrade로 매핑
+    { label: 'ERP 영향 점수', score: 65, grade: '주의', diffLabel: '전일 대비 ▲ +6p' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
+  ]
+}
+
+/**
+ * 구매팀 대시보드 확장(Phase 9.4, surin importDependency 이식) — 수입 의존도 도넛차트.
+ * risk_event 스키마에는 없는 개념(국가별 수입 비중)이라 surin 값을 그대로 가져왔다 —
+ * docs/mock-schemas.md 참고, 후속 검증 필요.
+ *
+ * 사용 예:
+ *   const dependency = fetchImportDependency()
+ */
+export function fetchImportDependency(): ImportDependencyData {
+  return {
+    total: 82.3, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
+    year: '2024년 기준',
+    breakdown: [
+      { label: '중국', value: 54.1, color: '#2f5adb' },
+      { label: '인도네시아', value: 12.8, color: '#22c55e' },
+      { label: '호주', value: 8.7, color: '#a855f7' },
+      { label: '모잠비크', value: 6.3, color: '#f59e0b' },
+      { label: '브라질', value: 5.2, color: '#38bdf8' },
+      { label: '기타', value: 12.9, color: '#cbd5e1' },
+    ], // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
   }
 }

@@ -231,3 +231,39 @@ export interface ExecutiveDashboardResponse {
   savings_simulation: SavingsSimulation
   enterprise_risk_summary: EnterpriseRiskSummaryItem[]
 }
+
+/**
+ * 구매팀 대시보드 확장(Phase 9.4, surin RiskStepGauge 이식) — 원자재 리스크 개요 5칸 그리드 중
+ * 게이지 카드 3장용. `grade`는 surin의 4단계(정상/주의/경고/심각) 대신 기존 3단계 `RiskGrade`를
+ * 재사용한다(경고→심각 매핑) — docs/mock-schemas.md 참고.
+ */
+export interface MaterialRiskGaugeItem {
+  name: string
+  basis: string
+  grade: RiskGrade
+  changeLabel?: string
+}
+
+/**
+ * 구매팀 대시보드 확장(Phase 9.4) — 원자재 리스크 개요 5칸 그리드 중 점수 카드 2장용.
+ * score/grade 모두 mock 임시값이다 — docs/mock-schemas.md 참고.
+ */
+export interface ScoreCardItem {
+  label: string
+  score: number
+  grade: RiskGrade
+  diffLabel?: string
+}
+
+export interface ImportDependencyBreakdownItem {
+  label: string
+  value: number
+  color: string
+}
+
+/** 구매팀 대시보드 확장(Phase 9.4, surin importDependency 이식) — 수입 의존도 도넛차트용. */
+export interface ImportDependencyData {
+  total: number
+  year?: string
+  breakdown: ImportDependencyBreakdownItem[]
+}

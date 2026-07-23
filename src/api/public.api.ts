@@ -1,84 +1,19 @@
 import { fetchRiskEvents } from './purchasing.api'
 import { parseRiskEventDate } from '../lib/riskEventId'
-import type {
-  AiRecommendation,
-  GlobalRiskBoardItem,
-  MaterialPriceSeries,
-  MaterialPriceSummary,
-  NewsFeedItem,
-  RiskGrade,
-} from './types'
+import type { AiRecommendation, NewsFeedItem, RiskGrade } from './types'
+
+/**
+ * fetchGlobalRiskBoard/fetchMaterialPriceTrends/fetchMaterialPriceSummaries는 원래 이 파일에
+ * 있었으나, 구매팀 대시보드(Phase 9.4)도 같은 데이터를 쓰게 되면서 원천 데이터 허브인
+ * purchasing.api.ts로 옮기고 여기서는 재수출만 한다 — 로직 변경 없음, 이 파일을 통해
+ * import하던 기존 코드(PublicDashboardPage.tsx 등)는 수정 없이 그대로 동작한다.
+ */
+export { fetchGlobalRiskBoard, fetchMaterialPriceTrends, fetchMaterialPriceSummaries } from './purchasing.api'
 
 const RECOMMENDATION_BY_GRADE: Record<RiskGrade, string> = {
   심각: '즉시 대체 조달처 검토 필요',
   주의: '대체 조달처 사전 확보 권고',
   정상: '정기 모니터링 유지',
-}
-
-/**
- * 원자재 가격 추이 데모 데이터. risk_event 스키마에는 가격 필드가 없어 대상 자재만
- * market_context.material에서 가져오고, 지수 값은 데모용으로 합성했다(기준일=100).
- */
-const MOCK_PRICE_SERIES: Record<string, MaterialPriceSeries> = {
-  니켈: {
-    material: '니켈',
-    unit: '지수(기준일=100)',
-    points: [
-      { date: '2026-07-15', price_index: 100 },
-      { date: '2026-07-16', price_index: 101 },
-      { date: '2026-07-17', price_index: 103 },
-      { date: '2026-07-18', price_index: 106 },
-      { date: '2026-07-19', price_index: 112 },
-      { date: '2026-07-20', price_index: 116 },
-      { date: '2026-07-21', price_index: 118 },
-    ],
-  },
-  리튬: {
-    material: '리튬',
-    unit: '지수(기준일=100)',
-    points: [
-      { date: '2026-07-15', price_index: 100 },
-      { date: '2026-07-16', price_index: 99 },
-      { date: '2026-07-17', price_index: 98 },
-      { date: '2026-07-18', price_index: 100 },
-      { date: '2026-07-19', price_index: 103 },
-      { date: '2026-07-20', price_index: 104 },
-      { date: '2026-07-21', price_index: 105 },
-    ],
-  },
-  코발트: {
-    material: '코발트',
-    unit: '지수(기준일=100)',
-    points: [
-      { date: '2026-07-15', price_index: 100 },
-      { date: '2026-07-16', price_index: 100 },
-      { date: '2026-07-17', price_index: 102 },
-      { date: '2026-07-18', price_index: 101 },
-      { date: '2026-07-19', price_index: 104 },
-      { date: '2026-07-20', price_index: 108 },
-      { date: '2026-07-21', price_index: 109 },
-    ],
-  },
-}
-
-/**
- * 글로벌 리스크 관제 맵 mock 함수. purchasing.api.ts의 risk_event mock 배열을 그대로
- * 재사용해 같은 근원 데이터에서 파생한다(중복 데이터 생성 금지 원칙).
- *
- * 사용 예:
- *   const items = fetchGlobalRiskBoard()
- */
-export function fetchGlobalRiskBoard(): GlobalRiskBoardItem[] {
-  return fetchRiskEvents().map((event) => ({
-    risk_event_id: event.risk_event_id,
-    material: event.market_context.material,
-    grade: event.grade,
-    confidence_label: event.confidence_label,
-    event_summary: event.market_context.event_summary,
-    country_code: event.market_context.country_code,
-    country_name: event.market_context.country_name,
-    coordinates: event.market_context.coordinates,
-  }))
 }
 
 /**
@@ -96,35 +31,6 @@ export function fetchAiRecommendations(): AiRecommendation[] {
     confidence_label: event.confidence_label,
     recommendation: RECOMMENDATION_BY_GRADE[event.grade],
   }))
-}
-
-/**
- * 원자재 가격 추이 mock 함수. 현재 risk_event mock에 등장하는 자재(니켈/리튬/코발트)만 반환한다.
- *
- * 사용 예:
- *   const series = fetchMaterialPriceTrends()
- */
-export function fetchMaterialPriceTrends(): MaterialPriceSeries[] {
-  const materials = new Set(fetchRiskEvents().map((event) => event.market_context.material))
-  return Array.from(materials)
-    .map((material) => MOCK_PRICE_SERIES[material])
-    .filter((series): series is MaterialPriceSeries => Boolean(series))
-}
-
-/**
- * 원자재 가격 상세보기(Phase 9.3) 요약 카드용 mock 함수. change_label/risk_score/grade는
- * MaterialPriceSeries나 risk_event에서 계산한 값이 아니라 surin RiskMonitoring 화면의
- * 시각 구성을 이식하기 위한 임시값이다 — docs/mock-schemas.md 참고, 후속 검증 필요.
- *
- * 사용 예:
- *   const summaries = fetchMaterialPriceSummaries()
- */
-export function fetchMaterialPriceSummaries(): MaterialPriceSummary[] {
-  return [
-    { material: '니켈', change_label: '▲ 1.7%', risk_score: 72, grade: '주의' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
-    { material: '리튬', change_label: '▲ 1.0%', risk_score: 58, grade: '주의' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
-    { material: '코발트', change_label: '▲ 4.8%', risk_score: 66, grade: '심각' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
-  ]
 }
 
 /**

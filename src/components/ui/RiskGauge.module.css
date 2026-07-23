@@ -1,0 +1,45 @@
+.gauge {
+  margin-top: var(--space-3);
+}
+
+.steps {
+  display: flex;
+  align-items: center;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.step:last-child {
+  flex: 0 0 auto;
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+}
+
+.line {
+  flex: 1;
+  height: 2px;
+  background: var(--color-border);
+}
+
+.labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.labelActive {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
-import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
-import type { MaterialPriceSeries, MaterialPriceSummary } from '../../../api/types'
+import { ScrollCard } from '../ui/ScrollCard/ScrollCard'
+import { RiskGradeBadge } from '../ui/RiskGradeBadge'
+import type { MaterialPriceSeries, MaterialPriceSummary } from '../../api/types'
 import styles from './MaterialPriceDetail.module.css'
 
 interface MaterialPriceDetailProps {

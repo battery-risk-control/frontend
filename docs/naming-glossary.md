@@ -187,7 +187,7 @@
 ### `components/ui/ScrollCard/ScrollCard.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `ScrollCard` | 카드형 UI 공통 컨테이너 컴포넌트 | 제목(`title`)+헤더 우측 컨트롤(`actions`)+부제(`caption`)+스크롤 영역 밖 고정 콘텐츠(`pinnedTop`)+스크롤 본문(`children`)+하단 고정 안내(`footer`) 슬롯 구조. 본문에 항상 `min-height:0`+`overflow-y:auto`를 캡슐화해, 부모 레이아웃이 카드 높이를 제약하는 경우(예: 비로그인 공개 대시보드 2x2 그리드)에만 내부 스크롤이 실제로 발동하고 그 외에는 자유롭게 늘어난다. `fillHeight`는 형제와 높이를 맞춰야 하는 카드용(`height:100%`). 신규 카드형 컴포넌트는 이 컴포넌트를 사용하고 자체 `.panel`/`.title` 스타일을 새로 만들지 않는다(CLAUDE.md) |
+| `ScrollCard` | 카드형 UI 공통 컨테이너 컴포넌트 | 제목(`title`)+헤더 우측 컨트롤(`actions`)+부제(`caption`)+스크롤 영역 밖 고정 콘텐츠(`pinnedTop`)+스크롤 본문(`children`)+하단 고정 안내(`footer`) 슬롯 구조. 본문에 기본적으로 `min-height:0`+`overflow-y:auto`를 캡슐화해, 부모 레이아웃이 카드 높이를 제약하는 경우(예: 비로그인 공개 대시보드 2x2 그리드)에만 내부 스크롤이 실제로 발동하고 그 외에는 자유롭게 늘어난다. `fillHeight`는 형제와 높이를 맞춰야 하는 카드용(`height:100%`). `scrollable`(기본 `true`)을 `false`로 주면 본문에 `overflow: visible`이 적용돼 스크롤이 배제된다(레이아웃 속성인 `flex:1`/`min-height:0`은 유지) — Recharts `ResponsiveContainer`처럼 스크롤 컨테이너 안에서 폭을 잘못 재측정하는 콘텐츠용(MaterialPriceDetail에서 실사용, 트러블슈팅으로 확인). 신규 카드형 컴포넌트는 이 컴포넌트를 사용하고 자체 `.panel`/`.title` 스타일을 새로 만들지 않는다(CLAUDE.md) |
 
 ### `features/auth/components/AuthTabs.tsx`
 | physical | logical | 역할 |
@@ -273,7 +273,7 @@
 ### `features/public/components/MaterialPriceDetail.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `MaterialPriceDetail` | 원자재 가격 추이 컴포넌트 | Phase 9.3 — surin RiskMonitoring.tsx 시각 이식(필터行/요약카드 3장/기간버튼/Recharts 멀티라인 차트). "원자재" 드롭다운만 실제로 차트 계열을 필터링, "국가·지역"과 기간 버튼은 의도적으로 표시 전용(확정된 범위). `ScrollCard` 도입(필터行+요약카드는 `pinnedTop`으로 항상 고정 노출, 차트만 스크롤 영역인 `children`) |
+| `MaterialPriceDetail` | 원자재 가격 추이 컴포넌트 | Phase 9.3 — surin RiskMonitoring.tsx 시각 이식(필터行/요약카드 3장/기간버튼/Recharts 멀티라인 차트). "원자재" 드롭다운만 실제로 차트 계열을 필터링, "국가·지역"과 기간 버튼은 의도적으로 표시 전용(확정된 범위). `ScrollCard` 도입(필터行+요약카드는 `pinnedTop`으로 항상 고정 노출). 차트 영역은 `scrollable={false}`로 스크롤 제외 — Recharts `ResponsiveContainer`가 `overflow:auto` 스크롤 컨테이너 안에 있으면 폭을 재측정하며 카드가 계속 확장되는 문제가 확인돼 스크롤 없이 자유 높이로 렌더링한다 |
 
 ### `features/public/components/SupplyNewsFeed.tsx`
 | physical | logical | 역할 |

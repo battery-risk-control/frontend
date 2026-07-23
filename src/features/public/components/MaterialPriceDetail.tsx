@@ -59,8 +59,11 @@ function toChartRows(series: MaterialPriceSeries[]): ChartRow[] {
  * 표시 전용이며 후속 작업이 아니라 확정된 범위 결정이다(사용자 확인 완료).
  * 요약 카드의 가격만 MaterialPriceSeries 마지막 포인트에서 직접 유도해 항상 일치시키고,
  * 등락률/리스크 지수/등급은 mock 임시값(fetchMaterialPriceSummaries)이다.
- * 필터行/요약카드는 ScrollCard의 pinnedTop(스크롤 밖 고정)에 배치해, 카드가 좁아져도
- * 필터·요약이 스크롤 뒤로 가려지지 않고 차트만 스크롤되도록 한다.
+ * 필터行/요약카드는 ScrollCard의 pinnedTop(스크롤 밖 고정)에 배치한다. 차트는
+ * `scrollable={false}`로 ScrollCard 본문 스크롤을 배제한다 — Recharts
+ * ResponsiveContainer가 스크롤 컨테이너(overflow:auto) 안에 있으면 폭을 재측정하며
+ * 카드가 계속 확장되는 문제가 트러블슈팅 중 확인돼, 이 컴포넌트는 스크롤 없이
+ * 자유 높이로 렌더링한다.
  *
  * 사용 예:
  *   <MaterialPriceDetail series={series} summaries={summaries} />
@@ -97,6 +100,7 @@ export function MaterialPriceDetail({ series, summaries }: MaterialPriceDetailPr
     <ScrollCard
       headingId="material-price-detail-heading"
       title="원자재 가격 추이"
+      scrollable={false}
       pinnedTop={
         <>
           <div className={styles.filterRow}>
@@ -237,7 +241,6 @@ export function MaterialPriceDetail({ series, summaries }: MaterialPriceDetailPr
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4 }}
-                isAnimationActive={false}
               />
             ))}
           </LineChart>

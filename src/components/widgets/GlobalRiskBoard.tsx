@@ -181,7 +181,7 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
             zoom={1.4}
             minZoom={1}
             maxZoom={6}
-            scrollWheelZoom={false}
+            scrollWheelZoom={true}
             worldCopyJump
             style={{ height: '100%', width: '100%' }}
           >

@@ -1,0 +1,87 @@
+# 로드맵 후보 — 갭/버그/미결정 설계 이슈
+
+이 문서는 "아직 만들지 않은 기능/화면 갭" 또는 "발견된 버그·미결정 설계 이슈"를 기록한다.
+`docs/design-candidates.md`와는 다르다 — 그쪽은 "고려했으나 채택하지 않은 디자인 대안"만 다룬다.
+
+## C1 — 리스크 유형별 분포 차트 (별도 Phase, 착수 전, 2026-07-24)
+
+product-overview.md "MVP 범위"에 "유형별 분포 차트"가 필수 항목으로 명시돼 있으나(Seq
+번호 없음 — `요구사항_정의서.xlsx`/`docs/requirements-frontend.md` 쪽에는 이 항목 자체가
+없음, 별도 출처인 "프로젝트_기획_정의서 v2"에만 등장), 착수 전 확인이 필요한 미결 사항을
+기록해 둔다. 아직 구현 착수하지 않았다.
+
+- **스키마 공백**: `risk_event`(CLAUDE.md 원본 스키마) 최상위 8개 필드 및 `market_context`
+  하위 필드를 전수 확인한 결과 "유형"/"category"/"event_type"/"issue" 계열 필드가 전혀 없다
+  (`src/api/types.ts`의 `RiskEvent`도 CLAUDE.md 스키마와 정확히 일치, 동일하게 없음). "리스크
+  유형" 개념 자체가 mock 데이터에 아직 존재하지 않으므로, 착수 시 신규 필드 설계가 선행돼야
+  한다.
+- **카테고리 출처 후보 2가지(확정 아님)**:
+  - (a) GDELT 이벤트유형 기반 — 기획정의서에 "예: 수출제한/광산사고/관세/재고소진"이 언급되나
+    이는 예시일 뿐 확정된 값 목록이 아니다.
+  - (b) 데모 이미지의 "주요 리스크 드라이버" 고정 4종(수출규제/광산차질/정책변화/물류지연) —
+    단, 이 요소는 데모상 대시보드(1, `UX-01-DB`) 화면이 아니라 **"외부 리스크 모니터링"
+    (2, `UX-02-RM`) 화면 소속**이다. 우리 레포의 `PurchasingDashboardPage`(1계층 구매팀
+    대시보드)와 화면 성격이 다를 수 있음에 유의.
+- **배치 화면 미결**: 현재 작업 중인 `PurchasingDashboardPage`에 넣을지, 아니면 데모처럼
+  별도 화면(외부 리스크 모니터링에 해당하는 신규 페이지/라우트, 현재 레포엔 존재하지 않음)을
+  신설해야 할지 확인이 필요하다.
+
+## C2 — "ERP 영향 분석" 화면 부재 (별도 Phase, 착수 전, 2026-07-24)
+
+surin에는 `pages/ErpImpact.tsx`(`/erp-impact` 라우트, 네비 라벨 "ERP 영향 분석")로 존재하고
+데모 이미지(`ChatGPT Image 2026년 7월 9일 오전 10_50_58 (3).png`)에도 등장하는 화면이지만,
+`docs/requirements-frontend.md`(Seq 1~36 체계)에는 이 화면에 대응하는 Seq 항목이 없고
+우리 레포에도 구현이 없다. 착수 전 확인이 필요한 갭만 기록해 둔다. 아직 구현 착수하지 않았다.
+
+- 이 화면의 "자재 영향도 분포" 도넛(영향도 점수 구간 높음 80~100=14건/주의 50~79=20건/
+  보통 20~49=10건/낮음 0~19=4건)은 **C1(리스크 유형별 분포 차트)과는 다른 축**이다 — C1은
+  "리스크 유형"(아직 스키마에 없는 개념) 기준 분포, 이건 "ERP 영향도 점수 구간" 기준 분포다.
+  따라서 C1 해결책(리스크 유형별 분포 차트 구현)으로 이 화면의 부재를 대신 해소할 수 없다.
+- 착수 여부·우선순위는 미결정 상태로 남긴다.
+
+## C3 — SideNav 내비게이션 항목 미기능(placeholder) 및 개념 불일치 (미결정, 2026-07-24)
+
+`SideNav`(Purchasing/BriefingDetail/Planning 3개 페이지)의 하위 항목이 실제로는 기능하지
+않는 placeholder라는 사실과, 이를 둘러싼 여러 미결정 설계 이슈를 기록한다.
+
+- **원래부터 placeholder였음**: `SIDE_NAV_ITEMS`(Purchasing/BriefingDetail:
+  "리스크 현황판"/"브리핑 자료", Planning: "노출도 비교"/"협력사 이력")는 Phase 4부터
+  `href="#..."` 형태의 순수 placeholder였다. `docs/timeline.md` Phase 4 기록 원문:
+  > **버그**: `SideNav` 두 항목이 동일한 `href="#"`를 사용해 React key 중복 경고 발생 →
+  > 항목별 고유 해시(`#risk-board`, `#briefing`)로 수정.
+
+  즉 원래 목적이 "React key 중복 경고 회피"였을 뿐, 기능적 내비게이션을 의도한 것이 아니었다.
+
+- **Playwright 6개 시나리오 실측 확인 결과**(2026-07-24):
+  1. Purchasing 대시보드에서 "리스크 현황판" 클릭 → URL만 `/purchasing`→`/purchasing#risk-board`로 변경, `<h1>`은 "구매팀 대시보드"로 불변.
+  2. Purchasing 대시보드에서 "브리핑 자료" 클릭 → URL만 `/purchasing#briefing`으로 변경, `<h1>` 불변.
+  3. BriefingDetailPage(`/purchasing/briefing/RISK-2026-0721-001`, `<h1>`="니켈 브리핑 자료")에서 "리스크 현황판" 클릭 → `/purchasing#risk-board`로 실제 이동(pathname이 달라 라우트 전환 발생), `<h1>`이 "구매팀 대시보드"로 바뀜.
+  4. 같은 페이지에서 "브리핑 자료" 클릭 → 위와 동일하게 `/purchasing#briefing`으로 이동, `<h1>`도 동일하게 "구매팀 대시보드" — **"리스크 현황판"과 결과가 구분되지 않음**.
+  5. Planning 대시보드에서 "노출도 비교" 클릭 → URL만 `/planning#exposure`로 변경, `<h1>`="경영기획팀 대시보드" 불변.
+  6. Planning 대시보드에서 "협력사 이력" 클릭 → URL만 `/planning#vendor-history`로 변경, `<h1>` 불변.
+
+  `src` 전체에서 `id="risk-board"`/`id="briefing"`/`id="exposure"`/`id="vendor-history"` grep도
+  0건 — 스크롤 대상 앵커 요소 자체가 없다.
+
+- **문서-코드 drift**: `docs/roadmap.md`(Phase 8)과 `docs/timeline.md`(Phase 8)는 모두
+  "SideNav 플레이스홀더 해시(`#briefing` 등)를 실제 라우트로 교체(연결)"라고 기록하고 있으나,
+  실제 코드(`git blame` 커밋 `5c623308`)는 href에 `/purchasing` 경로 접두사를 붙였을 뿐 여전히
+  해시 기반 placeholder다 — "실제 라우트로 교체"라는 문서 서술은 실제로 달성된 것보다 앞서 나간
+  표현이다.
+
+- **surin과의 개념 불일치 발견**: surin의 "브리핑 & 의사결정 지원"(`/briefing`,
+  `Briefing.tsx`)은 특정 리스크 이벤트에 종속되지 않는 **이벤트 비종속 종합 브리핑**
+  (Executive Summary, 주요 리스크 Top 3, 권장 대응 조치, 시나리오 비교, 문서 미리보기 등 —
+  당일 전체 현황을 AI가 요약)인 반면, 우리 `BriefingDetailPage`는 `riskEventId`가 **필수 파라미터인
+  개별 이벤트 브리핑**(특정 `risk_event`의 `rag_view`/`output_artifacts`만 추출)이다. 이름은
+  비슷해 보이지만 서로 다른 개념의 화면이다.
+- **"리스크 현황판" 관련 미결정**: surin에는 "리스크 현황판"에 정확히 대응하는 별도 화면이
+  없다(가장 가까운 것은 `Dashboard.tsx` 자체이거나 `RiskMonitoring.tsx`인데 둘 다 이름이 다름).
+  `docs/requirements-frontend.md` Seq 24 원문("협력사별 리스크 등급·근거 정리 현황판(**상세**)")의
+  "(상세)"라는 단어가 정확히 무엇을 가리키는지도 불명확하다 — 현재 `PurchasingDashboardPage`
+  자체를 "(상세)"로 보는지, 아니면 그보다 더 깊은 별도의 상세 화면을 의미하는지 확인되지 않았다.
+- **착수 방향 미결정**: 다음 세 방향 모두 검토되지 않은 상태로 남겨둔다 —
+  (1) 앵커 스크롤 구현(대상 섹션에 실제 `id` 부여 + 클릭 시 스크롤),
+  (2) 신규 페이지 분리(현재 `PurchasingDashboardPage`의 특정 섹션을 별도 라우트로 분리),
+  (3) surin `Briefing.tsx` 이식(종합 브리핑 개념 자체를 새로 도입).
+  세 방향의 장단점 비교, 우선순위, `BriefingDetailPage`와의 관계 정리 모두 미결정.

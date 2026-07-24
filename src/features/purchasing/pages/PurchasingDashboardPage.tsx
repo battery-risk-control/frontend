@@ -13,7 +13,7 @@ import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
 import { KpiSummaryPanel } from '../components/KpiSummaryPanel'
-import { MaterialRiskOverviewRow } from '../components/MaterialRiskOverviewRow'
+import { MaterialRiskOverviewSection } from '../components/MaterialRiskOverviewSection'
 import { ImportDependencyRow } from '../components/ImportDependencyRow'
 import { MaterialRiskStatusPanel } from '../components/MaterialRiskStatusPanel'
 import { ErpImpactPanel } from '../components/ErpImpactPanel'
@@ -51,7 +51,7 @@ export function PurchasingDashboardPage() {
         <main id="main-content" className={styles.main}>
           <h1 className={styles.heading}>구매팀 대시보드</h1>
           <KpiSummaryPanel events={events} />
-          <MaterialRiskOverviewRow gauges={gauges} scoreCards={scoreCards} />
+          <MaterialRiskOverviewSection gauges={gauges} scoreCards={scoreCards} />
           <GlobalRiskBoard items={riskBoardItems} />
           <ImportDependencyRow
             importDependency={importDependency}

@@ -69,6 +69,25 @@ function isLocated(item: GlobalRiskBoardItem): item is LocatedItem {
   return Boolean(item.country_code && item.coordinates)
 }
 
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ transform: expanded ? 'rotate(180deg)' : undefined }}
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  )
+}
+
 // mock 데이터의 좌표는 국가 단위 근사치라, 같은 나라에 이벤트가 2건 이상이면(예: 콩고민주공화국
 // 코발트 2건) 이벤트뷰 마커가 완전히 겹친다. 완전 자동 배치 알고리즘 대신 같은 국가 그룹 안에서만
 // 마커를 원형으로 살짝 벌리고, 라벨도 상/하로 번갈아 배치해 최소한의 겹침만 방지한다.
@@ -134,6 +153,7 @@ function groupByCountry(items: LocatedItem[]): CountryGroup[] {
 export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('event')
   const [selected, setSelected] = useState<SelectedDetail | null>(null)
+  const [panelExpanded, setPanelExpanded] = useState(false)
 
   const locatedItems = items.filter(isLocated)
   const countryGroups = groupByCountry(locatedItems)
@@ -146,10 +166,12 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
 
   function handleSelectEvent(item: LocatedItem) {
     setSelected({ label: item.material, events: [item] })
+    setPanelExpanded(true)
   }
 
   function handleSelectCountry(group: CountryGroup) {
     setSelected({ label: group.countryName, events: group.events })
+    setPanelExpanded(true)
   }
 
   return (
@@ -252,30 +274,44 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
         </div>
       }
     >
-      {selected ? (
-        <>
-          <div className={styles.detailHeader}>
-            <span className={styles.detailLabel}>{selected.label}</span>
-            <button type="button" className={styles.closeButton} onClick={() => setSelected(null)}>
-              닫기
-            </button>
-          </div>
-          <ul className={styles.list}>
-            {selected.events.map((item) => (
-              <li key={item.risk_event_id} className={styles.item}>
-                <div className={styles.itemHeader}>
-                  <span className={styles.material}>{item.material}</span>
-                  <RiskGradeBadge grade={item.grade} />
-                  <ConfidenceBadge label={item.confidence_label} />
-                </div>
-                <p className={styles.summary}>{item.event_summary}</p>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : (
+      <div className={styles.panelHeader}>
         <p className={styles.placeholder}>지도에서 마커를 클릭하면 관련 리스크 정보가 여기에 표시됩니다.</p>
-      )}
+        <button
+          type="button"
+          className={styles.panelToggleButton}
+          onClick={() => setPanelExpanded((prev) => !prev)}
+          aria-expanded={panelExpanded}
+          aria-label={panelExpanded ? '리스크 정보 패널 접기' : '리스크 정보 패널 펼치기'}
+        >
+          <ChevronIcon expanded={panelExpanded} />
+        </button>
+      </div>
+      <div className={panelExpanded ? `${styles.panelBody} ${styles.panelBodyExpanded}` : styles.panelBody}>
+        <div className={styles.panelBodyInner}>
+          {selected && (
+            <>
+              <div className={styles.detailHeader}>
+                <span className={styles.detailLabel}>{selected.label}</span>
+                <button type="button" className={styles.closeButton} onClick={() => setSelected(null)}>
+                  닫기
+                </button>
+              </div>
+              <ul className={styles.list}>
+                {selected.events.map((item) => (
+                  <li key={item.risk_event_id} className={styles.item}>
+                    <div className={styles.itemHeader}>
+                      <span className={styles.material}>{item.material}</span>
+                      <RiskGradeBadge grade={item.grade} />
+                      <ConfidenceBadge label={item.confidence_label} />
+                    </div>
+                    <p className={styles.summary}>{item.event_summary}</p>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      </div>
     </ScrollCard>
   )
 }

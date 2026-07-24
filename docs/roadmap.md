@@ -30,6 +30,7 @@
   - [ ] 9.2 로그인/회원가입: surin AuthShell 비주얼 이식 — **보류(기존 dev-김영진 화면 유지 결정, 20260722)**. surin 비주얼 이식은 현재 우선순위 밖.
   - 9.3 원자재 가격 추이 / 2·3계층 차트: surin 차트 스타일 이식
   - [x] 9.4 구매팀 대시보드 UX-01-DB 데모 구조 반영 + ScrollCard 통일 + SideNav 접기: 5칸 리스크 게이지 그리드(`MaterialRiskOverviewRow`, surin `RiskStepGauge` 이식) → 지도(승격된 `GlobalRiskBoard` 재사용) → 도넛+가격추이 2단(`ImportDependencyRow`, surin `DonutChart` 이식) 요약 영역 신설, 기존 4개 패널 전체를 `ScrollCard`로 전환, `GlobalRiskBoard`/`MaterialPriceDetail`을 `components/widgets/`로 승격(공개 대시보드와 구매팀 대시보드가 공유), `SideNav` 접기/펼치기(Context 전역 상태) 추가
+  - [ ] 9.5(후보) — 리스크 유형별 분포 차트: **미착수**. product-overview.md MVP 필수 항목이나 Seq 번호 없음, `risk_event` 스키마에 "유형" 관련 필드 자체가 없어 신규 필드 설계 선행 필요. 카테고리 출처·배치 화면 등 미결 사항은 `docs/design-candidates.md` "C1" 참고
 
 - [ ] Phase 10(후보) — 전체 앱 반응형 대응 — 이미 합의된 사항, 아직 착수 전. 공개 대시보드(Seq 23)에 760px 미만 브레이크포인트(2x2 → 1열 4행) + 하단 콘텐츠 힌트(ScrollHint)를 실험적으로 먼저 도입(2026-07-23)했으나, 구매팀/기획팀/경영진 대시보드를 포함한 전체 화면의 반응형 대응은 이 Phase에서 별도로 다룬다.
 

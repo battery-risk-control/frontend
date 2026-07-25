@@ -86,6 +86,6 @@
 
 모든 [펼치기/접기] 인터랙션(예: `MaterialRiskOverviewSection`의 "더보기", `GlobalRiskBoard`의 정보 패널 접기/펼치기)은 애니메이션을 기본 적용한다. 신규 라이브러리를 쓰지 않고 순수 CSS `max-height`+`opacity` transition을 쓴다(SideNav 접기의 `width` transition과 동일한 패턴을 높이 축으로 확장). duration은 `--transition-fast`(`0.2s`) 토큰을 공용으로 사용한다.
 
-### d) 형제 카드/리스트 항목 4개 이상 시 overflow 처리 고려 대상
+### d) 형제 카드/리스트 항목 4개 초과 시 overflow 처리 기준
 
-한 영역 안에 형제 카드 또는 리스트 항목이 4개 이상이면(예: 5칸 게이지 그리드) 스크롤(`ScrollCard` 기본값) 또는 "더보기"(Disclosure) 중 하나로 overflow를 처리하는 것을 고려 대상으로 삼는다 — 3개 이하는 대부분 화면에 한 번에 들어가 별도 처리가 불필요한 경우가 많다는 경험적 기준이며, 강제 규칙은 아니다.
+다음 기준으로 적용한다: 리스트 항목이 4개를 초과하면 4개가 보이는 높이로 `max-height`를 고정하고 `overflow-y: auto`로 5번째 항목부터 스크롤하게 한다(`ScrollCard`의 `maxBodyHeight` prop). 높이는 해당 화면의 실제 렌더링 결과를 실측해 정한다(고정 공식이 아님 — 항목당 내용 길이가 다르면 카드마다 다르게 측정). 5칸 게이지 그리드처럼 리스트가 아니라 그리드 형태인 경우는 스크롤 대신 "더보기"(Disclosure)로 처리한다(`MaterialRiskOverviewSection` 참고). 3개 이하는 대부분 화면에 한 번에 들어가 별도 처리가 불필요한 경우가 많다.

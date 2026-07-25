@@ -9,6 +9,7 @@ interface ScrollCardProps {
   pinnedTop?: ReactNode
   fillHeight?: boolean
   scrollable?: boolean
+  maxBodyHeight?: number | string
   footer?: ReactNode
   children: ReactNode
 }
@@ -29,6 +30,10 @@ interface ScrollCardProps {
  * `ResizeObserver`로 감지) — 그리드 페이지 다음 카드를 안내하는 `ScrollHint`와는 별개로,
  * "이 카드 안에 아직 안 보이는 콘텐츠가 있다"는 것만 알린다. 화면별로 별도 작업 없이
  * `ScrollCard`를 쓰는 모든 카드에 자동 적용된다.
+ * `maxBodyHeight`(선택)를 주면 본문에 해당 높이로 `max-height`가 걸린다 — 형제 리스트
+ * 항목이 4개를 넘는 카드에서 "4개 높이로 고정 + 5번째부터 스크롤" 규칙(design-tokens.md
+ * "카드 레이아웃·스크롤 규칙" d)을 적용할 때 쓴다. 값을 안 주면 기존과 동일하게 자유
+ * 높이(부모가 제약할 때만 스크롤 발동)로 동작한다.
  *
  * 사용 예:
  *   <ScrollCard headingId="foo-heading" title="제목">
@@ -43,6 +48,7 @@ export function ScrollCard({
   pinnedTop,
   fillHeight = false,
   scrollable = true,
+  maxBodyHeight,
   footer,
   children,
 }: ScrollCardProps) {
@@ -87,7 +93,11 @@ export function ScrollCard({
       {caption && <p className={styles.caption}>{caption}</p>}
       {pinnedTop}
       <div className={styles.bodyWrapper}>
-        <div ref={bodyRef} className={scrollable ? styles.body : `${styles.body} ${styles.noScroll}`}>
+        <div
+          ref={bodyRef}
+          className={scrollable ? styles.body : `${styles.body} ${styles.noScroll}`}
+          style={maxBodyHeight !== undefined ? { maxHeight: typeof maxBodyHeight === 'number' ? `${maxBodyHeight}px` : maxBodyHeight } : undefined}
+        >
           {children}
         </div>
         {scrollable && showOverflowHint && (

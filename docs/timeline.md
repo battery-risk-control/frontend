@@ -115,3 +115,30 @@ git remote 연결 및 첫 커밋 (미착수)
 Phase 10.2(스켈레톤 UI)가 착수 전 상태라 이 환경변수를 읽는 코드가 존재하지 않는다
 (2026-07-27 전수 확인). CLAUDE.md/README.md의 `VITE_MOCK_DELAY_MS` 언급은 설계 시점에 미리
 정해둔 인터페이스일 뿐, 10.2 착수 시 실제로 구현된다.
+
+## 오류 및 기능 미흡 1차 라운드 (버그 헌팅) — #5/#4/#2 수정, #6 재분류 정정 (2026-07-27)
+
+구매팀 대시보드 실측 중 사용자가 제기한 4건(#2/#4/#5/#6)을 조사·수정한 라운드. 조사(읽기 전용) 후
+수정을 분리해 진행했다.
+
+- **#6 자재 카드 가로 스크롤 — 재분류 정정**: 최초 구현(2fcc1ef)에서 SideNav/AlertsPanel과 같은
+  "스크롤바 숨김+힌트" 패턴을 그대로 가져다 썼으나, 이는 페이지 전환과 무관하게 항상 같은 자리를
+  차지하는 앱 뼈대(chrome)용 패턴이지 본문 콘텐츠에 맞지 않는다고 재판단해 네이티브 스크롤바 노출
+  + 마우스 드래그(grab-to-scroll)로 정정(2026-07-27, `ee87b13`). 이 재분류가 계기가 되어
+  `design-tokens.md`에 "스크롤 UI 노출 원칙"(앱 뼈대 vs 본문 콘텐츠, 본문 콘텐츠 내에서도
+  카드 내부 리스트형/형제 카드 캐러셀형 구분)을 신설했다.
+- **#5 상위 요약 행(3장) SideNav 폭 변화에 줄바꿈** — `MaterialRiskOverviewSection`의 `.row`가
+  `auto-fit` grid라 SideNav를 펼치면 `.main`이 좁아져 2줄로 줄바꿈됨을 실측 재현. #6과 동일한
+  "형제 카드 캐러셀형" 원칙을 적용해 `display:flex`+`nowrap`+`overflow-x:auto`로 전환하고,
+  드래그 로직을 `src/lib/useHorizontalDragScroll.ts` 공용 훅으로 추출해 재사용 가능하게
+  분리했다(2026-07-27, `60cd14e`). 구현 중 `flex-shrink`를 실수로 1로 지정해 카드가 짓눌리는
+  회귀가 있었으나 Playwright 실측으로 즉시 발견·수정.
+- **#4 SideNav 토글 버튼이 스크롤 안 따라옴** — `SideNavToggleButton`에 `position:sticky`가
+  누락돼 있어 SideNav 본체와 달리 페이지 스크롤 시 사라지던 문제를 SideNav와 동일한
+  `position:sticky;top:var(--header-height)` 추가로 수정(2026-07-27, `6d1ebec`).
+- **#2 도트 활성/클릭 이동 싱크** — `PageSectionDots`의 `IntersectionObserver`에 헤더 높이만큼
+  보정된 `rootMargin`(`-{header-height}px 0px -60% 0px`, 통상적 스크롤스파이 기법)을 추가하고,
+  `ScrollCard`의 heading에 `scroll-margin-top: var(--header-height)`를 줘 `scrollIntoView`도
+  함께 보정했다(2026-07-27, `36d0fa6`). 단, 페이지 최하단 섹션 부근(약 936px 구간)에는 이
+  조정만으로 해소되지 않는 사각지대가 실측으로 확인돼 미해소 상태로 남았다 — 후속 라운드 과제,
+  `docs/roadmap-candidates.md` "C7" 참고.

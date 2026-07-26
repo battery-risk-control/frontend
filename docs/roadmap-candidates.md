@@ -85,3 +85,16 @@ surin에는 `pages/ErpImpact.tsx`(`/erp-impact` 라우트, 네비 라벨 "ERP �
   (2) 신규 페이지 분리(현재 `PurchasingDashboardPage`의 특정 섹션을 별도 라우트로 분리),
   (3) surin `Briefing.tsx` 이식(종합 브리핑 개념 자체를 새로 도입).
   세 방향의 장단점 비교, 우선순위, `BriefingDetailPage`와의 관계 정리 모두 미결정.
+
+## C4 — 2·3계층 차트 surin 스타일 이식 (Phase 9.3 잔여분, 착수 전, 2026-07-25)
+
+Phase 9.3 "원자재 가격 추이 / 2·3계층 차트: surin 차트 스타일 이식" 중 "원자재 가격 추이"는
+완료됐으나(design-candidates.md 참고), "2·3계층 차트" 부분은 git log 확인 결과 Phase 6/8
+이후 Planning/Executive 차트 컴포넌트에 수정 이력이 없어 미착수임을 2026-07-25 timeline.md
+정리 작업 중 발견했다. 착수 전 확인 필요 사항만 기록해 둔다.
+
+- 대상: PlanningDashboardPage의 ComparisonChart, ExecutiveDashboardPage의
+  SavingsSimulation/EnterpriseRiskSummary 등 Recharts 기반 차트 컴포넌트.
+- surin 원본 대응 화면/컴포넌트를 먼저 특정해야 한다(CLAUDE.md 원칙 —
+  "surin을 참고 자료로 사용할 때는 어느 파일/어느 화면인지 먼저 특정").
+- 아직 착수하지 않았다.

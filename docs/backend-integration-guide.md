@@ -41,16 +41,18 @@ docker-compose 기준 기본값 `http://localhost:8080`).
 
 ## 4. 프론트엔드를 ②단계로 실행
 
+⚠️ dev:live 종료 후 재실행 전에는 `netstat -ano | findstr :5173`으로 포트가 실제로
+비어있는지 확인할 것 — Ctrl+C→Y로도 vite 프로세스가 완전히 안 죽는 경우가 있다
+(Windows/node 조합에서 보고되는 이슈). 남아있다면 `tasklist /FI "PID eq <PID>"`로 확인 후
+`taskkill /PID <PID> /F`로 정리. strictPort 설정으로 포트 충돌 시 즉시 에러가 뜨므로
+최소한 문제 발생 자체는 바로 알아챌 수 있다.
+
 ```bash
 npm run dev:live
 ```
 
 `npm run dev`(기본)는 `.env.live`를 읽지 않으므로 항상 ①단계(mock)로 뜬다 — `dev:live`를 쓸
 때만 실제 백엔드를 호출한다.
-
-`dev:live` 실행 전 5173 포트가 비어있는지 확인할 것(다른 dev 서버가 떠 있으면 CORS
-불일치로 Failed to fetch 발생) — strictPort 설정으로 이제 포트 충돌 시 조용히 다른 포트로
-넘어가지 않고 에러로 즉시 알려준다.
 
 ## 5. 종료 방법
 

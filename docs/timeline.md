@@ -66,6 +66,7 @@ Phase 번호가 붙지 않는 문서화·툴링 작업 기록 (`docs/roadmap.md`
 - `.claude/settings.json` 문법 오류(주석 오삽입)로 설정 미적용 — 수정
 - `AskUserQuestion` 위젯이 CLAUDE.md 지시에도 계속 노출됨 — 근본 원인(CLAUDE.md는 약한 우선순위) 확인 후 `permissions.deny`로 도구 자체 차단
 - VS Code 창 닫힘 — 실제 파일 미생성 지점이라 재개 시 손실 없음
+- `npm run dev:live` 종료 시 Ctrl+C→Y로도 자식 node.exe(vite 서버)가 완전히 안 죽고 남는 경우 발견(2026-07-27) — 원인 미상(정상적으로 Ctrl+C→Y를 눌렀는지 추적 불가), 다음 실행 시 5173이 아닌 5174/5175로 밀려나 CORS 불일치(`Failed to fetch`)로 뒤늦게 발견됨. `strictPort: true` 추가로 재발 시 조용히 다른 포트로 밀리는 대신 즉시 에러로 드러나도록 조치(commit 99fe4f7). 완전 예방은 아니므로 종료 후 `netstat -ano | findstr :5173`으로 실제로 비었는지 확인하는 습관 권장.
 
 ## Phase 7 — 예정
 git remote 연결 및 첫 커밋 (미착수)

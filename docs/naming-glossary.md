@@ -54,7 +54,7 @@
 | `features/purchasing/components/ImportDependencyPanel.tsx` | 수입 의존도 도넛차트 패널(Phase 9.4 신규) |
 | `features/purchasing/components/ImportDependencyRow.tsx` | 수입 의존도+원자재 가격 추이 2컬럼 행(Phase 9.4 신규) |
 | `features/purchasing/components/KpiSummaryPanel.tsx` | 상단 KPI 요약 패널 |
-| `features/purchasing/components/MaterialRiskOverviewRow.tsx` | 원자재 리스크 상세 그리드(게이지 카드+placeholder 자재 카드, Phase 9.4 신규 — 더보기 구조 재정의 후 점수 카드는 `ScoreCardPanel`로 분리) |
+| `features/purchasing/components/MaterialRiskOverviewRow.tsx` | 원자재 리스크 상세 그리드(게이지 카드+placeholder 자재 카드, Phase 9.4 신규 — 더보기 구조 재정의 후 점수 카드는 `ScoreCardPanel`로 분리, 9장으로 늘어나며 세로 줄바꿈 대신 가로 스크롤로 전환) |
 | `features/purchasing/components/MaterialRiskOverviewSection.tsx` | 원자재 리스크 개요 요약 행 — 더보기(Disclosure) 컨테이너 |
 | `features/purchasing/components/MaterialRiskStatusPanel.tsx` | 원자재 공급사 리스크 현황 패널 |
 | `features/purchasing/components/MaterialRiskSummaryCard.tsx` | 원자재 리스크 요약 카드(더보기 토글 보유) |
@@ -70,6 +70,7 @@
 | `lib/SideNavProvider.tsx` | SideNav 접기/펼치기 상태 Provider 컴포넌트(Phase 9.4 신규) |
 | `lib/tierLabels.ts` | org_tier별 한글 라벨 매핑 |
 | `lib/useAuthState.ts` | 인증 상태 접근 훅 |
+| `lib/useScrollOverflowHint.ts` | 스크롤 오버플로 힌트 감지 훅(Phase 9.4/10.7, `axis` 파라미터로 세로/가로 축 지원) |
 | `lib/useSideNavState.ts` | SideNav 접기/펼치기 상태 접근 훅(Phase 9.4 신규) |
 
 ## 2. 상세 — 파일별 export 목록
@@ -350,7 +351,7 @@
 ### `features/purchasing/components/MaterialRiskOverviewRow.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `MaterialRiskOverviewRow` | 원자재 리스크 상세 그리드 컴포넌트 | Phase 9.4 신규(데모 화면ID UX-01-DB, surin 이식), 더보기 구조 재정의(2026-07-27) 후 게이지 카드만 렌더링(`RiskGauge`+`RiskGradeBadge`) — 점수 카드는 `ScoreCardPanel`로 분리돼 더 이상 이 컴포넌트에 없음. 같은 날 실제 데이터가 없는 자재 6종(코발트/망간/구리/알루미늄/철광석/희토류, `PLACEHOLDER_MATERIALS`)을 제목만 있는 "준비 중" placeholder 카드로 추가(CLAUDE.md 부분 placeholder UI 원칙) |
+| `MaterialRiskOverviewRow` | 원자재 리스크 상세 그리드 컴포넌트 | Phase 9.4 신규(데모 화면ID UX-01-DB, surin 이식), 더보기 구조 재정의(2026-07-27) 후 게이지 카드만 렌더링(`RiskGauge`+`RiskGradeBadge`) — 점수 카드는 `ScoreCardPanel`로 분리돼 더 이상 이 컴포넌트에 없음. 같은 날 실제 데이터가 없는 자재 6종(코발트/망간/구리/알루미늄/철광석/희토류, `PLACEHOLDER_MATERIALS`)을 제목만 있는 "준비 중" placeholder 카드로 추가(CLAUDE.md 부분 placeholder UI 원칙). 9장(3+6)으로 카드가 늘며 `grid-template-columns` 대신 `display:flex`+`overflow-x:auto`(카드 4장 너비만 노출, 스크롤바 숨김)로 전환, `useScrollOverflowHint`를 `axis:'horizontal'`로 적용해 좌우 그라데이션+화살표 힌트 표시 |
 
 ### `features/purchasing/components/MaterialRiskOverviewSection.tsx`
 | physical | logical | 역할 |
@@ -428,6 +429,13 @@
 | physical | logical | 역할 |
 |---|---|---|
 | `useAuthState` | 인증 상태 접근 훅 | `AuthProvider` 내부에서 orgTier/이메일/signIn/signOut 제공, 범위 밖 사용 시 예외 발생 |
+
+### `lib/useScrollOverflowHint.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `ScrollOverflowHint` | 스크롤 오버플로 힌트 타입 | `hasOverflowTop`/`hasOverflowBottom` — 필드명은 축과 무관하게 고정, 세로축은 위/아래, 가로축은 왼쪽/오른쪽으로 의미 해석 |
+| `ScrollOverflowAxis` | 스크롤 오버플로 판단 축 타입 | `'vertical'`(기본) \| `'horizontal'`(자재 카드 가로 스크롤, 2026-07-27 신규) |
+| `useScrollOverflowHint` | 스크롤 오버플로 힌트 감지 훅 | scroll 이벤트+`ResizeObserver`로 실제 오버플로·스크롤 위치 감지(`ScrollCard`/`SideNav`/`AlertsPanel`이 세로축으로, `MaterialRiskOverviewRow`가 가로축으로 재사용) |
 
 ### `lib/useSideNavState.ts`
 | physical | logical | 역할 |

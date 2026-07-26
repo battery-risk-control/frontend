@@ -1,7 +1,24 @@
+/* 카드 4장 너비만큼만 잡아 5번째 카드부터 가로 스크롤 대상이 되게 한다(design-tokens.md
+   "카드 레이아웃·스크롤 규칙" d항목). 카드 폭(180px)은 이 컴포넌트에서만 쓰는 고정값. */
+.wrapper {
+  position: relative;
+  max-width: calc(180px * 4 + var(--space-4) * 3);
+}
+
 .grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: flex;
   gap: var(--space-4);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none; /* Firefox */
+}
+
+.grid::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Edge */
+}
+
+.grid > * {
+  flex: 0 0 180px;
 }
 
 .gaugeBody {
@@ -20,4 +37,42 @@
   margin: 0;
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
+}
+
+/* SideNav/AlertsPanel의 상하단 힌트와 동일한 원리를 좌우로 회전 적용 — 배경은 이 그리드가
+   놓이는 페이지 배경(--color-bg)에 맞춘다(카드 자체는 ScrollCard가 흰 배경을 가짐). */
+.overflowHintLeft,
+.overflowHintRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 32px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.overflowHintLeft {
+  left: 0;
+  justify-content: flex-start;
+  padding-left: var(--space-1);
+  background: linear-gradient(to left, rgba(255, 255, 255, 0) 0%, var(--color-bg) 75%);
+}
+
+.overflowHintRight {
+  right: 0;
+  justify-content: flex-end;
+  padding-right: var(--space-1);
+  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, var(--color-bg) 75%);
+}
+
+.overflowArrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-surface);
 }

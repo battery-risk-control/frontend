@@ -37,3 +37,8 @@ dist-ssr
 
 # 검증용 임시 스크립트(Playwright 등) — node_modules 접근을 위해 프로젝트 루트 안에 두되 커밋 대상 아님
 .scratch/
+_tmp-*.mjs
+verify-*.mjs
+shot-*.mjs
+route_check*.mjs
+debug_*.mjs

@@ -29,12 +29,19 @@
   - 원칙: dev-김영진의 구조(3계층 분리+RequireAuth, 신뢰도 라벨, 공개 대시보드, PENDING 화면, api/types.ts 스키마, CSS Modules)는 유지. surin에서는 시각/위젯 구현만 가져온다. surin의 Tailwind·mock.ts·요구사항에 없는 추가 메뉴는 가져오지 않는다.
   - [x] 9.1 GlobalRiskBoard: surin의 react-leaflet 지도 이식 (최우선 — 격차 가장 큼)
   - [ ] 9.2 로그인/회원가입: surin AuthShell 비주얼 이식 — **보류(기존 dev-김영진 화면 유지 결정, 20260722)**. surin 비주얼 이식은 현재 우선순위 밖.
-  - 9.3 원자재 가격 추이 / 2·3계층 차트: surin 차트 스타일 이식
+  - [x] 9.3 원자재 가격 추이(부분 완료, 2026-07-22~23): 전체보기/상세보기 토글, 상세보기 단독 유지 결정, 자재 드롭다운 실제 필터링, `ScrollCard` 공용 컴포넌트 도입(공개 대시보드 4개 카드 교체 포함), 애니메이션/스크롤 예외 처리(`scrollable={false}`) — surin `RiskMonitoring.tsx` 시각 이식(`d5ae9e3`/`bf68bb8`/`104c174`/`a670542`/`1938156`/`726b69f`). **"2·3계층 차트: surin 스타일 이식" 부분은 미착수** — Planning/Executive 차트 컴포넌트(`ComparisonChart`/`CumulativeRiskKpi` 등)는 Phase 6/8 이후 수정 이력이 없다(`git log` 확인). 원래 항목명이 두 범위를 함께 가리켜 착시가 있었음을 여기 기록.
   - [x] 9.4 구매팀 대시보드 UX-01-DB 데모 구조 반영 + ScrollCard 통일 + SideNav 접기: 5칸 리스크 게이지 그리드(`MaterialRiskOverviewRow`, surin `RiskStepGauge` 이식) → 지도(승격된 `GlobalRiskBoard` 재사용) → 도넛+가격추이 2단(`ImportDependencyRow`, surin `DonutChart` 이식) 요약 영역 신설, 기존 4개 패널 전체를 `ScrollCard`로 전환, `GlobalRiskBoard`/`MaterialPriceDetail`을 `components/widgets/`로 승격(공개 대시보드와 구매팀 대시보드가 공유), `SideNav` 접기/펼치기(Context 전역 상태) 추가
   - [ ] 9.5(후보) — 리스크 유형별 분포 차트: **미착수**. product-overview.md MVP 필수 항목이나 Seq 번호 없음, `risk_event` 스키마에 "유형" 관련 필드 자체가 없어 신규 필드 설계 선행 필요. 카테고리 출처·배치 화면 등 미결 사항은 `docs/roadmap-candidates.md` "C1" 참고
   - [ ] 9.6(후보) — ERP 영향 분석 화면 신설: **미착수**. surin `pages/ErpImpact.tsx`(`/erp-impact`)·데모 이미지에는 있으나 `docs/requirements-frontend.md`에 대응 Seq 항목이 없고 우리 레포엔 미구현. 상세는 `docs/roadmap-candidates.md` "C2" 참고
 
-- [ ] Phase 10(후보) — 전체 앱 반응형 대응 — 이미 합의된 사항, 아직 착수 전. 공개 대시보드(Seq 23)에 760px 미만 브레이크포인트(2x2 → 1열 4행) + 하단 콘텐츠 힌트(ScrollHint)를 실험적으로 먼저 도입(2026-07-23)했으나, 구매팀/기획팀/경영진 대시보드를 포함한 전체 화면의 반응형 대응은 이 Phase에서 별도로 다룬다. **(2026-07-26 갱신)** ScrollHint는 이후 컷오프 기법(그리드 행 auto 크기 + `.page` 자체 스크롤)으로 대체됐다 — 상세는 `docs/design-candidates.md` "공개 대시보드 좁은 화면 콘텐츠 신호" 참고.
+- [ ] Phase 10(후보) — 전체 앱 반응형 대응 — 이미 합의된 사항, 구매팀/기획팀/경영진 대시보드를 포함한 전체 화면의 반응형 대응 자체는 아직 착수 전. 아래 하위 항목은 진행 중 실제로 완료된 작업을 시간순으로 소급 번호 매김한 것(2026-07-26)이며, 전체 반응형 자체가 끝난 건 아니다.
+  - [x] 10.1 — 공개 대시보드(Seq 23) 760px 미만 브레이크포인트(2x2 → 1열 4행) + 하단 콘텐츠 힌트(ScrollHint)를 실험적으로 도입(2026-07-23, `5e4f119`). **(2026-07-26 갱신)** ScrollHint는 이후 컷오프 기법(그리드 행 auto 크기 + `.page` 자체 스크롤)으로 대체됐다 — 상세는 `docs/design-candidates.md` "공개 대시보드 좁은 화면 콘텐츠 신호" 참고.
+  - [ ] 10.2 — 스켈레톤 UI(`VITE_MOCK_DELAY_MS` 기반 의도적 로딩 지연 + 스켈레톤 화면): **미착수**.
+  - [x] 10.3 — GlobalRiskBoard 지도 스크롤휠 확대/축소 활성화(2026-07-25, `b0485d0`).
+  - [x] 10.4 — 원자재 리스크 게이지 요약 카드 + "더보기"(Disclosure)로 5칸 상세 그리드 접기/펼치기(`MaterialRiskOverviewSection`, 2026-07-25, `b98b222`).
+  - [x] 10.5 — GlobalRiskBoard 지도 정보 패널 접기/펼치기(Disclosure)(2026-07-25, `b98b222`, 10.4와 같은 커밋).
+  - [x] 10.6 — `ScrollCard` 카드 내부 오버플로 시각 신호(그라데이션+화살표 힌트) 도입 + `design-tokens.md` "카드 레이아웃·스크롤 규칙" 문서화(2026-07-25, `8080101`), 이후 3개 패널(원자재 공급사 리스크 현황/ERP 영향/구매 대응 우선순위)에 실측 기반 `maxBodyHeight` 적용해 4개 초과 시 실제 스크롤 트리거하도록 후속 수정(2026-07-25, `588fe73`).
+  - [x] 10.7 — 구매팀 대시보드 페이지 섹션 도트 인디케이터(`PageSectionDots`, 2026-07-26, `c73b654`) + SideNav/AlertsPanel 독립 스크롤 전환(`useScrollOverflowHint` 공용 훅 분리 포함, `dd3e07a`) + 공개 대시보드 컷오프 기법 적용(`37e011d`) + 미사용 `ScrollHint` 컴포넌트 삭제 및 문서 정리(`71d8787`).
   - [ ] 10.9(후보) — SideNav 실기능 연결: **미착수**. `SIDE_NAV_ITEMS`가 Phase 4부터 `href="#..."` 순수 placeholder였고(원 목적: React key 중복 경고 회피), Phase 8에서 "실제 라우트로 교체"했다는 기록과 달리 실제로는 여전히 미기능 상태임을 Playwright 6개 시나리오로 실측 확인(2026-07-24). 앵커 스크롤/신규 페이지 분리/surin `Briefing.tsx` 이식 등 착수 방향 전부 미결정. 상세는 `docs/roadmap-candidates.md` "C3" 참고
 
 ## 재사용 규칙 (Phase 3에서 결정되는 인터페이스는 이후 Phase가 그대로 따른다)

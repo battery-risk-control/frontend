@@ -79,3 +79,31 @@ git remote 연결 및 첫 커밋 (미착수)
 `risk_event.market_context`에 `country_code`/`country_name`/`coordinates`(optional) 스키마 확장 — mock 6건 중 국가를 텍스트 근거로 특정할 수 없던 1건(코발트 "최대 생산국")은 프로젝트 기획 정의서 근거(DRC가 세계 최대 코발트 생산국)로 사용자 확인 후 채움. `docs/naming-glossary.md`에 "동일 물리 필드명은 동일 한글 표기, 의미가 다르면 수식어+병기, export 인터페이스 필드 누락 금지" 규칙을 신설하고 기존 결함(email/label 표기 불일치, risk_event_id·business_unit·period 등 첫 필드 누락) 전수 스캔 후 정정 — `CLAUDE.md`에도 "대표 사례 발견 시 전수 스캔 후 보고" 원칙 추가. `features/public/` 전체에 대해 Phase 8.5/9 반영 누락 여부 문서 감사 수행 — Header 조건부 표시·확인 모달 변경이 `CLAUDE.md`/`docs/roadmap.md`에 반영 안 된 지점, `product-overview.md`의 "실시간 스트리밍" 제외 항목과 "실시간 뉴스 속보" 화면명 간 표현 긴장을 찾아 정정.
 
 `GlobalRiskBoard.tsx`를 리스트형 요약에서 `react-leaflet`+`world-atlas`(GeoJSON 국경)+`topojson-client` 기반 실제 인터랙티브 세계지도로 재구현(surin 브랜치 구현 참고, 데이터는 dev-김영진 risk_event 스키마만 사용). "이벤트뷰"(개별 좌표 마커)/"국가뷰"(country_code 기준 집계, 대표 이벤트=최고 심각도 등급·동률 시 배열 순서, 건수 배지) 토글 구현, country_code 없는 이벤트는 마커 제외, 마커 클릭 시 컴포넌트 내부 상세 패널에 해당 국가/이벤트의 risk_event 리스트 표시(`RiskGradeBadge`/`ConfidenceBadge` 재사용). Leaflet SVG 렌더러가 CSS 커스텀 프로퍼티를 해석하지 못해 리스크 등급 색상을 `tokens.css`와 동일한 hex로 리터럴 미러링 — `docs/design-tokens.md`에 각주로 근거 남김. `naming-glossary.md`/`docs/roadmap.md`(Phase 9.1 완료 표시) 등 관련 문서 동기화.
+
+## Phase 9 요약 (9.1~9.6)
+
+> 9.1은 위 절에 상세 기록(재작성하지 않음). 9.2~9.6을 시간순으로 요약한다.
+
+- **9.1 GlobalRiskBoard 인터랙티브 지도** — 완료. 위 "Phase 9.1" 절 참고(`3bfe905`/`f6a6b6d`/`c6b2815`).
+- **9.2 로그인/회원가입 surin 비주얼 이식** — **보류 결정**(2026-07-22, `0d8c7e4`). 기존 dev-김영진 화면 유지, 코드 변경 없음.
+- **9.3 원자재 가격 추이(부분 완료)** — 전체보기/상세보기 토글 도입 후 상세보기 단독 유지 결정, 자재 드롭다운 실제 필터링, `ScrollCard` 공용 컴포넌트 최초 도입(공개 대시보드 4개 카드 교체 포함), 차트 진입 애니메이션/스크롤 예외(`scrollable={false}`) 처리(2026-07-22~23, `d5ae9e3`/`bf68bb8`/`b508c24`/`104c174`/`a670542`/`1938156`/`726b69f`/`0e09f6c`). 원 항목명에 포함된 "2·3계층 차트 surin 스타일 이식" 부분은 **미착수**(`ComparisonChart`/`CumulativeRiskKpi` 등은 Phase 6/8 이후 수정 이력 없음, `docs/roadmap.md` 9.3 각주 참고).
+- **9.4 구매팀 대시보드 UX-01-DB 데모 구조 반영** — 완료(2026-07-24, `5c4a812` 데모 구조+ScrollCard 통일, `c8873f3` SideNav 접기/펼치기). 5칸 리스크 게이지 그리드/지도 재사용/도넛+가격추이 2단 요약 영역 신설, 기존 4개 패널 ScrollCard 전환, `GlobalRiskBoard`/`MaterialPriceDetail`을 `components/widgets/`로 승격.
+- **9.5(후보) 리스크 유형별 분포 차트** — **미착수**. `risk_event` 스키마에 "유형" 필드 자체가 없어 신규 필드 설계 선행 필요 — 미결 사항은 `docs/roadmap-candidates.md` "C1"(2026-07-24, `9a9cd06`) 참고.
+- **9.6(후보) ERP 영향 분석 화면 신설** — **미착수**. surin에는 있으나 `requirements-frontend.md`에 대응 Seq 항목 없음 — 미결 사항은 `docs/roadmap-candidates.md` "C2"(2026-07-24, `42fbb71`) 참고.
+
+## Phase 10 — 스크롤/오버플로/내비게이션 UX 개선 (소급 번호 매김, 2026-07-26)
+
+> `docs/roadmap.md` Phase 10 하위 항목(10.1~10.9, 전체 반응형 대응 자체는 미완료)과 번호를 맞춰 기록한다. 원래 Phase로 계획된 작업이 아니라, 세션 중 실측으로 발견한 문제를 그때그때 수정하며 쌓인 항목들을 이번에 소급 정리한 것이다.
+
+- **10.1 공개 대시보드 좁은 화면 브레이크포인트 + ScrollHint** — 실험적 도입(2026-07-23, `5e4f119`). 760px 미만에서 2x2→1열 4행 전환 + IntersectionObserver 기반 하단 콘텐츠 힌트. 이후 10.7에서 컷오프 기법으로 대체.
+- **10.2 스켈레톤 UI** — **미착수**. `VITE_MOCK_DELAY_MS` 기반 의도적 로딩 지연 자체는 있으나(CLAUDE.md "환경 단계" 원칙), 스켈레톤 화면 컴포넌트 구현은 아직 없음.
+- **10.3 GlobalRiskBoard 지도 스크롤휠 확대/축소 활성화** — `scrollWheelZoom` false→true(2026-07-25, `b0485d0`). `zoomControl`/`doubleClickZoom` 충돌 없음 사전 확인.
+- **10.4 원자재 리스크 게이지 요약 + 더보기(Disclosure)** — `MaterialRiskSummaryCard`(자재별 grade+changeLabel 미니 리스트) 신설 + `MaterialRiskOverviewSection`이 기존 5칸 상세 그리드(`MaterialRiskOverviewRow`)를 CSS `max-height`+`opacity` transition으로 접기/펼치기(2026-07-25, `b98b222`). 기본 펼침 상태 유지(요약 카드 도입 전 UX와 동일).
+- **10.5 GlobalRiskBoard 정보 패널 접기/펼치기** — 지도 마커 클릭 시 나오는 상세 패널을 헤더(항상 노출)+본문(Disclosure)으로 분리(2026-07-25, `b98b222`, 10.4와 동일 커밋). 마커 선택 시 자동으로 펼쳐짐.
+- **10.6 ScrollCard 카드 내부 오버플로 힌트 + maxBodyHeight** — `.body`의 scroll/resize 이벤트 + `ResizeObserver`로 실제 오버플로·스크롤 위치를 감지해 하단 그라데이션+화살표 힌트 자동 표시(2026-07-25, `8080101`, `design-tokens.md` "카드 레이아웃·스크롤 규칙" a~d 신설). 이후 원자재 공급사 리스크 현황/ERP 영향/구매 대응 우선순위 3개 패널이 mock 6건에도 실제로 오버플로가 발생하지 않던 문제(페이지가 무제약으로 늘어나는 구조)를 실측(Playwright)으로 발견해 `maxBodyHeight` prop을 신설하고 실측 높이(440/360/368px)로 적용(2026-07-25, `588fe73`).
+- **10.7 페이지 섹션 도트 인디케이터 + 독립 스크롤 + 컷오프 기법** — 3개 커밋으로 진행:
+  - `components/ui/PageSectionDots` 신규 — 섹션 heading을 `IntersectionObserver`로 다중 관찰해 도트 활성 표시, 클릭 시 `scrollIntoView`, 상하단 이동 리모컨(목록 버튼은 placeholder). 구매팀 대시보드에 8개 섹션 적용(2026-07-26, `c73b654`). 검증 중 `.body{gap:40px}`가 SideNavToggleButton/SideNav 사이에도 번지는 부작용을 발견해 `main{margin-right:40px}`로 대체.
+  - SideNav/AlertsPanel을 `position:sticky`+독립 스크롤로 전환, `ScrollCard`의 하단 전용 오버플로 감지 로직을 `useScrollOverflowHint` 공용 훅으로 일반화(상/하단)해 재사용(2026-07-26, `dd3e07a`). 검증 중 sticky Header(56px)와 겹치는 문제를 발견해 `--header-height` 토큰 신설.
+  - 공개 대시보드의 `ScrollHint` 사용을 제거하고, `.page`를 `height:100vh; overflow-y:auto`로, 그리드 행을 `minmax(320px, 1fr)`→`minmax(320px, auto)`로 바꿔 다음 카드/행이 하단에 자연스럽게 일부만 보이는 컷오프 효과로 대체(2026-07-26, `37e011d`). 1fr 사용 시 카드 내부에 억지 빈 여백이 생기는 부작용을 실측으로 발견해 auto로 교체.
+  - 이후 별도 확인을 거쳐 `ScrollHint` 컴포넌트 자체(소비처 0건 재확인)를 완전히 삭제하고, `design-tokens.md` a) 절을 3갈래 체계(페이지 레벨 내비게이션/페이지 레벨 콘텐츠 신호/카드 레벨 오버플로 신호) 표로 재작성(2026-07-26, `71d8787`).
+- **10.9(후보) SideNav 실기능 연결** — **미착수**. 상세는 `docs/roadmap-candidates.md` "C3" 참고.

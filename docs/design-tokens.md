@@ -96,7 +96,7 @@
 
 ### d) 형제 카드/리스트 항목 4개 초과 시 overflow 처리 기준
 
-다음 기준으로 적용한다: 리스트 항목이 4개를 초과하면 4개가 보이는 높이로 `max-height`를 고정하고 `overflow-y: auto`로 5번째 항목부터 스크롤하게 한다(`ScrollCard`의 `maxBodyHeight` prop). 높이는 해당 화면의 실제 렌더링 결과를 실측해 정한다(고정 공식이 아님 — 항목당 내용 길이가 다르면 카드마다 다르게 측정). 5칸 게이지 그리드처럼 리스트가 아니라 그리드 형태인 경우는 스크롤 대신 "더보기"(Disclosure)로 처리한다(`MaterialRiskOverviewSection` 참고). 3개 이하는 대부분 화면에 한 번에 들어가 별도 처리가 불필요한 경우가 많다.
+다음 기준으로 적용한다: 리스트 항목이 4개를 초과하면 4개가 보이는 높이로 `max-height`를 고정하고 `overflow-y: auto`로 5번째 항목부터 스크롤하게 한다(`ScrollCard`의 `maxBodyHeight` prop). 높이는 해당 화면의 실제 렌더링 결과를 실측해 정한다(고정 공식이 아님 — 항목당 내용 길이가 다르면 카드마다 다르게 측정). 5칸 게이지 그리드처럼 리스트가 아니라 그리드 형태인 경우는 스크롤 대신 "더보기"(Disclosure)로 처리한다(`MaterialRiskOverviewSection` 참고). 3개 이하는 대부분 화면에 한 번에 들어가 별도 처리가 불필요한 경우가 많다 — 단, 3개 이하라도 부모 폭이 좁아지는 상황(SideNav 펼침 등)에서는 줄바꿈 대신 가로 스크롤을 적용한다(`MaterialRiskOverviewSection`의 요약 행 참고, 실측으로 auto-fit grid가 부모 폭 축소 시 줄바꿈됨을 확인).
 
 ## 스크롤 UI 노출 원칙
 

@@ -1,8 +1,9 @@
-import { useRef, useState, type MouseEvent } from 'react'
+import { useRef } from 'react'
 import { RiskGauge } from '../../../components/ui/RiskGauge'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { useScrollOverflowHint } from '../../../lib/useScrollOverflowHint'
+import { useHorizontalDragScroll } from '../../../lib/useHorizontalDragScroll'
 import type { MaterialRiskGaugeItem } from '../../../api/types'
 import styles from './MaterialRiskOverviewRow.module.css'
 
@@ -37,43 +38,22 @@ const PLACEHOLDER_MATERIALS = ['코발트', '망간', '구리', '알루미늄', 
  */
 export function MaterialRiskOverviewRow({ gauges }: MaterialRiskOverviewRowProps) {
   const gridRef = useRef<HTMLDivElement>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const dragStartXRef = useRef(0)
-  const dragStartScrollLeftRef = useRef(0)
   const { hasOverflowTop: hasOverflowLeft, hasOverflowBottom: hasOverflowRight } = useScrollOverflowHint(
     gridRef,
     true,
     'horizontal',
   )
-
-  function handleMouseDown(event: MouseEvent<HTMLDivElement>) {
-    const el = gridRef.current
-    if (!el) return
-    setIsDragging(true)
-    dragStartXRef.current = event.pageX
-    dragStartScrollLeftRef.current = el.scrollLeft
-  }
-
-  function handleMouseMove(event: MouseEvent<HTMLDivElement>) {
-    if (!isDragging) return
-    const el = gridRef.current
-    if (!el) return
-    el.scrollLeft = dragStartScrollLeftRef.current - (event.pageX - dragStartXRef.current)
-  }
-
-  function handleMouseUp() {
-    setIsDragging(false)
-  }
+  const drag = useHorizontalDragScroll(gridRef)
 
   return (
     <div className={styles.wrapper}>
       <div
         ref={gridRef}
-        className={isDragging ? `${styles.grid} ${styles.dragging}` : styles.grid}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        className={drag.isDragging ? `${styles.grid} ${styles.dragging}` : styles.grid}
+        onMouseDown={drag.onMouseDown}
+        onMouseMove={drag.onMouseMove}
+        onMouseUp={drag.onMouseUp}
+        onMouseLeave={drag.onMouseLeave}
       >
         {gauges.map((gauge) => (
           <ScrollCard

@@ -79,7 +79,9 @@ Agent 구조는 §4.2 텍스트 기준 **ERP 에이전트 + RAG 에이전트 병
 단계 제어는 환경변수 `VITE_MOCK_DELAY_MS`로 한다(기본값은 화면별 스켈레톤 검증에 필요한
 지연 시간, `0`으로 설정 시 지연 없이 즉시 반환 — 단계 2/3 시뮬레이션용).
 
-②서비스 테스트 단계 전환은 `VITE_API_BASE_URL` 설정으로 이뤄진다(이번에 신규 추가).
+①→② 전환은 `.env` 삭제가 아니라 `npm run dev:live`(`vite --mode live`)로 한다.
+`.env.live`(gitignore 대상)에 `VITE_API_BASE_URL`을 두고, 기본 `npm run dev`는 이 파일을
+안 읽으므로 항상 ①단계로 뜬다. 시연 절차 상세는 `docs/backend-integration-guide.md` 참고.
 
 **앞으로 "mock 전용", "데모 전용", "배포 전 삭제" 등 임시 조치를 문서화할 때는 반드시
 위 3단계 중 몇 단계까지 유지되는지 명시한다** (예: "①에서만 유지, ②부터 제거" 또는

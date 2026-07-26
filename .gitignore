@@ -14,7 +14,7 @@ dist-ssr
 
 # Environment variables
 .env*
-!.env.example
+!.env.live.example
 
 # Playwright
 /playwright-report/

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { MaterialRiskOverviewRow } from './MaterialRiskOverviewRow'
 import { MaterialRiskSummaryCard } from './MaterialRiskSummaryCard'
+import { ScoreCardPanel } from './ScoreCardPanel'
 import type { MaterialRiskGaugeItem, ScoreCardItem } from '../../../api/types'
 import styles from './MaterialRiskOverviewSection.module.css'
 
@@ -10,11 +11,12 @@ interface MaterialRiskOverviewSectionProps {
 }
 
 /**
- * 자재 리스크 게이지 그룹 요약 + 더보기(Disclosure). 상단에 항상 보이는
- * `MaterialRiskSummaryCard`(자재별 grade+changeLabel 미니 리스트) + "더보기" 토글을 두고,
- * 그 아래 기존 `MaterialRiskOverviewRow`(5칸 상세 그리드, 무수정 재사용)를 애니메이션과 함께
- * 접기/펼치기 한다. 기본 펼침 상태(요약 도입 전에도 상세 그리드가 항상 보이던 UX를 그대로
- * 유지) — 더보기는 "전체 상세 게이지 숨기기/보기" 역할이다.
+ * 원자재 리스크 개요 요약 행 — 형제 카드 3장(현재 기준): [원자재(더보기 있음)]
+ * [외부 리스크 종합 점수(더보기 없음)] [ERP 영향 점수(더보기 없음)]. "원자재" 카드
+ * (`MaterialRiskSummaryCard`)의 더보기를 펼치면 그 아래 자재 게이지 상세 그리드
+ * (`MaterialRiskOverviewRow`)만 애니메이션과 함께 확장된다 — 점수 카드(`ScoreCardPanel`)는
+ * 항상 노출 상태를 유지하고 더보기 대상에서 제외된다(점수 카드는 형제 관계일 뿐 더보기
+ * 내부 콘텐츠가 아니다). 기본 펼침 상태(요약 도입 전에도 상세 그리드가 항상 보이던 UX 유지).
  *
  * 사용 예:
  *   <MaterialRiskOverviewSection gauges={gauges} scoreCards={scoreCards} />
@@ -24,10 +26,15 @@ export function MaterialRiskOverviewSection({ gauges, scoreCards }: MaterialRisk
 
   return (
     <div className={styles.section}>
-      <MaterialRiskSummaryCard gauges={gauges} expanded={expanded} onToggle={() => setExpanded((prev) => !prev)} />
+      <div className={styles.row}>
+        <MaterialRiskSummaryCard gauges={gauges} expanded={expanded} onToggle={() => setExpanded((prev) => !prev)} />
+        {scoreCards.map((card) => (
+          <ScoreCardPanel key={card.label} card={card} />
+        ))}
+      </div>
       <div className={expanded ? `${styles.detail} ${styles.detailExpanded}` : styles.detail}>
         <div className={styles.detailInner}>
-          <MaterialRiskOverviewRow gauges={gauges} scoreCards={scoreCards} />
+          <MaterialRiskOverviewRow gauges={gauges} />
         </div>
       </div>
     </div>

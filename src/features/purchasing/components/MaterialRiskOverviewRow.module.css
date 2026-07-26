@@ -15,33 +15,3 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
-
-.scoreBody {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.scoreValue {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text);
-}
-
-.scoreMax {
-  margin-left: var(--space-1);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-regular);
-  color: var(--color-text-muted);
-}
-
-.scoreFooter {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.diffLabel {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-}

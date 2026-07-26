@@ -54,9 +54,12 @@
 | `features/purchasing/components/ImportDependencyPanel.tsx` | 수입 의존도 도넛차트 패널(Phase 9.4 신규) |
 | `features/purchasing/components/ImportDependencyRow.tsx` | 수입 의존도+원자재 가격 추이 2컬럼 행(Phase 9.4 신규) |
 | `features/purchasing/components/KpiSummaryPanel.tsx` | 상단 KPI 요약 패널 |
-| `features/purchasing/components/MaterialRiskOverviewRow.tsx` | 원자재 리스크 개요 5칸 그리드(게이지 3+점수 2, Phase 9.4 신규) |
+| `features/purchasing/components/MaterialRiskOverviewRow.tsx` | 원자재 리스크 상세 그리드(게이지 카드, Phase 9.4 신규 — 더보기 구조 재정의 후 점수 카드는 `ScoreCardPanel`로 분리) |
+| `features/purchasing/components/MaterialRiskOverviewSection.tsx` | 원자재 리스크 개요 요약 행 — 더보기(Disclosure) 컨테이너 |
 | `features/purchasing/components/MaterialRiskStatusPanel.tsx` | 원자재 공급사 리스크 현황 패널 |
+| `features/purchasing/components/MaterialRiskSummaryCard.tsx` | 원자재 리스크 요약 카드(더보기 토글 보유) |
 | `features/purchasing/components/PurchasePriorityPanel.tsx` | 구매 대응 우선순위 패널 |
+| `features/purchasing/components/ScoreCardPanel.tsx` | 점수 카드(외부 리스크 종합/ERP 영향) — 더보기 구조 재정의로 신규 분리 |
 | `features/purchasing/pages/BriefingDetailPage.tsx` | 1계층 브리핑 자료 열람 페이지 |
 | `features/purchasing/pages/PurchasingDashboardPage.tsx` | 1계층 구매팀 대시보드 페이지 |
 | `lib/AuthContext.ts` | 인증 상태 Context 객체 정의 |
@@ -347,17 +350,32 @@
 ### `features/purchasing/components/MaterialRiskOverviewRow.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `MaterialRiskOverviewRow` | 원자재 리스크 개요 5칸 그리드 컴포넌트 | Phase 9.4 신규(데모 화면ID UX-01-DB, surin 이식). 게이지 카드 3장(`RiskGauge`+`RiskGradeBadge`) + 점수 카드 2장(파일 내부 헬퍼 `ScoreCard`, 별도 export 안 함) — 5개 전부 개별 `ScrollCard`로 감쌈 |
+| `MaterialRiskOverviewRow` | 원자재 리스크 상세 그리드 컴포넌트 | Phase 9.4 신규(데모 화면ID UX-01-DB, surin 이식), 더보기 구조 재정의(2026-07-27) 후 게이지 카드만 렌더링(`RiskGauge`+`RiskGradeBadge`) — 점수 카드는 `ScoreCardPanel`로 분리돼 더 이상 이 컴포넌트에 없음 |
+
+### `features/purchasing/components/MaterialRiskOverviewSection.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `MaterialRiskOverviewSection` | 원자재 리스크 개요 요약 행 컴포넌트 | 더보기 구조 재정의(2026-07-27) — 형제 카드 3장(원자재 `MaterialRiskSummaryCard` + 점수 카드 2장 `ScoreCardPanel`)을 한 grid row로 배치. "원자재" 카드의 더보기만 그 아래 `MaterialRiskOverviewRow`(자재 상세 그리드)의 펼침 상태(`expanded`)를 제어하고, 점수 카드는 더보기 대상에서 제외돼 항상 노출 |
 
 ### `features/purchasing/components/MaterialRiskStatusPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
 | `MaterialRiskStatusPanel` | 원자재 공급사 리스크 현황 패널 컴포넌트 | risk_event 리스트, 등급/신뢰도 배지 포함. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
 
+### `features/purchasing/components/MaterialRiskSummaryCard.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `MaterialRiskSummaryCard` | 원자재 리스크 요약 카드 컴포넌트 | 자재별 grade+changeLabel 미니 리스트 + 더보기/접기 토글 버튼. `expanded`/`onToggle`은 부모(`MaterialRiskOverviewSection`)로부터 props로 받는다(자체 state 없음) |
+
 ### `features/purchasing/components/PurchasePriorityPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
 | `PurchasePriorityPanel` | 구매 대응 우선순위 패널 컴포넌트 | 등급·재고 소진일 기준 파생 정렬 순위 리스트. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
+
+### `features/purchasing/components/ScoreCardPanel.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ScoreCardPanel` | 점수 카드 컴포넌트 | 더보기 구조 재정의(2026-07-27)로 `MaterialRiskOverviewRow` 내부 비export 헬퍼(`ScoreCard`)에서 분리 — "원자재" 카드와 형제 관계로 `MaterialRiskOverviewSection`의 요약 행에 항상 노출되며 더보기 대상이 아니다 |
 
 ### `features/purchasing/pages/BriefingDetailPage.tsx`
 | physical | logical | 역할 |
@@ -367,7 +385,7 @@
 ### `features/purchasing/pages/PurchasingDashboardPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바(+`SideNavToggleButton`) + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역 3종(`MaterialRiskOverviewRow` → 승격된 `GlobalRiskBoard` → `ImportDependencyRow`)을 기존 4단 패널 위에 추가 |
+| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바(+`SideNavToggleButton`) + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역 3종(`MaterialRiskOverviewSection` → 승격된 `GlobalRiskBoard` → `ImportDependencyRow`)을 기존 4단 패널 위에 추가 |
 
 ### `lib/AuthContext.ts`
 | physical | logical | 역할 |

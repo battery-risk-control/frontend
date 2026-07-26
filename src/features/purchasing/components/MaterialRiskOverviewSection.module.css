@@ -4,6 +4,15 @@
   gap: var(--space-4);
 }
 
+/* 현재는 형제 카드 3장(원자재 1 + 점수 2)뿐이라 넘치지 않지만, 추후 카테고리가 늘어 4개를
+   초과하면 design-tokens.md "카드 레이아웃·스크롤 규칙" d항목(4개 초과 시 스크롤) 적용 여부를
+   별도로 검토한다 — auto-fit 그리드라 카드가 늘어도 줄바꿈만 될 뿐 구조는 깨지지 않는다. */
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+}
+
 .detail {
   max-height: 0;
   opacity: 0;

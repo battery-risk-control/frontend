@@ -48,6 +48,10 @@ npm run dev:live
 `npm run dev`(기본)는 `.env.live`를 읽지 않으므로 항상 ①단계(mock)로 뜬다 — `dev:live`를 쓸
 때만 실제 백엔드를 호출한다.
 
+`dev:live` 실행 전 5173 포트가 비어있는지 확인할 것(다른 dev 서버가 떠 있으면 CORS
+불일치로 Failed to fetch 발생) — strictPort 설정으로 이제 포트 충돌 시 조용히 다른 포트로
+넘어가지 않고 에러로 즉시 알려준다.
+
 ## 5. 종료 방법
 
 `.env.live` 파일을 지울 필요가 없다 — 그냥 `npm run dev`로 돌아가면 자동으로 ①단계(mock)로

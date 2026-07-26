@@ -33,3 +33,9 @@
   color: var(--color-primary);
   text-decoration: underline;
 }
+
+.authError {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-risk-critical);
+}

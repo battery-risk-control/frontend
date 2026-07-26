@@ -20,6 +20,7 @@ export function AuthPage() {
   const { orgTier, signIn } = useAuthState()
   const [activeTab, setActiveTab] = useState<AuthTabKey>('login')
   const [pendingMessage, setPendingMessage] = useState<string | null>(null)
+  const [authError, setAuthError] = useState<string | null>(null)
 
   // signIn()과 navigate()를 같은 이벤트 핸들러에서 함께 호출하면(로그아웃에서 실측된 것과 같은 원인으로)
   // react-router의 history 갱신과 인증 Context 갱신이 서로 다른 타이밍에 처리되면서, 목적지 라우트의
@@ -32,18 +33,29 @@ export function AuthPage() {
     }
   }, [orgTier, navigate])
 
-  function handleLogin(values: LoginFormValues) {
-    const result = login(values)
-    if ('error' in result) {
-      setPendingMessage(result.message)
-      return
+  async function handleLogin(values: LoginFormValues) {
+    setAuthError(null)
+    try {
+      const result = await login(values)
+      if ('error' in result) {
+        setPendingMessage(result.message)
+        return
+      }
+      signIn(result.org_tier, values.email)
+    } catch (err) {
+      // 백엔드 연동(②단계) 시 mock에는 없던 실패(예: 비밀번호 오류)가 여기로 들어온다.
+      setAuthError(err instanceof Error ? err.message : '로그인에 실패했습니다.')
     }
-    signIn(result.org_tier, values.email)
   }
 
-  function handleSignup(values: SignupFormValues) {
-    const result = signup(values)
-    setPendingMessage(result.message)
+  async function handleSignup(values: SignupFormValues) {
+    setAuthError(null)
+    try {
+      const result = await signup(values)
+      setPendingMessage(result.message)
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : '회원가입에 실패했습니다.')
+    }
   }
 
   function handleGoHome() {
@@ -65,6 +77,7 @@ export function AuthPage() {
           ← 홈으로
         </Link>
         <AuthTabs activeTab={activeTab} onChange={setActiveTab} />
+        {authError && <p className={styles.authError}>{authError}</p>}
         {activeTab === 'login' ? <LoginForm onSubmit={handleLogin} /> : <SignupForm onSubmit={handleSignup} />}
         <SecurityBadge />
       </div>

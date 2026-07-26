@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState, type MouseEvent } from 'react'
 import { RiskGauge } from '../../../components/ui/RiskGauge'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
@@ -25,24 +25,56 @@ const PLACEHOLDER_MATERIALS = ['코발트', '망간', '구리', '알루미늄', 
  * (ScoreCardPanel)로 분리돼 더 이상 이 그리드에 포함되지 않는다.
  *
  * 카드가 9장(3+6)으로 늘어나며 세로 줄바꿈 대신 한 줄 가로 나열 + 가로 스크롤로 전환했다
- * (design-tokens.md "카드 레이아웃·스크롤 규칙" d항목). 카드 4장 너비만큼만 보이고 5번째부터는
- * 가로 스크롤 대상이며, `useScrollOverflowHint`를 `axis: 'horizontal'`로 적용해 좌우
- * 그라데이션+화살표 힌트를 표시한다(SideNav/AlertsPanel의 상하단 힌트와 동일한 원리, 축만 회전).
+ * (design-tokens.md "스크롤 UI 노출 원칙" — 형제 카드 캐러셀형). 폭은 섹션이 준 실제 폭에
+ * 그대로 맞추고(고정 카드 수 계산 없음), 넘치는 만큼만 스크롤 대상이 된다. 네이티브
+ * 스크롤바를 그대로 노출하고, 가로 휠 지원이 기기마다 약한 점을 보완하기 위해 마우스
+ * 드래그(grab-to-scroll)로도 이동할 수 있다. `useScrollOverflowHint`를 `axis: 'horizontal'`로
+ * 적용해 좌우 그라데이션+화살표 힌트도 함께 표시한다(SideNav/AlertsPanel의 상하단 힌트와
+ * 동일한 원리, 축만 회전).
  *
  * 사용 예:
  *   <MaterialRiskOverviewRow gauges={gauges} />
  */
 export function MaterialRiskOverviewRow({ gauges }: MaterialRiskOverviewRowProps) {
   const gridRef = useRef<HTMLDivElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStartXRef = useRef(0)
+  const dragStartScrollLeftRef = useRef(0)
   const { hasOverflowTop: hasOverflowLeft, hasOverflowBottom: hasOverflowRight } = useScrollOverflowHint(
     gridRef,
     true,
     'horizontal',
   )
 
+  function handleMouseDown(event: MouseEvent<HTMLDivElement>) {
+    const el = gridRef.current
+    if (!el) return
+    setIsDragging(true)
+    dragStartXRef.current = event.pageX
+    dragStartScrollLeftRef.current = el.scrollLeft
+  }
+
+  function handleMouseMove(event: MouseEvent<HTMLDivElement>) {
+    if (!isDragging) return
+    const el = gridRef.current
+    if (!el) return
+    el.scrollLeft = dragStartScrollLeftRef.current - (event.pageX - dragStartXRef.current)
+  }
+
+  function handleMouseUp() {
+    setIsDragging(false)
+  }
+
   return (
     <div className={styles.wrapper}>
-      <div ref={gridRef} className={styles.grid}>
+      <div
+        ref={gridRef}
+        className={isDragging ? `${styles.grid} ${styles.dragging}` : styles.grid}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
         {gauges.map((gauge) => (
           <ScrollCard
             key={gauge.name}

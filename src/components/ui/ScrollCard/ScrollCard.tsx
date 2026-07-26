@@ -29,8 +29,9 @@ interface ScrollCardProps {
  * `scrollable`이 `true`일 때, 본문이 실제로 오버플로하고 아직 끝까지 스크롤하지 않은
  * 상태면 하단에 그라데이션+화살표 힌트를 자동으로 표시한다(`useScrollOverflowHint` 공용
  * 훅이 scroll/resize 이벤트 + `ResizeObserver`로 감지, SideNav/AlertsPanel의 상하단
- * 힌트와 로직 공유) — 그리드 페이지 다음 카드를 안내하는 `ScrollHint`와는 별개로,
- * "이 카드 안에 아직 안 보이는 콘텐츠가 있다"는 것만 알린다. 화면별로 별도 작업 없이
+ * 힌트와 로직 공유) — 카드 레벨 오버플로 신호로, 페이지 레벨 내비게이션(`PageSectionDots`)이나
+ * 페이지 레벨 콘텐츠 신호(컷오프 기법, `docs/design-tokens.md` "카드 레이아웃·스크롤 규칙" a
+ * 참고)와는 다른 계층에서 "이 카드 안에 아직 안 보이는 콘텐츠가 있다"는 것만 알린다. 화면별로 별도 작업 없이
  * `ScrollCard`를 쓰는 모든 카드에 자동 적용된다.
  * `maxBodyHeight`(선택)를 주면 본문에 해당 높이로 `max-height`가 걸린다 — 형제 리스트
  * 항목이 4개를 넘는 카드에서 "4개 높이로 고정 + 5번째부터 스크롤" 규칙(design-tokens.md

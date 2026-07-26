@@ -71,16 +71,20 @@
 
 각 카드(영역)는 정확히 하나의 스크롤 컨테이너만 갖는다. 그 안의 구조적 하위그룹은 별도 스크롤을 갖지 않고, 개별 요소(리스트 행 등)가 넘칠 때만 "더보기"(`...` 또는 아이콘, 본문을 과도하게 가리지 않는 형태)로 펼친다. 1차 개요에 필요한 정보를 더보기 뒤에 숨기지 않는다(빠른 개요 파악 우선). ScrollCard 공용 컴포넌트가 이 규칙을 구조적으로 보장한다(소급 문서화: 현재 `ScrollCard`가 이 규칙을 구조적으로 보장함 — `.body` 하나에만 `overflow-y:auto`가 걸리고, 그 안의 하위 요소는 별도 스크롤 컨테이너를 갖지 않는다).
 
-### a) ScrollHint vs ScrollCard 내부 오버플로 신호 — 적용 범위 구분
+### a) 스크롤/내비게이션 신호 3갈래 — 적용 범위 구분
 
-이름이 비슷한 두 컴포넌트가 서로 다른 문제를 다룬다 — 혼동하지 않도록 표로 구분한다.
+"더 볼 콘텐츠가 있다"를 알리거나 그리로 이동시키는 장치가 화면 레벨에 따라 3갈래로 나뉜다 — 이름이 비슷하거나 목적이 겹쳐 보일 수 있어 표로 구분한다.
 
-| | `ScrollHint`(`components/ui/ScrollHint`) | `ScrollCard` 내부 오버플로 신호 |
-|---|---|---|
-| 대상 | 페이지 레벨 그리드(예: 비로그인 공개 대시보드 2x2→1열) | 카드 레벨(`ScrollCard`의 `.body`) |
-| 감지 방식 | `targetId`로 지정한 요소를 `IntersectionObserver`로 관찰 | `.body`의 scroll 이벤트 + `ResizeObserver`로 실제 오버플로·스크롤 위치 감지 |
-| 트리거 조건 | 지정 대상(보통 마지막 카드)이 아직 뷰포트에 안 보일 때 | `scrollable`이 `true`이고, 본문이 실제로 넘치며 아직 끝까지 스크롤하지 않았을 때 |
-| 적용 범위 | 사용하는 페이지가 직접 배치 — **2026-07-26: 유일한 소비처였던 `PublicDashboardPage`가 컷오프 기법(그리드 행 auto 크기 + `.page` 자체 스크롤)으로 전환하며 제거, 현재 실사용처 없음(`docs/design-candidates.md` 참고)** | `ScrollCard`를 쓰는 모든 카드에 자동 적용(화면별 추가 작업 불필요) |
+| | 페이지 레벨 내비게이션 (`PageSectionDots`) | 페이지 레벨 콘텐츠 신호 (컷오프 기법) | 카드 레벨 오버플로 신호 (`useScrollOverflowHint`) |
+|---|---|---|---|
+| 대상 | 이름 붙은 섹션이 많은 화면(예: 구매팀 대시보드) | 섹션이 적고 간소한 화면(예: 비로그인 공개 대시보드) | 카드 레벨(`ScrollCard`의 `.body`, 또는 `SideNav`/`AlertsPanel`의 독립 스크롤 영역) |
+| 구현 방식 | `components/ui/PageSectionDots` — 각 섹션 heading을 `IntersectionObserver`로 다중 관찰, 도트 클릭 시 `scrollIntoView` | `.page`를 `height:100vh; overflow-y:auto`로, 그리드 행을 `minmax(320px, auto)`로 둬 다음 행/카드가 하단에 자연스럽게 일부만 보이게 함(레이아웃만으로 구현, JS 없음) | `.body`의 scroll 이벤트 + `ResizeObserver`로 실제 오버플로·스크롤 위치 감지, 상/하단 그라데이션+화살표 힌트 |
+| 트리거 조건 | 항상 표시, 현재 뷰포트에 보이는 섹션의 도트만 활성화 | 항상 표시(레이아웃 자체가 신호), 별도 표시/숨김 로직 없음 | 본문이 실제로 넘치고, 아직 끝(또는 처음)까지 스크롤하지 않았을 때만 표시 |
+| 적용 범위 | 현재 구매팀 대시보드 1곳(`variant="withAside"`) — `variant="standalone"`은 아직 실사용처 없음 | 현재 비로그인 공개 대시보드 1곳 | `ScrollCard`를 쓰는 모든 카드 + `SideNav`/`AlertsPanel`에 자동 적용(화면별 추가 작업 불필요) |
+
+**어떤 화면에 어느 걸 쓸지 판단 기준(현재 기준, 고정 공식 아님)**: 이름 붙은 독립 섹션이 8개 이상으로 많고 점프 이동이 유용한 화면 → `PageSectionDots`, 섹션이 3~4개 이하로 적고 구조가 간소한 화면 → 컷오프 기법, 카드 내부의 리스트/본문 하나가 자체적으로 넘치는 경우 → `useScrollOverflowHint`(`ScrollCard`가 이미 내장, `SideNav`/`AlertsPanel`처럼 카드가 아닌 곳은 직접 적용).
+
+**폐기됨**: `ScrollHint`(`components/ui/ScrollHint`, `IntersectionObserver`로 그리드 마지막 카드 관찰) — 2026-07-26, 유일한 소비처였던 `PublicDashboardPage`가 컷오프 기법으로 전환하며 실사용처가 사라져 컴포넌트 자체를 삭제(`docs/design-candidates.md` "공개 대시보드 좁은 화면 콘텐츠 신호" 참고).
 
 ### b) 카드 단일 스크롤 규칙(중첩 스크롤 금지)
 

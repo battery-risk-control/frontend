@@ -26,9 +26,10 @@ const TIER_TABS = [
  * 전환 — 실험적 브레이크포인트, 전체 앱 반응형 Phase 전까지의 임시 대응).
  * 상단 탭 클릭 시 로그인 상태가 있으면 해당 계층 대시보드로, 없으면 /auth로 이동한다.
  * 그리드를 뷰포트 높이보다 살짝 낮게 제한(컷오프)해 다음 행이 하단에 일부 잘려 보이도록
- * 해서 "더 볼 콘텐츠가 있다"를 별도 안내 컴포넌트 없이 레이아웃만으로 전달한다(기존
- * IntersectionObserver 기반 `ScrollHint`를 대체 — 실험적, 전체 반응형 Phase 전까지의 임시
- * 대응이라는 점은 동일).
+ * 해서 "더 볼 콘텐츠가 있다"를 별도 안내 컴포넌트 없이 레이아웃만으로 전달한다 — 섹션이
+ * 적고 간소한 화면에 쓰는 페이지 레벨 콘텐츠 신호(`docs/design-tokens.md` "카드 레이아웃·
+ * 스크롤 규칙" a 참고, 폐기된 IntersectionObserver 기반 `ScrollHint`를 대체). 실험적,
+ * 전체 반응형 Phase 전까지의 임시 대응이라는 점은 동일.
  */
 export function PublicDashboardPage() {
   const navigate = useNavigate()

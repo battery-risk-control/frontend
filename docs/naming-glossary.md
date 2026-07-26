@@ -54,7 +54,7 @@
 | `features/purchasing/components/ImportDependencyPanel.tsx` | 수입 의존도 도넛차트 패널(Phase 9.4 신규) |
 | `features/purchasing/components/ImportDependencyRow.tsx` | 수입 의존도+원자재 가격 추이 2컬럼 행(Phase 9.4 신규) |
 | `features/purchasing/components/KpiSummaryPanel.tsx` | 상단 KPI 요약 패널 |
-| `features/purchasing/components/MaterialRiskOverviewRow.tsx` | 원자재 리스크 상세 그리드(게이지 카드, Phase 9.4 신규 — 더보기 구조 재정의 후 점수 카드는 `ScoreCardPanel`로 분리) |
+| `features/purchasing/components/MaterialRiskOverviewRow.tsx` | 원자재 리스크 상세 그리드(게이지 카드+placeholder 자재 카드, Phase 9.4 신규 — 더보기 구조 재정의 후 점수 카드는 `ScoreCardPanel`로 분리) |
 | `features/purchasing/components/MaterialRiskOverviewSection.tsx` | 원자재 리스크 개요 요약 행 — 더보기(Disclosure) 컨테이너 |
 | `features/purchasing/components/MaterialRiskStatusPanel.tsx` | 원자재 공급사 리스크 현황 패널 |
 | `features/purchasing/components/MaterialRiskSummaryCard.tsx` | 원자재 리스크 요약 카드(더보기 토글 보유) |
@@ -350,7 +350,7 @@
 ### `features/purchasing/components/MaterialRiskOverviewRow.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `MaterialRiskOverviewRow` | 원자재 리스크 상세 그리드 컴포넌트 | Phase 9.4 신규(데모 화면ID UX-01-DB, surin 이식), 더보기 구조 재정의(2026-07-27) 후 게이지 카드만 렌더링(`RiskGauge`+`RiskGradeBadge`) — 점수 카드는 `ScoreCardPanel`로 분리돼 더 이상 이 컴포넌트에 없음 |
+| `MaterialRiskOverviewRow` | 원자재 리스크 상세 그리드 컴포넌트 | Phase 9.4 신규(데모 화면ID UX-01-DB, surin 이식), 더보기 구조 재정의(2026-07-27) 후 게이지 카드만 렌더링(`RiskGauge`+`RiskGradeBadge`) — 점수 카드는 `ScoreCardPanel`로 분리돼 더 이상 이 컴포넌트에 없음. 같은 날 실제 데이터가 없는 자재 6종(코발트/망간/구리/알루미늄/철광석/희토류, `PLACEHOLDER_MATERIALS`)을 제목만 있는 "준비 중" placeholder 카드로 추가(CLAUDE.md 부분 placeholder UI 원칙) |
 
 ### `features/purchasing/components/MaterialRiskOverviewSection.tsx`
 | physical | logical | 역할 |

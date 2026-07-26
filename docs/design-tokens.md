@@ -80,7 +80,7 @@
 | 대상 | 페이지 레벨 그리드(예: 비로그인 공개 대시보드 2x2→1열) | 카드 레벨(`ScrollCard`의 `.body`) |
 | 감지 방식 | `targetId`로 지정한 요소를 `IntersectionObserver`로 관찰 | `.body`의 scroll 이벤트 + `ResizeObserver`로 실제 오버플로·스크롤 위치 감지 |
 | 트리거 조건 | 지정 대상(보통 마지막 카드)이 아직 뷰포트에 안 보일 때 | `scrollable`이 `true`이고, 본문이 실제로 넘치며 아직 끝까지 스크롤하지 않았을 때 |
-| 적용 범위 | 사용하는 페이지가 직접 배치(현재 `PublicDashboardPage` 1곳) | `ScrollCard`를 쓰는 모든 카드에 자동 적용(화면별 추가 작업 불필요) |
+| 적용 범위 | 사용하는 페이지가 직접 배치 — **2026-07-26: 유일한 소비처였던 `PublicDashboardPage`가 컷오프 기법(그리드 행 auto 크기 + `.page` 자체 스크롤)으로 전환하며 제거, 현재 실사용처 없음(`docs/design-candidates.md` 참고)** | `ScrollCard`를 쓰는 모든 카드에 자동 적용(화면별 추가 작업 불필요) |
 
 ### b) 카드 단일 스크롤 규칙(중첩 스크롤 금지)
 

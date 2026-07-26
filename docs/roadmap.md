@@ -34,7 +34,7 @@
   - [ ] 9.5(후보) — 리스크 유형별 분포 차트: **미착수**. product-overview.md MVP 필수 항목이나 Seq 번호 없음, `risk_event` 스키마에 "유형" 관련 필드 자체가 없어 신규 필드 설계 선행 필요. 카테고리 출처·배치 화면 등 미결 사항은 `docs/roadmap-candidates.md` "C1" 참고
   - [ ] 9.6(후보) — ERP 영향 분석 화면 신설: **미착수**. surin `pages/ErpImpact.tsx`(`/erp-impact`)·데모 이미지에는 있으나 `docs/requirements-frontend.md`에 대응 Seq 항목이 없고 우리 레포엔 미구현. 상세는 `docs/roadmap-candidates.md` "C2" 참고
 
-- [ ] Phase 10(후보) — 전체 앱 반응형 대응 — 이미 합의된 사항, 아직 착수 전. 공개 대시보드(Seq 23)에 760px 미만 브레이크포인트(2x2 → 1열 4행) + 하단 콘텐츠 힌트(ScrollHint)를 실험적으로 먼저 도입(2026-07-23)했으나, 구매팀/기획팀/경영진 대시보드를 포함한 전체 화면의 반응형 대응은 이 Phase에서 별도로 다룬다.
+- [ ] Phase 10(후보) — 전체 앱 반응형 대응 — 이미 합의된 사항, 아직 착수 전. 공개 대시보드(Seq 23)에 760px 미만 브레이크포인트(2x2 → 1열 4행) + 하단 콘텐츠 힌트(ScrollHint)를 실험적으로 먼저 도입(2026-07-23)했으나, 구매팀/기획팀/경영진 대시보드를 포함한 전체 화면의 반응형 대응은 이 Phase에서 별도로 다룬다. **(2026-07-26 갱신)** ScrollHint는 이후 컷오프 기법(그리드 행 auto 크기 + `.page` 자체 스크롤)으로 대체됐다 — 상세는 `docs/design-candidates.md` "공개 대시보드 좁은 화면 콘텐츠 신호" 참고.
   - [ ] 10.9(후보) — SideNav 실기능 연결: **미착수**. `SIDE_NAV_ITEMS`가 Phase 4부터 `href="#..."` 순수 placeholder였고(원 목적: React key 중복 경고 회피), Phase 8에서 "실제 라우트로 교체"했다는 기록과 달리 실제로는 여전히 미기능 상태임을 Playwright 6개 시나리오로 실측 확인(2026-07-24). 앵커 스크롤/신규 페이지 분리/surin `Briefing.tsx` 이식 등 착수 방향 전부 미결정. 상세는 `docs/roadmap-candidates.md` "C3" 참고
 
 ## 재사용 규칙 (Phase 3에서 결정되는 인터페이스는 이후 Phase가 그대로 따른다)

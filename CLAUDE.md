@@ -83,6 +83,9 @@ Agent 구조는 §4.2 텍스트 기준 **ERP 에이전트 + RAG 에이전트 병
 `.env.live`(gitignore 대상)에 `VITE_API_BASE_URL`을 두고, 기본 `npm run dev`는 이 파일을
 안 읽으므로 항상 ①단계로 뜬다. 시연 절차 상세는 `docs/backend-integration-guide.md` 참고.
 
+①단계는 어떤 `.env` 파일도 요구하지 않는다 — `VITE_API_BASE_URL`이 undefined면
+`auth.api.ts`가 자동으로 mock 분기로 빠진다(구조적 보장, 파일 존재 여부와 무관).
+
 **앞으로 "mock 전용", "데모 전용", "배포 전 삭제" 등 임시 조치를 문서화할 때는 반드시
 위 3단계 중 몇 단계까지 유지되는지 명시한다** (예: "①에서만 유지, ②부터 제거" 또는
 "①②③ 전 단계에서 유지"). 이 태깅 없이 "임시"라고만 쓰지 않는다.

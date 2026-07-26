@@ -78,6 +78,8 @@ npm run build
 npm run test:e2e
 ```
 
+별도 `.env` 파일 없이 `npm install && npm run dev`만 실행해도 정상 동작합니다(①단계 mock 모드가 기본값) — `.env.live`는 ②단계(백엔드 연결) 전환 시에만 필요합니다.
+
 ```bash
 # 프론트엔드 단독 모드(기본값) — mock 데이터 + 로딩 지연 시뮬레이션
 npm run dev

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
+import { useScrollOverflowHint } from '../../../lib/useScrollOverflowHint'
 import styles from './ScrollCard.module.css'
 
 interface ScrollCardProps {
@@ -26,8 +27,9 @@ interface ScrollCardProps {
  * 콘텐츠용. `flex:1`/`min-height:0` 등 레이아웃 속성은 그대로 유지된다.
  *
  * `scrollable`이 `true`일 때, 본문이 실제로 오버플로하고 아직 끝까지 스크롤하지 않은
- * 상태면 하단에 그라데이션+화살표 힌트를 자동으로 표시한다(scroll/resize 이벤트 +
- * `ResizeObserver`로 감지) — 그리드 페이지 다음 카드를 안내하는 `ScrollHint`와는 별개로,
+ * 상태면 하단에 그라데이션+화살표 힌트를 자동으로 표시한다(`useScrollOverflowHint` 공용
+ * 훅이 scroll/resize 이벤트 + `ResizeObserver`로 감지, SideNav/AlertsPanel의 상하단
+ * 힌트와 로직 공유) — 그리드 페이지 다음 카드를 안내하는 `ScrollHint`와는 별개로,
  * "이 카드 안에 아직 안 보이는 콘텐츠가 있다"는 것만 알린다. 화면별로 별도 작업 없이
  * `ScrollCard`를 쓰는 모든 카드에 자동 적용된다.
  * `maxBodyHeight`(선택)를 주면 본문에 해당 높이로 `max-height`가 걸린다 — 형제 리스트
@@ -53,31 +55,7 @@ export function ScrollCard({
   children,
 }: ScrollCardProps) {
   const bodyRef = useRef<HTMLDivElement>(null)
-  const [showOverflowHint, setShowOverflowHint] = useState(false)
-
-  useEffect(() => {
-    if (!scrollable) return
-    const body = bodyRef.current
-    if (!body) return
-
-    function updateHint() {
-      const el = bodyRef.current
-      if (!el) return
-      const hasOverflow = el.scrollHeight - el.clientHeight > 1
-      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 1
-      setShowOverflowHint(hasOverflow && !atBottom)
-    }
-
-    updateHint()
-    body.addEventListener('scroll', updateHint)
-    const resizeObserver = new ResizeObserver(updateHint)
-    resizeObserver.observe(body)
-
-    return () => {
-      body.removeEventListener('scroll', updateHint)
-      resizeObserver.disconnect()
-    }
-  }, [scrollable, children])
+  const { hasOverflowBottom: showOverflowHint } = useScrollOverflowHint(bodyRef, scrollable)
 
   return (
     <section

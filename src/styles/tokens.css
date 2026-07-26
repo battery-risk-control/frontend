@@ -43,4 +43,7 @@
 
   /* Motion */
   --transition-fast: 0.2s;
+
+  /* Layout */
+  --header-height: 56px; /* Header.module.css .header의 height와 동일 — sticky 하위 요소(top 오프셋) 공용 참조 */
 }

@@ -55,6 +55,9 @@
 
   /* Motion */
   --transition-fast: 0.2s;
+
+  /* Layout */
+  --header-height: 56px; /* Header.module.css .header의 height와 동일 — sticky 하위 요소(top 오프셋) 공용 참조 */
 }
 ```
 
@@ -62,6 +65,7 @@
 - 신뢰도 라벨 색상(`--color-confidence-*`)과 리스크 등급 색상(`--color-risk-*`)은 서로 다른 축이다. 화면에 함께 쓰일 때 혼동되지 않도록 컴포넌트명도 구분한다 (`ConfidenceBadge` vs `RiskGradeBadge`).
 - spacing/radius는 근거 자료가 없어 업계 관례로 채운 값이다. 실제 Figma 고해상도 스타일 가이드 프레임을 열람할 수 있게 되면(Figma 커넥터 연결 시) 가장 먼저 교체해야 한다.
 - GlobalRiskBoard 지도 마커(Leaflet SVG 렌더러)는 CSS 변수를 읽지 못해 리스크 등급 색상을 hex로 리터럴 미러링함 — 이 문서의 리스크 색상 토큰이 바뀌면 GlobalRiskBoard.tsx의 하드코딩된 값도 함께 갱신해야 함.
+- `--header-height`는 `Header`가 `position:sticky; top:0`으로 항상 뷰포트 상단에 고정되는 것과 겹치지 않도록, 마찬가지로 `position:sticky`인 하위 요소(`SideNav`/`AlertsPanel`/`PageSectionDots`의 `withAside` 레일)가 `top`/`height` 계산에 공통 참조하는 값이다. `Header.module.css`의 `.header{height:...}`가 바뀌면 이 토큰도 함께 갱신해야 한다(값이 어긋나면 sticky 요소가 Header 뒤로 가려지거나 그 아래 빈틈이 생김).
 
 ## 카드 레이아웃·스크롤 규칙
 

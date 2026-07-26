@@ -11,7 +11,7 @@
 
 .railWithAside {
   position: sticky;
-  top: var(--space-6);
+  top: calc(var(--header-height) + var(--space-6)); /* sticky Header와 겹치지 않도록 그 아래에서부터 고정 */
 }
 
 .railStandalone {

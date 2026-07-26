@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { MaterialRiskOverviewRow } from './MaterialRiskOverviewRow'
 import { MaterialRiskSummaryCard } from './MaterialRiskSummaryCard'
 import { ScoreCardPanel } from './ScoreCardPanel'
+import { HorizontalScrollHint } from '../../../components/ui/HorizontalScrollHint'
 import { useScrollOverflowHint } from '../../../lib/useScrollOverflowHint'
 import { useHorizontalDragScroll } from '../../../lib/useHorizontalDragScroll'
 import type { MaterialRiskGaugeItem, ScoreCardItem } from '../../../api/types'
@@ -24,7 +25,7 @@ interface MaterialRiskOverviewSectionProps {
  * 있어(auto-fit grid), `MaterialRiskOverviewRow`와 동일한 "형제 카드 캐러셀형"
  * (design-tokens.md "스크롤 UI 노출 원칙")으로 전환했다 — display:flex+nowrap+overflow-x:auto,
  * 네이티브 스크롤바 노출, `useHorizontalDragScroll` 공용 훅으로 grab-to-scroll 드래그,
- * `useScrollOverflowHint(axis:'horizontal')`로 좌우 힌트.
+ * `useScrollOverflowHint(axis:'horizontal')`+`HorizontalScrollHint` 공용 컴포넌트로 좌우 힌트.
  *
  * 사용 예:
  *   <MaterialRiskOverviewSection gauges={gauges} scoreCards={scoreCards} />
@@ -55,24 +56,7 @@ export function MaterialRiskOverviewSection({ gauges, scoreCards }: MaterialRisk
             <ScoreCardPanel key={card.label} card={card} />
           ))}
         </div>
-        {hasOverflowLeft && (
-          <div className={styles.overflowHintLeft} aria-hidden="true">
-            <span className={styles.overflowArrow}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 6l-6 6 6 6" />
-              </svg>
-            </span>
-          </div>
-        )}
-        {hasOverflowRight && (
-          <div className={styles.overflowHintRight} aria-hidden="true">
-            <span className={styles.overflowArrow}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 6l6 6-6 6" />
-              </svg>
-            </span>
-          </div>
-        )}
+        <HorizontalScrollHint showLeft={hasOverflowLeft} showRight={hasOverflowRight} />
       </div>
       <div className={expanded ? `${styles.detail} ${styles.detailExpanded}` : styles.detail}>
         <div className={styles.detailInner}>

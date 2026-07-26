@@ -32,42 +32,6 @@
   flex: 1 0 240px;
 }
 
-.overflowHintLeft,
-.overflowHintRight {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 32px;
-  display: flex;
-  align-items: center;
-  pointer-events: none;
-}
-
-.overflowHintLeft {
-  left: 0;
-  justify-content: flex-start;
-  padding-left: var(--space-1);
-  background: linear-gradient(to left, rgba(255, 255, 255, 0) 0%, var(--color-bg) 75%);
-}
-
-.overflowHintRight {
-  right: 0;
-  justify-content: flex-end;
-  padding-right: var(--space-1);
-  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, var(--color-bg) 75%);
-}
-
-.overflowArrow {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: var(--color-surface);
-}
-
 .detail {
   max-height: 0;
   opacity: 0;

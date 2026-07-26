@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { RiskGauge } from '../../../components/ui/RiskGauge'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
+import { HorizontalScrollHint } from '../../../components/ui/HorizontalScrollHint'
 import { useScrollOverflowHint } from '../../../lib/useScrollOverflowHint'
 import { useHorizontalDragScroll } from '../../../lib/useHorizontalDragScroll'
 import type { MaterialRiskGaugeItem } from '../../../api/types'
@@ -30,8 +31,7 @@ const PLACEHOLDER_MATERIALS = ['코발트', '망간', '구리', '알루미늄', 
  * 그대로 맞추고(고정 카드 수 계산 없음), 넘치는 만큼만 스크롤 대상이 된다. 네이티브
  * 스크롤바를 그대로 노출하고, 가로 휠 지원이 기기마다 약한 점을 보완하기 위해 마우스
  * 드래그(grab-to-scroll)로도 이동할 수 있다. `useScrollOverflowHint`를 `axis: 'horizontal'`로
- * 적용해 좌우 그라데이션+화살표 힌트도 함께 표시한다(SideNav/AlertsPanel의 상하단 힌트와
- * 동일한 원리, 축만 회전).
+ * 적용하고, 좌우 그라데이션+화살표 힌트는 공용 컴포넌트 `HorizontalScrollHint`로 표시한다.
  *
  * 사용 예:
  *   <MaterialRiskOverviewRow gauges={gauges} />
@@ -75,24 +75,7 @@ export function MaterialRiskOverviewRow({ gauges }: MaterialRiskOverviewRowProps
           </ScrollCard>
         ))}
       </div>
-      {hasOverflowLeft && (
-        <div className={styles.overflowHintLeft} aria-hidden="true">
-          <span className={styles.overflowArrow}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 6l-6 6 6 6" />
-            </svg>
-          </span>
-        </div>
-      )}
-      {hasOverflowRight && (
-        <div className={styles.overflowHintRight} aria-hidden="true">
-          <span className={styles.overflowArrow}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 6l6 6-6 6" />
-            </svg>
-          </span>
-        </div>
-      )}
+      <HorizontalScrollHint showLeft={hasOverflowLeft} showRight={hasOverflowRight} />
     </div>
   )
 }

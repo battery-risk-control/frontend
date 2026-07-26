@@ -24,6 +24,8 @@
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-bold);
   color: var(--color-primary);
+  scroll-margin-top: var(--header-height); /* PageSectionDots의 scrollIntoView가 sticky Header에
+    가리지 않는 위치로 이동하도록 — heading 자체에 스크롤 정지 여백을 준다 */
 }
 
 .caption {

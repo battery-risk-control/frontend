@@ -27,6 +27,7 @@
 | `components/ui/ConfidenceBadge.tsx` | 리스크 판단 신뢰도 라벨 배지 |
 | `components/ui/ConfirmModal.tsx` | 확인/취소 모달 |
 | `components/ui/DonutChart.tsx` | 도넛 차트(Phase 9.4 신규, surin DonutChart 이식) |
+| `components/ui/PageSectionDots/PageSectionDots.tsx` | 페이지 섹션 이동 도트 인디케이터(Phase 10.7 신규, `rootMargin` 헤더 높이 보정 2026-07-27) |
 | `components/ui/RiskGauge.tsx` | 3단계 리스크 게이지(Phase 9.4 신규, surin RiskStepGauge 이식) |
 | `components/ui/RiskGradeBadge.tsx` | 리스크 등급 배지 |
 | `components/ui/ScrollCard/ScrollCard.tsx` | 카드형 UI 공통 컨테이너(스크롤 캡슐화) |
@@ -212,6 +213,12 @@
 |---|---|---|
 | `DonutChart` | 도넛 차트 컴포넌트 | Phase 9.4 신규, surin `DonutChart` 이식(recharts `Pie`/`Cell`). 고정 180x180px 컨테이너라 `ScrollCard` 기본 `scrollable`(true) 상태에서도 `ResponsiveContainer` 되먹임 리사이즈가 재현되지 않는다(사전 실측 확인) |
 
+### `components/ui/PageSectionDots/PageSectionDots.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `PageSectionDotsSection` | 도트 섹션 정의 타입 | `id`(표시명)+`headingId`(관찰 대상 heading의 DOM id) |
+| `PageSectionDots` | 페이지 섹션 이동 도트 인디케이터 컴포넌트 | Phase 10.7 신규. `sections`의 heading들을 `IntersectionObserver`로 다중 관찰해 뷰포트에 보이는 섹션 도트를 활성 표시(여러 개 동시 활성 가능), 클릭 시 `scrollIntoView`. 2026-07-27 — `rootMargin: -{header-height}px 0px -60% 0px`를 추가해 sticky Header에 가려지는 상단을 관찰 대상에서 제외하고 "뷰포트 상단 40%" 기준선으로 좁힘(통상적 스크롤스파이 기법), heading 쪽은 `ScrollCard.module.css`의 `.title`에 `scroll-margin-top: var(--header-height)`를 줘 `scrollIntoView`도 함께 보정. 페이지 맨 아래(마지막 섹션 부근)에는 이 조정만으로 해소되지 않는 사각지대가 남아있음을 실측 확인(추가 설계는 후속 과제로 보류) |
+
 ### `components/ui/RiskGauge.tsx`
 | physical | logical | 역할 |
 |---|---|---|
@@ -226,7 +233,7 @@
 ### `components/ui/ScrollCard/ScrollCard.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `ScrollCard` | 카드형 UI 공통 컨테이너 컴포넌트 | 제목(`title`)+헤더 우측 컨트롤(`actions`)+부제(`caption`)+스크롤 영역 밖 고정 콘텐츠(`pinnedTop`)+스크롤 본문(`children`)+하단 고정 안내(`footer`) 슬롯 구조. 본문에 기본적으로 `min-height:0`+`overflow-y:auto`를 캡슐화해, 부모 레이아웃이 카드 높이를 제약하는 경우(예: 비로그인 공개 대시보드 2x2 그리드)에만 내부 스크롤이 실제로 발동하고 그 외에는 자유롭게 늘어난다. `fillHeight`는 형제와 높이를 맞춰야 하는 카드용(`height:100%`). `scrollable`(기본 `true`)을 `false`로 주면 본문에 `overflow: visible`이 적용돼 스크롤이 배제된다(레이아웃 속성인 `flex:1`/`min-height:0`은 유지) — Recharts `ResponsiveContainer`처럼 스크롤 컨테이너 안에서 폭을 잘못 재측정하는 콘텐츠용(MaterialPriceDetail에서 실사용, 트러블슈팅으로 확인). 신규 카드형 컴포넌트는 이 컴포넌트를 사용하고 자체 `.panel`/`.title` 스타일을 새로 만들지 않는다(CLAUDE.md) |
+| `ScrollCard` | 카드형 UI 공통 컨테이너 컴포넌트 | 제목(`title`)+헤더 우측 컨트롤(`actions`)+부제(`caption`)+스크롤 영역 밖 고정 콘텐츠(`pinnedTop`)+스크롤 본문(`children`)+하단 고정 안내(`footer`) 슬롯 구조. 본문에 기본적으로 `min-height:0`+`overflow-y:auto`를 캡슐화해, 부모 레이아웃이 카드 높이를 제약하는 경우(예: 비로그인 공개 대시보드 2x2 그리드)에만 내부 스크롤이 실제로 발동하고 그 외에는 자유롭게 늘어난다. `fillHeight`는 형제와 높이를 맞춰야 하는 카드용(`height:100%`). `scrollable`(기본 `true`)을 `false`로 주면 본문에 `overflow: visible`이 적용돼 스크롤이 배제된다(레이아웃 속성인 `flex:1`/`min-height:0`은 유지) — Recharts `ResponsiveContainer`처럼 스크롤 컨테이너 안에서 폭을 잘못 재측정하는 콘텐츠용(MaterialPriceDetail에서 실사용, 트러블슈팅으로 확인). 신규 카드형 컴포넌트는 이 컴포넌트를 사용하고 자체 `.panel`/`.title` 스타일을 새로 만들지 않는다(CLAUDE.md). `.title`(h2)에 `scroll-margin-top: var(--header-height)`를 줘(2026-07-27) `PageSectionDots`의 `scrollIntoView`가 sticky Header에 안 가리는 위치로 이동하게 한다 |
 
 ### `components/widgets/GlobalRiskBoard.tsx`
 | physical | logical | 역할 |

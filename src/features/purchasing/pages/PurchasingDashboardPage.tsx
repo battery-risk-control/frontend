@@ -12,6 +12,7 @@ import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
+import { PageSectionDots } from '../../../components/ui/PageSectionDots/PageSectionDots'
 import { KpiSummaryPanel } from '../components/KpiSummaryPanel'
 import { MaterialRiskOverviewSection } from '../components/MaterialRiskOverviewSection'
 import { ImportDependencyRow } from '../components/ImportDependencyRow'
@@ -26,6 +27,18 @@ const SIDE_NAV_ITEMS = [
   // 별도 목록 화면이 없어 대시보드 내 각 리스크 항목의 "브리핑 보기" 링크로 진입한다.
   // href는 SideNav의 React key 중복을 피하기 위해 /purchasing 뒤에 서로 다른 해시를 붙였다.
   { label: '브리핑 자료', href: '/purchasing#briefing' },
+]
+
+// alerts-heading(우측 알림 패널)은 항상 뷰포트 밖으로 스크롤되지 않는 별도 영역이라 제외.
+const SECTION_DOTS_SECTIONS = [
+  { id: '상단 KPI 요약', headingId: 'kpi-summary-heading' },
+  { id: '원자재 리스크 요약', headingId: 'material-risk-summary-heading' },
+  { id: '글로벌 리스크 맵', headingId: 'global-risk-board-heading' },
+  { id: '수입 의존도', headingId: 'import-dependency-heading' },
+  { id: '원자재 가격 추이', headingId: 'material-price-detail-heading' },
+  { id: '원자재 공급사 리스크 현황', headingId: 'material-risk-heading' },
+  { id: 'ERP 영향', headingId: 'erp-impact-heading' },
+  { id: '구매 대응 우선순위', headingId: 'purchase-priority-heading' },
 ]
 
 /**
@@ -62,6 +75,7 @@ export function PurchasingDashboardPage() {
           <ErpImpactPanel events={events} />
           <PurchasePriorityPanel events={events} />
         </main>
+        <PageSectionDots variant="withAside" sections={SECTION_DOTS_SECTIONS} />
         <AlertsPanel events={events} />
       </div>
       <Footer />

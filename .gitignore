@@ -33,3 +33,6 @@ dist-ssr
 
 # Claude Code (개인 전용 설정 — settings.json은 공용이라 제외 대상 아님)
 .claude/settings.local.json
+
+# 검증용 임시 스크립트(Playwright 등) — node_modules 접근을 위해 프로젝트 루트 안에 두되 커밋 대상 아님
+.scratch/

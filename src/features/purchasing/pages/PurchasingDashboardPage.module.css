@@ -16,6 +16,7 @@
   flex-direction: column;
   gap: var(--space-6);
   padding: var(--space-6);
+  margin-right: 40px; /* 도트 인디케이터(PageSectionDots) 레일 공간 — main-aside 사이에만 적용, SideNav 쪽 간격은 그대로 유지 */
 }
 
 .heading {

@@ -1,4 +1,6 @@
 .toggleButton {
+  position: sticky; /* SideNav .wrapper와 동일 — 같은 .body(flex) 안에서 페이지 스크롤에도 계속 보이게 함 */
+  top: var(--header-height); /* sticky Header(56px)와 겹치지 않도록 그 아래에서부터 고정 */
   display: inline-flex;
   align-items: center;
   justify-content: center;

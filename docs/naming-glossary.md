@@ -189,7 +189,7 @@
 ### `components/layout/SideNavToggleButton.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `SideNavToggleButton` | SideNav 접기/펼치기 토글 버튼 컴포넌트 | Phase 9.4 신규. `useSideNavState()`의 `collapsed`/`toggle` 사용, 인라인 SVG 쉐브론(`aria-label`/`aria-expanded`). SideNav가 접히면 폭이 0이 돼 내부 요소가 클릭 불가능해지므로 SideNav 바깥(각 페이지 `.body`, `<SideNav>` 바로 앞)에 별도로 둔다 |
+| `SideNavToggleButton` | SideNav 접기/펼치기 토글 버튼 컴포넌트 | Phase 9.4 신규. `useSideNavState()`의 `collapsed`/`toggle` 사용, 인라인 SVG 쉐브론(`aria-label`/`aria-expanded`). SideNav가 접히면 폭이 0이 돼 내부 요소가 클릭 불가능해지므로 SideNav 바깥(각 페이지 `.body`, `<SideNav>` 바로 앞)에 별도로 둔다. `position:sticky;top:var(--header-height)`가 누락돼 페이지 스크롤 시 버튼만 SideNav와 달리 사라지던 버그를 수정(2026-07-27) — SideNav `.wrapper`와 동일한 sticky 처리 적용 |
 
 ### `components/layout/SkipLink.tsx`
 | physical | logical | 역할 |

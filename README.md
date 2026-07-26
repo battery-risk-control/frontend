@@ -122,6 +122,8 @@ VITE_MOCK_DELAY_MS=0 npm run dev
 
 단계 전환 방법은 아래 "실행 방법"을 참고하세요.
 
+백엔드를 실제로 연결해 시연/테스트하는 방법은 [docs/backend-integration-guide.md](docs/backend-integration-guide.md) 참고.
+
 ## ERD
 
 데이터베이스 설계(ERD)는 이 레포(프론트엔드) 범위 밖이며, 백엔드 레포에서 관리합니다.

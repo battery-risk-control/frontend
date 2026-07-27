@@ -70,10 +70,20 @@ npm run dev:live
 
 ## 알려진 이슈
 
-- **e2e 프리뷰 포트(4173) CORS 미허용** — Playwright e2e(`npm run test:e2e`)는
-  `vite preview`(4173)를 대상으로 하는데, 백엔드 `CORS_ALLOWED_ORIGINS` 기본값에 4173이
-  없어 실 백엔드 대상으로 e2e를 돌리면 대부분 실패한다. 백엔드 팀(minji) 확인 대기 중 —
-  상세는 [docs/roadmap-candidates.md](roadmap-candidates.md) "C6" 참고.
-- **테스트 계정 3종 미시드** — `purchasing@test.local`/`planning@test.local`/
-  `executive@test.local`은 mock 전용이라 실제 DB에는 없다. 필요하면 회원가입 플로우로 직접
-  만들거나, 백엔드의 기존 방식 가입 경로(`role` 필드 지정 시 즉시 APPROVED)로 시드한다.
+- ~~e2e 프리뷰 포트(4173) CORS 미허용~~ — **해결됨(2026-07-27)**. 백엔드 `CORS_ALLOWED_ORIGINS`
+  에 4173이 정식 추가됐다(`bb9f17a`). 상세는 [docs/roadmap-candidates.md](roadmap-candidates.md)
+  "C6" 참고.
+- ~~테스트 계정 3종 미시드~~ — **해결됨(2026-07-27)**. 백엔드 `AUTH_TEST_SEED_ENABLED=true`
+  설정 시 `purchasing`/`planning`/`executive@test.local`(비번 `test1234!`, APPROVED)과
+  `pending@company.com`(비번 `anything`, PENDING)이 자동 시드된다(`bb9f17a`,
+  `AuthTestSeedConfig.java`). 로컬에서 실 백엔드 대상 시연/e2e를 돌릴 때는 백엔드 `.env`
+  (또는 `docker compose` 환경변수)에 `AUTH_TEST_SEED_ENABLED=true`를 설정하고
+  `docker compose up -d --build postgres fastapi spring`으로 재기동해야 한다(기본값은
+  `false` — 운영 환경에 이 계정들이 새는 것을 막기 위함). **CI에서 실 백엔드 대상 e2e를
+  돌릴 때도 이 환경변수가 필요하다** — 백엔드 구동 스텝을 갖고 있는 쪽(백엔드 레포 CI)에서
+  설정해야 한다.
+- **실 DB 대상 e2e는 고정 이메일 재사용 시 유니크 제약으로 실패할 수 있음** — mock은
+  무상태라 재발 안 함(2026-07-27 실측: `pending-approval.spec.ts`의 회원가입 테스트가 고정
+  이메일 `hong@company.com`을 재사용해 실 DB 대상 2회차 실행부터 실패, 24개 중 1개
+  실패 → 원인 규명 후 수정). 신규 e2e 작성 시 회원가입류 테스트는 고정 이메일 대신 매번
+  고유값(예: `` `hong-${Date.now()}@company.com` ``)을 쓰는 것을 기본으로 한다.

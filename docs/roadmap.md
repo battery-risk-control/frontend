@@ -10,7 +10,7 @@
 - [x] Phase 5.5 — 라우팅 연결: react-router-dom 실제 연결, `/`(비로그인 공개 대시보드 자리, 아직 미구현), `/auth`, `/purchasing` 라우트 분리. App.tsx의 임시 단일 렌더링 제거
 - [x] Phase 5.6 — 비로그인 공개 대시보드 (Seq 23): `features/public/` — 글로벌 리스크 관제 맵 / AI 기반 권고 조치 리스트 / 원자재 가격 추이 / 실시간 뉴스 속보 (2x2, 상단 탭+로그인 버튼). `/` 라우트를 여기로 연결하고 `/auth` 강제 리다이렉트 제거 (Phase 8.5에서 공용 Header 컴포넌트로 교체, 상단 UI는 로그인 상태에 따라 조건부 표시로 변경됨)
 - [x] Phase 6 — 2계층·3계층 대시보드
-- [x] Phase 6.5 — 페이지 간 내비게이션 + 최소 접근 제어: 공개 대시보드 상단 탭은 미로그인 시 /auth로 유도, 로그인 시 해당 계층 화면 접근 가능. 테스트 계정 3종(mock, 배포 전 삭제 대상으로 명시). 인증/각 대시보드에서 홈으로 돌아가는 경로 추가 (Phase 8.5에서 계층 불일치 시 무음 리다이렉트 대신 확인 모달 "내 화면으로 이동/취소"로 변경됨)
+- [x] Phase 6.5 — 페이지 간 내비게이션 + 최소 접근 제어: 공개 대시보드 상단 탭은 미로그인 시 /auth로 유도, 로그인 시 해당 계층 화면 접근 가능. 테스트 계정 3종(mock, 배포 전 삭제 대상으로 명시). 인증/각 대시보드에서 홈으로 돌아가는 경로 추가 (Phase 8.5에서 계층 불일치 시 무음 리다이렉트 대신 확인 모달 "내 화면으로 이동/취소"로 변경됨) — **(2026-07-27 갱신)** FE mock 테스트 계정(`src/api/auth.api.ts`의 `TEST_ACCOUNTS`, ①단계 전용, 배포 전 삭제 대상 원칙은 그대로 유지)과 별개로, 백엔드에도 같은 계정 4종(`purchasing`/`planning`/`executive@test.local`+`pending@company.com`)을 실제 DB에 시드하는 `AuthTestSeedConfig`가 추가됨(`AUTH_TEST_SEED_ENABLED=true`일 때만 동작, 기본 `false` — ②서비스 테스트/e2e 전용, 운영 비활성). 상세는 `docs/backend-integration-guide.md`·`docs/timeline.md` 참고.
 - [x] Phase 7 — git remote 연결 및 첫 커밋 (권한 문제로 보류 중 — 첫 커밋/브랜치는 로컬에 존재)
 - [x] Phase 8 — 접근 제어 보정 + 계정 UI + 1계층 하위 화면
   - RequireAuth에 실제 org_tier 매칭 추가 (계층 불일치 시 자신의 대시보드로 리다이렉트)

@@ -328,3 +328,46 @@ docs/naming-glossary.md에만 있었음. 검토하지 않은 사실을 검토한
 (b) `0dd37cd` 정렬 검증 재실행 — 8개 도트 전수 `diff:0` 유지, (c) 700px 좁은 뷰포트에서
 도트 컬럼이 리모컨과 안 겹치고 화면 안에 다 들어옴(스크린샷), (d) C7 최하단 강제 active
 로직 회귀 없음 전부 재현 확인.
+
+## 백엔드 회신 반영 — CORS 4173 + 테스트 계정 시드 적용, e2e 24/24 확보 (2026-07-27)
+
+백엔드 팀(minji) 회신을 받아 backend 레포(`minji` 브랜치)를 pull하고, 실 백엔드 연동을
+재검증한 라운드.
+
+- **backend pull**: `git fetch`/`checkout minji`/`pull`로 7개 커밋 fast-forward.
+  `bb9f17a`("프론트 e2e용 테스트 계정 시드 + CORS 4173 허용")에서 `CORS_ALLOWED_ORIGINS`
+  (`.env.example`/`docker-compose.yml`/`application.yml`)에 `http://localhost:4173` 추가,
+  `AuthTestSeedConfig`(`AUTH_TEST_SEED_ENABLED=true`일 때만 동작, 기본 `false`)로
+  `purchasing`/`planning`/`executive@test.local`(비번 `test1234!`, APPROVED)과
+  `pending@company.com`(비번 `anything`, PENDING) 4계정을 실 DB에 upsert하는 기능이 추가된
+  걸 코드로 확인 — FE e2e/mock의 계정 스펙과 정확히 일치. backend README.md는 이번 pull로는
+  안 바뀌었지만, 확인해보니 이미 최신 CORS/AUTH_TEST_SEED 설정과 어긋나 있음을 발견(3000/5173만
+  언급, 4173·AUTH_TEST_SEED_ENABLED 안내 없음) — backend 레포 자체의 문서 drift라 FE 쪽에서
+  고치지 않고 참고로만 기록.
+- **로컬 백엔드 재기동**: `AUTH_TEST_SEED_ENABLED=true`를 backend `.env`(gitignore 대상)에
+  설정 후 `docker compose up -d --build postgres fastapi spring`으로 이미지 재빌드+재기동,
+  로그에서 "Auth test-seed completed: 4 accounts upserted" 확인.
+- **검증**: `.env.live`의 `VITE_API_BASE_URL`이 재기동한 백엔드와 일치 확인. e2e 코드
+  (`e2e/utils.ts` 기본 비번 `test1234!`, `pending-approval.spec.ts`의 `'anything'`)가 회신값과
+  이미 일치해 수정 불필요. `npm run dev:live`로 로그인/틀린 비밀번호/회원가입 PENDING/PENDING
+  로그인 락 화면 4개 시나리오 전부 정상 확인.
+- **e2e 24개 실측 — 23/24 → 원인 규명 → 24/24**: `npx vite build --mode live` +
+  `npx playwright test`로 실 백엔드 대상 e2e를 처음 돌렸을 때 24개 중 1개 실패
+  (`pending-approval.spec.ts`의 "회원가입을 제출하면 항상 승인 대기 화면으로 전환된다").
+  원인을 규명한 결과 앱 버그가 아니라 **mock(무상태) vs 실 DB(유니크 제약)의 차이**였다 —
+  이 테스트가 고정 이메일 `hong@company.com`을 쓰는데, mock은 상태가 없어 몇 번을 가입해도
+  항상 성공하지만 실 백엔드는 영구 DB라 이메일 유니크 제약이 있어 같은 DB에 반복 실행하면
+  두 번째 실행부터 중복으로 거부된다(실 DB 조회로 해당 이메일이 이미 `PENDING`으로 존재함을
+  확인). FE의 `signupApi`가 이 에러를 정상적으로 `throw`→`authError`로 처리하는 것도 확인돼
+  FE 에러 처리 자체는 문제없었다. 이 테스트 1건만 고유 이메일(`` hong-${Date.now()}@company.com
+  ``)을 쓰도록 수정(다른 e2e 스펙/테스트 계정은 그대로 유지) → 재실행 결과 24/24 통과 확인.
+
+문서 동기화: `docs/backend-integration-guide.md` "알려진 이슈"에서 "e2e 프리뷰 포트(4173)
+CORS 미허용"과 "테스트 계정 3종 미시드" 항목을 해결됨으로 갱신(삭제 대신 취소선+해결
+이력 유지), CI에서도 `AUTH_TEST_SEED_ENABLED=true`가 필요하다는 점과 "실 DB 대상 e2e는
+고정 이메일 재사용 시 유니크 제약으로 실패할 수 있음" 항목 신규 추가.
+`docs/roadmap-candidates.md` C6을 "해결됨(2026-07-27)"으로 갱신(삭제하지 않고 해결 이력
+유지). `docs/roadmap.md` Phase 6.5에 백엔드 쪽 테스트 계정 시드 존재를 반영(FE mock 계정의
+"배포 전 삭제 대상" 원칙 자체는 그대로 유지). CLAUDE.md "개발 시 참고 원칙"에 "다른 레포
+pull 시 README.md도 함께 확인" 신규 원칙 추가(이번에 backend README가 이미 낡아있었던 것을
+발견한 계기로).

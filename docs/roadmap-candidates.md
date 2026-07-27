@@ -105,7 +105,7 @@ Phase 9.3 "원자재 가격 추이 / 2·3계층 차트: surin 차트 스타일 �
 로그인 유지" 요구가 실제로 생기면, localStorage 전환 시 Phase 8의 하드 리다이렉트 로직을
 다시 검토해야 한다는 점을 미리 남겨둠.
 
-## C6 — e2e 프리뷰 포트(4173) CORS 미허용 (백엔드 팀 확인 필요, 2026-07-25)
+## C6 — e2e 프리뷰 포트(4173) CORS 미허용 (해결됨, 2026-07-27)
 
 Playwright e2e는 vite preview(4173)를 대상으로 실행되는데, 백엔드 CORS_ALLOWED_ORIGINS
 기본값(5173, 3000)에 4173이 없어 실 백엔드 대상 e2e 실행 시 17/24 테스트가 CORS로
@@ -115,6 +115,14 @@ pending@company.com 계정이 실 DB에 없어 발생하는 예상된 실패).
 
 CI 등에서 실 백엔드 대상 e2e를 정기적으로 돌리려면, 백엔드 CORS_ALLOWED_ORIGINS에 4173을
 정식으로 추가해야 한다 — 백엔드팀(minji) 확인 필요.
+
+**해결(2026-07-27)**: 백엔드 `bb9f17a`("프론트 e2e용 테스트 계정 시드 + CORS 4173 허용")로
+`CORS_ALLOWED_ORIGINS`/`application.yml`의 `app.cors.allowed-origins` 기본값에 4173이 정식
+추가됨을 pull 후 코드로 확인. 같은 커밋의 `AuthTestSeedConfig`(`AUTH_TEST_SEED_ENABLED=true`
+시 테스트 계정 4종 자동 시드)까지 적용해 재기동한 뒤, `npx vite build --mode live` +
+`npx playwright test`로 실 백엔드 대상 e2e 24개를 실측 — 첫 실행은 23/24(원인: 별개 문제,
+고정 이메일 재사용으로 인한 유니크 제약 실패, 앱 버그 아님), 그 원인을 수정한 뒤
+24/24 통과 확인. 상세는 `docs/timeline.md` 참고.
 
 ## C7 — 도트 인디케이터 최하단 섹션 사각지대 (해소, 2026-07-27)
 

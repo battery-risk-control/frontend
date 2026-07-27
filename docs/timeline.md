@@ -391,3 +391,10 @@ pull 시 README.md도 함께 확인" 신규 원칙 추가(이번에 backend READ
 
 이번 항목은 코드 변경이 전혀 없는 문서 전용 갱신이다 — 백엔드 회신이 오면 후속 라운드에서
 다시 갱신한다.
+
+## C5 최종 갱신 — httpOnly 쿠키 전환 설계 확정 (2026-07-27)
+
+백엔드가 httpOnly 쿠키 전환 가능·설계 확정 회신(Set-Cookie/쿠키에서 읽기/로그아웃 시 삭제/
+FE credentials:include), 구현은 FE의 silent refresh 착수 시점에 맞춰 별도 트랙으로 유지하기로
+최종 합의. `docs/roadmap-candidates.md` C5를 "논의 중"→"설계 합의 완료, 구현 대기"로 갱신
+(직전 항목은 그대로 두고 append만, 수정하지 않음). 코드 변경 없음.

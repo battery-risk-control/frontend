@@ -568,3 +568,8 @@ GlobalRiskBoard 마커 hover 재사용 후보"라고 적혀 있었으나 실제�
 자체가 아니라 `<main>`이 비정상적으로 좁아지는 게 근본 원인). `ImportDependencyRow`
 수정 범위 밖이라 이번엔 손대지 않았고, C12와 마찬가지로 별도 기록(C13 후보) 여부를
 사용자에게 확인받는 중 — 승인 시 후속 커밋에서 `docs/roadmap-candidates.md`에 추가한다.
+
+## C13 정식 등재 (2026-07-27)
+
+위 "범위 밖 발견 2"(SideNav 펼침 상태 650px 이하 재오버플로)를 `docs/roadmap-candidates.md`
+C13으로 정식 등재. 코드 변경 없음, 문서 전용.

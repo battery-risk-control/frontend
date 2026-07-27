@@ -239,3 +239,15 @@ react-query`는 여전히 설치만 된 상태 그대로다 — 이 상태는 �
 오버플로 발생. grid 컬럼 문제가 아니라 flex/inline 요소 줄바꿈 부재가 원인 —
 `ImportDependencyRow`(C 근처, 이번 수정 건)와는 다른 원인. `ImportDependencyRow` 조사 중
 우연히 발견, 범위 밖이라 별도 기록만 함.
+
+## C13 — 650px 이하에서 `<main>` 비수축 요소 총합으로 인한 재오버플로 (미착수, 2026-07-27)
+
+940px 미디어 쿼리(`ImportDependencyRow` 직렬 전환, C12 근처 커밋) 적용 후 정상 확인됐으나,
+SideNav 펼침 상태에서 650px 이하로 좁히면 오버플로가 다시 나타남. 원인은
+SideNav(220px)+PageSectionDots 레일(40px)+AlertsPanel(280px, 기본 펼침)이 전부
+`flex-shrink:0`인 비수축 요소라 `<main>`이 650px 뷰포트에서 48px까지 짓눌리고, 그 안의
+캐러셀 카드 고정폭이 이보다 커서 넘치는 구조. 캐러셀 자체의 `overflow-x:auto`는 정상 동작
+확인됨 — `<main>`이 비정상적으로 좁아지는 게 근본 원인. `ImportDependencyRow` 개별 수정
+범위를 벗어나는 페이지 레이아웃 셸 문제라 별도 조사·설계 필요(예: 특정 폭 이하에서
+SideNav/AlertsPanel도 자동 접힘, 또는 셸 요소 자체에 최소 폭 이하로는 `<main>`이 안
+줄어들도록 하한 설정 등 — 방향 미정).

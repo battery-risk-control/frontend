@@ -55,7 +55,7 @@
 | `features/purchasing/components/AlertsPanel.tsx` | 주요 알림 및 빠른 작업 패널. 2026-07-27 — `AlertsPanelContext`의 `expanded`로 펼침/접힘, 접힘+호버 시 상위 4개 `ScrollCard` 미리보기 추가(오류 및 기능 미흡 발견 #7) |
 | `features/purchasing/components/ErpImpactPanel.tsx` | ERP 영향 자재 재고 계약 분석 패널 |
 | `features/purchasing/components/ImportDependencyPanel.tsx` | 수입 의존도 도넛차트 패널(Phase 9.4 신규) |
-| `features/purchasing/components/ImportDependencyRow.tsx` | 수입 의존도+원자재 가격 추이 2컬럼 행(Phase 9.4 신규) |
+| `features/purchasing/components/ImportDependencyRow.tsx` | 수입 의존도+원자재 가격 추이 2컬럼 행(Phase 9.4 신규). 2026-07-27 — `940px` 이하 1컬럼 전환 미디어 쿼리 추가(신설 이후 처음, 미구현 상태였음) |
 | `features/purchasing/components/KpiSummaryPanel.tsx` | 상단 KPI 요약 패널 |
 | `features/purchasing/components/MaterialRiskOverviewRow.tsx` | 원자재 리스크 상세 그리드(게이지 카드+placeholder 자재 카드, Phase 9.4 신규 — 더보기 구조 재정의 후 점수 카드는 `ScoreCardPanel`로 분리, 9장으로 늘어나며 세로 줄바꿈 대신 가로 스크롤로 전환) |
 | `features/purchasing/components/MaterialRiskOverviewSection.tsx` | 원자재 리스크 개요 요약 행 — 더보기(Disclosure) 컨테이너, 형제 카드 캐러셀형(가로 스크롤+드래그) |
@@ -375,7 +375,7 @@
 ### `features/purchasing/components/ImportDependencyRow.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `ImportDependencyRow` | 수입 의존도+원자재 가격 추이 2컬럼 행 컴포넌트 | Phase 9.4 신규. `340px 1fr` grid(surin 비율 그대로) — `ImportDependencyPanel` + 승격된 `components/widgets/MaterialPriceDetail` |
+| `ImportDependencyRow` | 수입 의존도+원자재 가격 추이 2컬럼 행 컴포넌트 | Phase 9.4 신규. `340px 1fr` grid(surin 비율 그대로) — `ImportDependencyPanel` + 승격된 `components/widgets/MaterialPriceDetail`. 2026-07-27 — 신설 이후 반응형 브레이크포인트가 없어(회귀 아님, 미구현) `940px`(SideNav 펼침 기준 실측) 이하에서 `1fr`(1컬럼)로 전환하는 미디어 쿼리 추가, 카드 순서(수입 의존도→원자재 가격 추이)는 그대로 유지. `docs/design-tokens.md` "카드 레이아웃·스크롤 규칙" f항(고정 px 컬럼 병렬 그리드 규칙) 신설 계기 |
 
 ### `features/purchasing/components/KpiSummaryPanel.tsx`
 | physical | logical | 역할 |

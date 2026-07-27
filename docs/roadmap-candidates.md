@@ -232,3 +232,10 @@ README.md의 "기술 스택" 목록 문구는 이 조사 결과를 반영해 "�
 로 최소 구현했다(`PublicDashboardPage.tsx`). `useQuery` 사용처는 여전히 0건, `@tanstack/
 react-query`는 여전히 설치만 된 상태 그대로다 — 이 상태는 유지되고, `QueryClientProvider`
 정식 도입은 별도 작업으로 계속 미뤄진다.
+
+## C12 — Planning 대시보드 필터 pill 줄바꿈 안 됨 (미착수, 2026-07-27)
+
+460px 이하에서 필터 pill(`.filters`, '사업부 전체'/'2026년 2분기' 등)이 줄바꿈되지 않아
+오버플로 발생. grid 컬럼 문제가 아니라 flex/inline 요소 줄바꿈 부재가 원인 —
+`ImportDependencyRow`(C 근처, 이번 수정 건)와는 다른 원인. `ImportDependencyRow` 조사 중
+우연히 발견, 범위 밖이라 별도 기록만 함.

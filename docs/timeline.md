@@ -530,3 +530,41 @@ GlobalRiskBoard 마커 hover 재사용 후보"라고 적혀 있었으나 실제�
 `useAlertsPanelState`/`selectAlertEvents`/`PurchasingDashboardPage`/`App.tsx`/
 `useHoverDisclosure` 정정 갱신). `docs/roadmap.md` Phase 10.12로 3차 라운드(#6-1+#7)
 완료 반영.
+
+## ImportDependencyRow 반응형 브레이크포인트 신설 (2026-07-27)
+
+`ImportDependencyRow`(수입 의존도+원자재 가격 추이 2단, `340px 1fr` grid)가 좁은 뷰포트에서
+잘려 보인다는 문제 제기를 조사(읽기 전용) → 설계 승인 → 구현한 라운드.
+
+- **조사**: `git log --oneline --all`로 이 컴포넌트를 다룬 커밋이 신설 커밋(`5c4a812`,
+  Phase 9.4) 단 하나뿐임을 확인 — **회귀가 아니라 애초에 반응형 브레이크포인트가 없던
+  미구현**. `340px`가 고정 px 트랙이라 부모가 좁아져도 줄지 않는 게 원인. 공개 대시보드
+  Phase 10.1의 `760px` 브레이크포인트는 대칭 2컬럼(`minmax(360px,1fr)` 둘 다 가변)이라
+  패턴은 재사용 가능해도 값은 그대로 못 씀. 실측으로 오버플로 경계를 `960px(정상)~
+  940px(오버플로 시작)`까지 좁혀 특정.
+- **전수 스캔**: `grid-template-columns`/`display:grid` 전체 grep으로 후보 4곳(이 건 포함)을
+  찾아 각각 뷰포트 스캔 — `CumulativeRiskKpi`(경영진, `repeat(3,1fr)`)/`ExecutiveDashboardPage
+  .bottomRow`(`1fr 1fr`)/`MaterialPriceDetail .summaryGrid`(공개 대시보드에서 단독 확인,
+  `repeat(3,1fr)`)는 400~320px까지 전부 오버플로 없음(순수 `1fr`류는 구조적으로 안전함을
+  실측 확인) — 같은 문제는 `ImportDependencyRow` 1곳뿐.
+- **범위 밖 발견 1(별도 기록)**: 전수 스캔 중 Planning 대시보드에서 460px 이하 필터 pill
+  줄바꿈 부재로 인한 오버플로를 우연히 발견 — grid 컬럼 문제가 아니라 별개 원인이라
+  `docs/roadmap-candidates.md` C12로 기록만 하고 수정하지 않음.
+- **구현**: `.row`에 `@media (max-width: 940px) { grid-template-columns: 1fr; }` 추가.
+  카드 순서(수입 의존도→원자재 가격 추이)는 그대로 유지.
+
+검증: tsc/eslint/build 통과. Playwright로 SideNav 펼침/접힘 두 상태 모두 940px 경계 안팎
+재확인 — 펼침 상태는 940px에서 정확히 1컬럼 전환되고 700px까지 오버플로 없음, 접힘
+상태는 같은 전환 후 500px까지 오버플로 없음, 두 상태 모두 940px 이상에서 기존 2컬럼
+배치 유지(회귀 없음) 확인.
+
+**범위 밖 발견 2(사용자 확인 대기, 아직 기록 안 함)**: 검증 중 SideNav **펼침** 상태에서
+650px 이하로 좁히면(940px 전환 이후에도) 다시 오버플로가 재현됨을 발견 — 원인은
+`ImportDependencyRow`와 무관하게, `SideNav`(220px)+`PageSectionDots` 레일(40px)+
+`AlertsPanel`(280px, 기본 펼침 상태)이 전부 `flex-shrink:0`인 비수축 "앱 뼈대" 요소라
+좁은 뷰포트에서 `<main>`의 실제 폭이 극단적으로 줄어들고(650px 뷰포트에서 48px까지 관찰),
+그 안의 개별 콘텐츠(예: 캐러셀 카드 1장 고정폭)가 그 좁은 `<main>`보다 커서 넘치는
+구조적 문제로 추정된다(캐러셀 자체의 `overflow-x:auto`는 정상 작동 확인 — 컨테이너
+자체가 아니라 `<main>`이 비정상적으로 좁아지는 게 근본 원인). `ImportDependencyRow`
+수정 범위 밖이라 이번엔 손대지 않았고, C12와 마찬가지로 별도 기록(C13 후보) 여부를
+사용자에게 확인받는 중 — 승인 시 후속 커밋에서 `docs/roadmap-candidates.md`에 추가한다.

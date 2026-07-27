@@ -6,6 +6,13 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+  /* PageSectionDots의 scrollIntoView가 sticky Header에 가리지 않는 위치로 이동하도록 —
+     대상은 heading(.title)이 아니라 이 섹션 컨테이너 자체여야 한다. heading에 걸면 heading
+     자체는 헤더 아래로 정확히 오지만, heading 위쪽 이 .panel의 padding(space-4)만큼 카드
+     테두리/배경이 헤더 뒤로 말려들어간다(실측 확인) — .panel 자체에 걸면 카드 테두리부터
+     정확히 헤더 아래에 위치한다. header-height와 이 padding은 서로 다른 여백이라 더하지
+     않는다(이중 계산 없음). */
+  scroll-margin-top: var(--header-height);
 }
 
 .fillHeight {
@@ -24,8 +31,6 @@
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-bold);
   color: var(--color-primary);
-  scroll-margin-top: var(--header-height); /* PageSectionDots의 scrollIntoView가 sticky Header에
-    가리지 않는 위치로 이동하도록 — heading 자체에 스크롤 정지 여백을 준다 */
 }
 
 .caption {

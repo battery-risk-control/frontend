@@ -20,7 +20,7 @@
 
 - **React 19 + TypeScript + Vite**
 - **react-router-dom** — 클라이언트 라우팅
-- **서버 상태**: TanStack Query (`useQuery` 중심)
+- **서버 상태**: TanStack Query (패키지 설치됨, 실사용처 아직 없음 — docs/roadmap-candidates.md C11 참고)
 - **UI 상태**: React 기본 `useState`/`Context` — 별도 상태관리 라이브러리 미도입
 - **스타일**: CSS Modules (`*.module.css`), 디자인 토큰은 `src/styles/tokens.css`로 전역 관리
 - **차트**: Recharts

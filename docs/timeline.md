@@ -437,3 +437,41 @@ FE credentials:include), 구현은 FE의 silent refresh 착수 시점에 맞춰 
 (`fetchPublicRiskBoard`/`PublicDashboardPage`/`public.api.ts` 갱신). `docs/roadmap-candidates.md`
 C11에 "QueryClientProvider 도입 안 함" 결정 보강(기존 내용과 어긋나지 않아 신규 생성 없이
 추가만).
+
+## 스크롤힌트 클릭 시 페이징 이동 — #6-1 구현 (2026-07-27)
+
+"오류 및 기능 미흡 발견" #6-1("좌우 스크롤카드에 대해서는 스크롤힌트가 클릭 시 스크롤
+이동을 수행하도록 규칙 수정. 이동 간격은 현재 보이는 카드가 (1,2,3,4>)였다면
+(4,5,6,7>)이 되도록")을 조사(원문이 가리키던 대상이 여전히 존재하는지 확인) → 설계 승인
+(적용 범위: `MaterialRiskOverviewRow`(하위섹션)+`MaterialRiskOverviewSection`(상위 섹션)
+둘 다) → 구현 순으로 진행했다.
+
+- **조사**: 원문의 "스크롤힌트"는 이미 폐기된 `ScrollHint`(세로축, 공개 대시보드 전용)가
+  아니라 지금도 존재하는 `HorizontalScrollHint`(가로축, 2026-07-27 공용화)를 가리킴을
+  확인. 코드 직접 확인 결과 `HorizontalScrollHint`는 `aria-hidden="true"` `<div>`로,
+  `onClick`이 전혀 없는 순수 시각 힌트였다 — 원문이 가리키던 대상이 없어진 게 아니라
+  그 대상은 그대로 있고 클릭 기능만 애초부터 빠져 있었던 상태(재해석 불필요, 그대로 구현
+  가능).
+- **구현**: `HorizontalScrollHint`에 선택적 `onClickLeft`/`onClickRight` prop 추가 —
+  전달되면 `<button aria-label="이전/다음 카드 보기">`로, 없으면 기존과 동일하게
+  `<div aria-hidden>`로 렌더링(하위 호환, CSS도 `div.../button...` 선택자로 분기).
+  `src/lib/scrollHorizontalByPage.ts` 신규 — `container.clientWidth - 첫 번째 자식 카드의
+  실제 렌더링 폭`을 매번 계산해 그만큼 `scrollBy({behavior:'smooth'})`(카드 폭 하드코딩
+  없음, 두 컴포넌트의 서로 다른 카드 폭에 그대로 대응). `MaterialRiskOverviewRow`/
+  `MaterialRiskOverviewSection` 둘 다에 연결.
+
+검증: tsc/eslint/build 통과. Playwright로 (1) `MaterialRiskOverviewRow`(9장, 고정 180px
+카드) — 오른쪽 힌트 클릭 시 계산된 스텝(예: 736px 컨테이너 기준 556px)과 실제 이동량이
+정확히 일치, 왼쪽 힌트로 되돌리면 원위치, 스크롤 끝에서 오른쪽 힌트 사라지고 왼쪽 힌트만
+남음(회귀 없음) 확인. (2) `MaterialRiskOverviewSection`(3장, 가변 240px 카드) — 좁은
+뷰포트(900px)에서는 카드 1장(240px)이 컨테이너(236px)보다 넓어 계산된 스텝이 음수로
+클램프돼(`Math.max(...,0)`) 이동 없음(정상, 버그 아님)을 확인했고, 넓은 뷰포트(1400px)
+에서는 전체 오버플로 자체가 16px뿐(카드 3장이 컨테이너에 거의 다 들어감)이라 496px 스텝이
+브라우저의 `scrollBy` 클램핑으로 자연스럽게 최대치(16px, 끝까지 스크롤)로 수렴함을 확인 —
+둘 다 `scrollHorizontalByPage`의 결함이 아니라 스크롤 가능 범위 자체가 짧은 정상 케이스.
+좌우 힌트 회귀도 두 컴포넌트 모두 정상.
+
+문서 동기화: `docs/design-tokens.md` "스크롤 UI 노출 원칙" 표에 `HorizontalScrollHint`가
+두 소비처 모두에서 클릭 가능해졌다는 점 갱신. `docs/naming-glossary.md`
+(`HorizontalScrollHint`/`scrollHorizontalByPage`/`MaterialRiskOverviewRow`/
+`MaterialRiskOverviewSection` 갱신).

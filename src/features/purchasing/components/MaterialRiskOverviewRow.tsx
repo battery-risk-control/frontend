@@ -5,6 +5,7 @@ import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { HorizontalScrollHint } from '../../../components/ui/HorizontalScrollHint'
 import { useScrollOverflowHint } from '../../../lib/useScrollOverflowHint'
 import { useHorizontalDragScroll } from '../../../lib/useHorizontalDragScroll'
+import { scrollHorizontalByPage } from '../../../lib/scrollHorizontalByPage'
 import type { MaterialRiskGaugeItem } from '../../../api/types'
 import styles from './MaterialRiskOverviewRow.module.css'
 
@@ -32,6 +33,8 @@ const PLACEHOLDER_MATERIALS = ['코발트', '망간', '구리', '알루미늄', 
  * 스크롤바를 그대로 노출하고, 가로 휠 지원이 기기마다 약한 점을 보완하기 위해 마우스
  * 드래그(grab-to-scroll)로도 이동할 수 있다. `useScrollOverflowHint`를 `axis: 'horizontal'`로
  * 적용하고, 좌우 그라데이션+화살표 힌트는 공용 컴포넌트 `HorizontalScrollHint`로 표시한다.
+ * 힌트를 클릭하면 `scrollHorizontalByPage`로 "카드 1장 겹치는" 페이징 이동도 가능하다
+ * (2026-07-27, 오류 및 기능 미흡 발견 #6-1).
  *
  * 사용 예:
  *   <MaterialRiskOverviewRow gauges={gauges} />
@@ -75,7 +78,12 @@ export function MaterialRiskOverviewRow({ gauges }: MaterialRiskOverviewRowProps
           </ScrollCard>
         ))}
       </div>
-      <HorizontalScrollHint showLeft={hasOverflowLeft} showRight={hasOverflowRight} />
+      <HorizontalScrollHint
+        showLeft={hasOverflowLeft}
+        showRight={hasOverflowRight}
+        onClickLeft={() => scrollHorizontalByPage(gridRef.current, 'left')}
+        onClickRight={() => scrollHorizontalByPage(gridRef.current, 'right')}
+      />
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { ScoreCardPanel } from './ScoreCardPanel'
 import { HorizontalScrollHint } from '../../../components/ui/HorizontalScrollHint'
 import { useScrollOverflowHint } from '../../../lib/useScrollOverflowHint'
 import { useHorizontalDragScroll } from '../../../lib/useHorizontalDragScroll'
+import { scrollHorizontalByPage } from '../../../lib/scrollHorizontalByPage'
 import type { MaterialRiskGaugeItem, ScoreCardItem } from '../../../api/types'
 import styles from './MaterialRiskOverviewSection.module.css'
 
@@ -26,6 +27,8 @@ interface MaterialRiskOverviewSectionProps {
  * (design-tokens.md "스크롤 UI 노출 원칙")으로 전환했다 — display:flex+nowrap+overflow-x:auto,
  * 네이티브 스크롤바 노출, `useHorizontalDragScroll` 공용 훅으로 grab-to-scroll 드래그,
  * `useScrollOverflowHint(axis:'horizontal')`+`HorizontalScrollHint` 공용 컴포넌트로 좌우 힌트.
+ * 힌트를 클릭하면 `scrollHorizontalByPage`로 "카드 1장 겹치는" 페이징 이동도 가능하다
+ * (2026-07-27, 오류 및 기능 미흡 발견 #6-1).
  *
  * 사용 예:
  *   <MaterialRiskOverviewSection gauges={gauges} scoreCards={scoreCards} />
@@ -56,7 +59,12 @@ export function MaterialRiskOverviewSection({ gauges, scoreCards }: MaterialRisk
             <ScoreCardPanel key={card.label} card={card} />
           ))}
         </div>
-        <HorizontalScrollHint showLeft={hasOverflowLeft} showRight={hasOverflowRight} />
+        <HorizontalScrollHint
+          showLeft={hasOverflowLeft}
+          showRight={hasOverflowRight}
+          onClickLeft={() => scrollHorizontalByPage(rowRef.current, 'left')}
+          onClickRight={() => scrollHorizontalByPage(rowRef.current, 'right')}
+        />
       </div>
       <div className={expanded ? `${styles.detail} ${styles.detailExpanded}` : styles.detail}>
         <div className={styles.detailInner}>

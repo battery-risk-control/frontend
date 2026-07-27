@@ -28,14 +28,28 @@ interface PageSectionDotsProps {
  * 뷰포트 우측 끝에 sticky로 배치되는 걸 전제로 한 스타일을 적용한다.
  * 하단 리모컨의 "목록" 버튼은 자리만 확보한 placeholder — 클릭 핸들러 없음(후속 기능).
  *
+ * 마지막 섹션은 rootMargin 기반 IntersectionObserver만으로는 영영 active가 안 될 수 있다
+ * (C7) — heading이 "뷰포트 상단 40%"에 들어오려면 그만큼 아래로 더 스크롤할 여유가
+ * 문서에 남아있어야 하는데, 마지막 섹션은 그 아래에 남은 콘텐츠가 없어 이 조건을 만족할
+ * 스크롤 위치 자체가 존재하지 않을 수 있기 때문이다(실측: 1400px 뷰포트 기준 약 113px
+ * 부족). 문서 하단에 도달했는지(`scrollY + innerHeight`가 `scrollHeight`에 근접)를 별도로
+ * 감지해 근접 시 마지막 섹션 id를 강제로 active에 포함시킨다 — rootMargin 계산과 무관하게
+ * "사용자가 더 스크롤할 수 없는 지점"이라는 절대적 조건이라 콘텐츠/뷰포트 크기가 달라져도
+ * 구조적으로 성립한다.
+ *
  * 사용 예:
  *   <PageSectionDots
  *     variant="withAside"
  *     sections={[{ id: '상단 KPI 요약', headingId: 'kpi-summary-heading' }]}
  *   />
  */
+// 문서 하단 도달 판정 여유값 — 정수 픽셀 반올림 오차만 흡수하면 되므로 작게 둔다(구조적
+// 판정이지, 특정 콘텐츠의 부족분(위 실측 113px)을 메우기 위한 값이 아니다).
+const BOTTOM_THRESHOLD_PX = 2
+
 export function PageSectionDots({ sections, variant }: PageSectionDotsProps) {
   const [activeIds, setActiveIds] = useState<Set<string>>(new Set())
+  const [nearBottom, setNearBottom] = useState(false)
 
   useEffect(() => {
     const entries = sections
@@ -75,6 +89,27 @@ export function PageSectionDots({ sections, variant }: PageSectionDotsProps) {
     return () => observer.disconnect()
   }, [sections])
 
+  useEffect(() => {
+    function checkNearBottom() {
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+      setNearBottom(window.scrollY >= maxScroll - BOTTOM_THRESHOLD_PX)
+    }
+
+    checkNearBottom()
+    window.addEventListener('scroll', checkNearBottom, { passive: true })
+    window.addEventListener('resize', checkNearBottom)
+    return () => {
+      window.removeEventListener('scroll', checkNearBottom)
+      window.removeEventListener('resize', checkNearBottom)
+    }
+  }, [])
+
+  const lastSectionId = sections[sections.length - 1]?.id
+  const displayActiveIds = new Set(activeIds)
+  if (nearBottom && lastSectionId) {
+    displayActiveIds.add(lastSectionId)
+  }
+
   function scrollToSection(headingId: string) {
     document.getElementById(headingId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -97,10 +132,10 @@ export function PageSectionDots({ sections, variant }: PageSectionDotsProps) {
           <li key={section.id}>
             <button
               type="button"
-              className={activeIds.has(section.id) ? `${styles.dot} ${styles.dotActive}` : styles.dot}
+              className={displayActiveIds.has(section.id) ? `${styles.dot} ${styles.dotActive}` : styles.dot}
               onClick={() => scrollToSection(section.headingId)}
               aria-label={`${section.id}로 이동`}
-              aria-current={activeIds.has(section.id)}
+              aria-current={displayActiveIds.has(section.id)}
             />
           </li>
         ))}

@@ -40,6 +40,21 @@
   padding: var(--space-6);
 }
 
+/* 공개 리스크 지도 실 API 로딩 중 최소 표시 — 정식 스켈레톤 UI(Phase 10.2, 미착수)가
+   아니라 최소 구현이다. GlobalRiskBoard(ScrollCard)가 놓일 같은 그리드 칸에 잠깐 대신
+   표시되므로 스타일도 최소한만 맞춘다. */
+.riskBoardLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
 /* 실험적 — 좁은 화면 대응(Phase 후속 전체 반응형 작업 전까지의 임시 브레이크포인트) */
 @media (max-width: 760px) {
   .grid {

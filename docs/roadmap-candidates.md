@@ -226,3 +226,9 @@ README.md의 "기술 스택" 목록 문구는 이 조사 결과를 반영해 "�
 아직 없음"으로 정정했다(2026-07-27) — CLAUDE.md의 동일 문구는 "기술 스택(확정)" 섹션,
 즉 "무엇을 쓰기로 결정했는지"를 다루는 결정 문서라 현재 실사용 여부와 무관하게 정확한
 서술이므로 정정 대상이 아니다.
+
+**결정(2026-07-27)**: 공개 지도 엔드포인트 연결 작업에서 `QueryClientProvider` 최초 도입은
+이번엔 하지 않기로 결정 — `fetchPublicRiskBoard()`(`public.api.ts`)는 `useState`/`useEffect`
+로 최소 구현했다(`PublicDashboardPage.tsx`). `useQuery` 사용처는 여전히 0건, `@tanstack/
+react-query`는 여전히 설치만 된 상태 그대로다 — 이 상태는 유지되고, `QueryClientProvider`
+정식 도입은 별도 작업으로 계속 미뤄진다.

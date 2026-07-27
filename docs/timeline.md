@@ -398,3 +398,42 @@ pull 시 README.md도 함께 확인" 신규 원칙 추가(이번에 backend READ
 FE credentials:include), 구현은 FE의 silent refresh 착수 시점에 맞춰 별도 트랙으로 유지하기로
 최종 합의. `docs/roadmap-candidates.md` C5를 "논의 중"→"설계 합의 완료, 구현 대기"로 갱신
 (직전 항목은 그대로 두고 append만, 수정하지 않음). 코드 변경 없음.
+
+## 공개 지도 엔드포인트 연결 — 최초 실 API 연동 (2026-07-27)
+
+공개 대시보드(비로그인) 글로벌 리스크 관제 지도를 백엔드 `GET /api/v1/public/risk-board`
+(`b8d44b9` 신설)에 연결한 라운드. 조사(백엔드 컨트롤러/DTO 코드 직접 확인) → 설계 승인
+→ 구현 순으로 진행했다.
+
+- **스키마 확인**: `PublicController.java`/`RiskEventDto.RiskBoardItem` 코드 확인 결과
+  `risk_event` 전체가 아니라 공개용으로 의도적으로 축약된 별도 구조였고(erp_view/
+  quality_check/rag_view 제외), 백엔드 DTO 주석에 "프론트 GlobalRiskBoardItem 계약과 1:1"
+  이라고 명시돼 있어 실제로 필드가 정확히 일치함을 확인 — 변환 로직 불필요.
+  `SecurityConfig`에서 `/api/v1/public/**`가 `permitAll` 확인. 데이터는 백엔드 자체가
+  "F3/F4 모델·뉴스 파이프라인 배선 전까지 결정론적 placeholder"라고 명시(코드 주석) —
+  다만 응답에 이를 나타내는 필드(예: `is_simulation` 같은)는 없어, FE도 별도 placeholder
+  표시 UI를 추가하지 않기로 결정(공개 대시보드 다른 3개 패널도 mock 기반이나 표시 없는
+  기존 관례와 일관 유지).
+- **구조 확인**: `fetchGlobalRiskBoard()`(purchasing.api.ts)를 공개 대시보드와 구매팀
+  대시보드가 동일하게 호출하고 있어, mock을 그대로 실 API로 바꾸면 구매팀 대시보드까지
+  영향받는 구조였음을 확인 — 분리 설계 필요.
+- **구현**: `public.api.ts`에 `fetchPublicRiskBoard()` 신규(`VITE_API_BASE_URL` 설정 시
+  실 API `fetchJson` 호출 — 토큰 불필요라 기존 `fetchJson`을 그대로 재사용, 별도 인증
+  헬퍼 불필요, 미설정 시 기존 `fetchGlobalRiskBoard()`로 폴백). `purchasing.api.ts`의
+  `fetchGlobalRiskBoard()`는 무변경 — 구매팀 대시보드는 여전히 mock. `PublicDashboardPage.tsx`
+  만 import 교체, `useState`/`useEffect`로 최소 비동기 처리(코드베이스 최초의 실제 비동기
+  API 연동이지만 `useQuery` 도입은 이번엔 보류 — `docs/roadmap-candidates.md` C11에 결정
+  기록). 로딩 중엔 최소 텍스트만 표시.
+
+검증: tsc/eslint/build 통과. 백엔드 `git pull`(`f58bea9`→`7f01c2b`, `b8d44b9` 포함) 후
+`docker compose up -d --build`로 재기동, `curl`로 엔드포인트 직접 확인(4건 응답, 스키마
+일치). Playwright로 (1) `dev:live`(실 API) — 공개 대시보드 마커 4개, 백엔드 응답과 정확히
+일치, (2) `dev`(mock) — 공개 대시보드 마커 6개(mock 전체), 실 API와 명확히 구분됨, (3)
+`dev`(mock) — 구매팀 대시보드 마커도 동일하게 6개, 회귀 없음 전부 확인. 스크린샷으로
+실 API 지도 렌더링 육안 확인.
+
+문서 동기화: `docs/mock-schemas.md` "4-1"(신규, 4번과 구분되는 실제 백엔드 계약 섹션)
+추가. `docs/roadmap.md` Phase 10.11로 반영. `docs/naming-glossary.md`
+(`fetchPublicRiskBoard`/`PublicDashboardPage`/`public.api.ts` 갱신). `docs/roadmap-candidates.md`
+C11에 "QueryClientProvider 도입 안 함" 결정 보강(기존 내용과 어긋나지 않아 신규 생성 없이
+추가만).

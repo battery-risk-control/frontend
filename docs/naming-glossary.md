@@ -14,7 +14,7 @@
 | `api/auth.api.ts` | 인증(로그인/회원가입) mock API |
 | `api/executive.api.ts` | 3계층 경영진 대시보드 mock API |
 | `api/planning.api.ts` | 2계층 경영기획팀 대시보드 mock API |
-| `api/public.api.ts` | 비로그인 공개 대시보드 mock API(Phase 9.4에서 fetchGlobalRiskBoard/fetchMaterialPriceTrends/fetchMaterialPriceSummaries를 purchasing.api.ts로 옮기고 재수출만 함) |
+| `api/public.api.ts` | 비로그인 공개 대시보드 API(Phase 9.4에서 fetchMaterialPriceTrends/fetchMaterialPriceSummaries를 purchasing.api.ts로 옮기고 재수출만 함; 2026-07-27 — fetchPublicRiskBoard 신규로 지도만 실 API 연동, 나머지는 여전히 mock) |
 | `api/purchasing.api.ts` | 1계층 구매팀 대시보드 mock API — risk_event 원천 데이터 + Phase 9.4에서 이동된 글로벌 리스크 맵/가격 추이 mock + 신규 원자재 리스크 개요/수입 의존도 mock |
 | `api/types.ts` | 전 화면 공용 API 응답 타입 정의 |
 | `app/routes.tsx` | 최상위 라우트 정의 및 로그인 가드 |
@@ -105,7 +105,7 @@
 ### `api/public.api.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `fetchGlobalRiskBoard` *(재수출)* | 글로벌 리스크 관제 맵 조회 함수 | Phase 9.4에서 `api/purchasing.api.ts`로 이동, 여기서는 재수출만(기존 import 경로 호환용) |
+| `fetchPublicRiskBoard` | 글로벌 리스크 관제 맵 조회 함수(실 API 연동) | 2026-07-27 신규. `VITE_API_BASE_URL` 설정 시 `GET /api/v1/public/risk-board` 실 호출(`fetchJson` 재사용, 새 인증 헬퍼 불필요 — 토큰 없는 공개 엔드포인트), 미설정 시(①단계) `purchasing.api.ts`의 `fetchGlobalRiskBoard()`(mock)를 그대로 반환. `auth.api.ts`의 `login`/`signup`과 동일한 mode 분기 컨벤션. 구매팀 대시보드가 쓰는 `fetchGlobalRiskBoard()`와는 별도 함수라 이 변경이 구매팀 대시보드에 영향 없음(설계 의도, 실측 확인) |
 | `fetchMaterialPriceTrends` *(재수출)* | 원자재 가격 추이 조회 함수 | Phase 9.4에서 `api/purchasing.api.ts`로 이동, 여기서는 재수출만 |
 | `fetchMaterialPriceSummaries` *(재수출)* | 원자재 가격 요약 카드 조회 함수 | Phase 9.4에서 `api/purchasing.api.ts`로 이동, 여기서는 재수출만 |
 | `fetchAiRecommendations` | AI 권고 조치 조회 함수 | 등급 기반 일반 권고 문구 생성(ERP 내부 상세는 미노출) |
@@ -342,7 +342,7 @@
 ### `features/public/pages/PublicDashboardPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `PublicDashboardPage` | 비로그인 공개 대시보드 페이지 | 공통 `Header`(3계층 탭을 children으로 전달) + 4개 패널 2x2 그리드. 탭 클릭 시 인증 상태에 따라 대시보드 또는 /auth로 이동. Phase 8.5 전에는 `Header`를 쓰지 않고 로그인 여부와 무관하게 로그인 버튼을 무조건 노출하는 자체 상단바를 갖고 있었음(버그, qa-checklist.md A/B 계기) |
+| `PublicDashboardPage` | 비로그인 공개 대시보드 페이지 | 공통 `Header`(3계층 탭을 children으로 전달) + 4개 패널 2x2 그리드. 탭 클릭 시 인증 상태에 따라 대시보드 또는 /auth로 이동. Phase 8.5 전에는 `Header`를 쓰지 않고 로그인 여부와 무관하게 로그인 버튼을 무조건 노출하는 자체 상단바를 갖고 있었음(버그, qa-checklist.md A/B 계기). 2026-07-27 — 글로벌 리스크 관제 지도만 `fetchPublicRiskBoard()`(비동기, `useState`/`useEffect`)로 전환, 나머지 3개 패널은 여전히 동기 mock. 로딩 중엔 `.riskBoardLoading`(최소 텍스트)이 `GlobalRiskBoard` 대신 같은 그리드 칸에 표시됨 |
 
 ### `features/purchasing/components/AlertsPanel.tsx`
 | physical | logical | 역할 |

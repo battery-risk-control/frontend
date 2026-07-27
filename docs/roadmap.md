@@ -52,6 +52,17 @@
     hover 시 `confidence_label` 노출(`18cd9e0`). 미검증 상태로 남은 사항(중간 사각지대 2곳,
     완전히 겹친 마커 간 hover 전환)은 각각 `docs/roadmap-candidates.md` "C8"/"C10" 참고.
     다음 순서는 3차 라운드(#6-1 → #7 변경) 예정.
+  - [x] 10.11 — 공개 대시보드 글로벌 리스크 관제 지도, 최초 실 백엔드 API 연동(2026-07-27):
+    `GET /api/v1/public/risk-board`(백엔드 `b8d44b9`, 토큰 불필요)를 `public.api.ts`의
+    `fetchPublicRiskBoard()`로 연결 — `VITE_API_BASE_URL` 설정 시 실 API, 미설정 시(①단계)
+    기존 mock(`fetchGlobalRiskBoard()`) 그대로 폴백. 구매팀 대시보드가 쓰는
+    `fetchGlobalRiskBoard()`(`purchasing.api.ts`)는 이 변경과 분리돼 mock 그대로 유지 —
+    실측(mock 6개 마커 vs 실 API 4개 마커)으로 두 화면이 서로 다른 데이터 소스를 쓰는 것
+    확인. 코드베이스 최초의 실제 비동기 API 연동이지만 `useQuery`(TanStack Query)는 도입
+    하지 않고 `useState`/`useEffect`로 최소 구현 — `QueryClientProvider` 정식 도입 여부는
+    `docs/roadmap-candidates.md` "C11"에서 별도 트랙으로 계속 미룸. 로딩 중에는 최소 텍스트만
+    표시(정식 스켈레톤 UI는 Phase 10.2, 미착수). 응답 스키마는 `docs/mock-schemas.md` "4-1"
+    참고.
 
 ## 재사용 규칙 (Phase 3에서 결정되는 인터페이스는 이후 Phase가 그대로 따른다)
 - `ConfidenceBadge`/`RiskGradeBadge`의 props 타입은 이후 모든 화면에서 동일하게 재사용한다 — 화면별로 별도 배지를 새로 만들지 않는다.

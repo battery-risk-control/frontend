@@ -120,6 +120,50 @@
 - **①②단계**에서는 이 엔드포인트를 실 데이터처럼 취급하면 안 된다 — **③단계** 진입(계약 확정) 시 이 스키마 전체(특히 `price_index`)를 교체해야 한다.
 - 통화 단위 절대값 대신 "기준일=100" 상대 지수를 쓰는 이유: 근거 없는 절대 가격 수치를 문서에 확정값처럼 남기지 않기 위함.
 
+## 4-1. 비로그인 공개 대시보드 — 글로벌 리스크 관제 지도 (실제 백엔드 계약, 2026-07-27 확정)
+
+위 4번(가격 추이)과 달리 이 엔드포인트는 **제안이 아니라 백엔드에 실제로 구현·연동된
+계약**이다 — `backend` 레포 `spring-backend/.../controller/PublicController.java`,
+`dto/RiskEventDto.java`(`RiskBoardItem`), `service/RiskEventService.java`(`b8d44b9`) 코드로
+직접 확인.
+
+`GET /api/v1/public/risk-board` (`SecurityConfig`에서 `permitAll` — 토큰 불필요)
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "risk_event_id": "RISK-2026-0721-001",
+      "material": "니켈",
+      "grade": "심각",
+      "confidence_label": "확정",
+      "event_summary": "인도네시아 니켈 수출 관세 인상 발표로 현물가 18% 급등",
+      "country_code": "ID",
+      "country_name": "인도네시아",
+      "coordinates": { "lat": -6.2088, "lng": 106.8456 }
+    }
+  ],
+  "timestamp": "2026-07-27T16:29:51.425389337+09:00"
+}
+```
+
+- CLAUDE.md `risk_event` 스키마 전체가 아니라, **공개용으로 의도적으로 축약된 별도 구조**
+  (`RiskBoardItem`)다 — `erp_view`/`quality_check`/`rag_view`는 백엔드가 명시적으로 제외한다
+  (컨트롤러 주석: "ERP 내부 상세를 제외한 공개 안전 subset").
+- `api/types.ts`의 `GlobalRiskBoardItem`과 **필드가 1:1로 정확히 일치**한다(백엔드 DTO
+  주석에도 "프론트 GlobalRiskBoardItem 계약과 1:1"로 명시) — 변환 로직 없이 응답 `data`
+  배열을 그대로 `GlobalRiskBoardItem[]`로 쓸 수 있다.
+- **데이터 내용은 아직 placeholder다** — 백엔드 컨트롤러 주석: "데이터 내용은 F3/F4
+  모델·뉴스 파이프라인 배선 전까지 결정론적 placeholder다(리스크 이벤트 원본과 동일)."
+  응답에 이를 나타내는 별도 플래그 필드는 없다(경영진 대시보드의 `savings_simulation.
+  is_simulation`과 달리) — FE 쪽에서도 별도 placeholder 표시 UI는 추가하지 않기로 결정
+  (공개 대시보드의 다른 3개 패널도 전부 mock 기반이나 화면에 별도 표시가 없는 기존 관례와
+  일관되게 유지, `docs/timeline.md` 참고).
+- FE 연동: `src/api/public.api.ts`의 `fetchPublicRiskBoard()`가 `VITE_API_BASE_URL` 설정
+  시 이 엔드포인트를, 미설정 시(①단계) `purchasing.api.ts`의 `fetchGlobalRiskBoard()`(mock)
+  를 그대로 반환한다. 구매팀 대시보드가 쓰는 `fetchGlobalRiskBoard()`는 이 변경과 무관하게
+  mock 그대로 유지된다(의도된 분리 — 이번 연동은 공개 대시보드 지도에만 적용).
+
 ## 5. 1계층 — 브리핑 자료 열람 (Seq 24)
 
 `GET /api/purchasing/risk-events/{risk_event_id}/briefing`

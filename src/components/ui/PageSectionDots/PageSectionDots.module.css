@@ -24,7 +24,12 @@
 .dots {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  /* var(--space-2)(8px)였으나, 0dd37cd에서 .dot을 display:block으로 바꿔 li 높이가
+     8px로 줄어든 부수 효과로 도트 간격이 27px(19+8)→16px(8+8)로 좁아져 2단계 hover 시
+     24px 고정 높이 배지 8개가 서로 8px씩 겹치는 회귀가 발생했다(실측 확인). li 높이(=도트
+     정렬 기준, 0dd37cd의 목적)는 8px로 그대로 두고 간격만 여기서 별도로 늘려 겹침을
+     해소한다 — 8+24=32px 간격이면 배지끼리도 32-24=8px 여유가 생긴다. */
+  gap: var(--space-6);
   margin: 0;
   padding: 0;
   list-style: none;

@@ -6,6 +6,10 @@ import styles from './Header.module.css'
 
 interface HeaderProps {
   children?: ReactNode
+  /** 계정 정보와 로그아웃 버튼 사이에 끼워넣을 콘텐츠(예: 알림 벨 아이콘) — 로그인 상태에서만
+   * 의미가 있다. AlertsPanel처럼 특정 화면에만 있는 기능을 Header에 직접 결합시키지 않기
+   * 위한 슬롯이다(SideNavToggleButton을 SideNav 바깥으로 분리한 것과 같은 이유). */
+  accountExtra?: ReactNode
 }
 
 function HomeIcon() {
@@ -33,12 +37,14 @@ function HomeIcon() {
  * 로그인 상태면 우측에 계정 정보(이메일·계층)와 로그아웃 버튼을, 미로그인 상태면 로그인/회원가입
  * 버튼을 표시한다 — 모든 화면(비로그인 공개 대시보드 포함)이 이 컴포넌트를 통해 동일하게 표시되어야 한다.
  * 로그아웃 시 인증 상태를 초기화하고 "/"로 이동한다. children으로 그 외 우측 영역(추가 액션 등)을 전달할 수 있다.
+ * `accountExtra`(선택)는 계정 정보와 로그아웃 버튼 사이에 렌더링된다(2026-07-27, 예: AlertsPanel
+ * 알림 벨 아이콘) — 미전달 시 기존과 완전히 동일하게 동작한다(다른 소비처 무변경).
  *
  * 사용 예:
  *   <Header />
  *   <Header><MyTabs /></Header>
  */
-export function Header({ children }: HeaderProps) {
+export function Header({ children, accountExtra }: HeaderProps) {
   const { orgTier, email, signOut } = useAuthState()
 
   function handleLogout() {
@@ -68,6 +74,7 @@ export function Header({ children }: HeaderProps) {
             <span className={styles.accountInfo}>
               {email ? `${email} · ${TIER_LABEL[orgTier]}` : TIER_LABEL[orgTier]}
             </span>
+            {accountExtra}
             <button type="button" className={styles.logoutButton} onClick={handleLogout}>
               로그아웃
             </button>

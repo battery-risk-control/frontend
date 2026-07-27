@@ -9,7 +9,7 @@
 
 | 파일 경로 (physical) | 논리명 (logical) |
 |---|---|
-| `App.tsx` | 앱 루트 컴포넌트 — AuthProvider·SideNavProvider로 라우트 트리 감싸기(Phase 9.4에서 SideNavProvider 추가) |
+| `App.tsx` | 앱 루트 컴포넌트 — AuthProvider·SideNavProvider·AlertsPanelProvider로 라우트 트리 감싸기(Phase 9.4에서 SideNavProvider, 2026-07-27에 AlertsPanelProvider 추가) |
 | `main.tsx` | 앱 진입점 — ReactDOM 렌더링, BrowserRouter 연결 |
 | `api/auth.api.ts` | 인증(로그인/회원가입) mock API |
 | `api/executive.api.ts` | 3계층 경영진 대시보드 mock API |
@@ -20,7 +20,8 @@
 | `app/routes.tsx` | 최상위 라우트 정의 및 로그인 가드 |
 | `components/layout/Breadcrumb.tsx` | 브레드크럼(탐색 위치 안내) |
 | `components/layout/Footer.tsx` | 공통 하단 푸터 |
-| `components/layout/Header.tsx` | 공통 상단 헤더(로고 = 홈 링크) |
+| `components/layout/AlertsBellButton.tsx` | 헤더 알림 벨 아이콘(2026-07-27 신규) — `Header`의 `accountExtra` 슬롯에 들어감 |
+| `components/layout/Header.tsx` | 공통 상단 헤더(로고 = 홈 링크). 2026-07-27 — `accountExtra` prop 추가(계정정보-로그아웃 사이 슬롯, 선택) |
 | `components/layout/SideNav.tsx` | 사이드 메뉴 내비게이션(Phase 9.4부터 SideNavContext의 collapsed 상태 반영) |
 | `components/layout/SideNavToggleButton.tsx` | SideNav 접기/펼치기 토글 버튼(Phase 9.4 신규) — SideNav 바깥에 위치 |
 | `components/layout/SkipLink.tsx` | 본문 바로가기 링크(접근성) |
@@ -51,7 +52,7 @@
 | `features/public/components/AiPriorityList.tsx` | AI 기반 권고 조치 리스트 |
 | `features/public/components/SupplyNewsFeed.tsx` | 실시간 뉴스 속보 |
 | `features/public/pages/PublicDashboardPage.tsx` | 비로그인 공개 대시보드 페이지 |
-| `features/purchasing/components/AlertsPanel.tsx` | 주요 알림 및 빠른 작업 패널 |
+| `features/purchasing/components/AlertsPanel.tsx` | 주요 알림 및 빠른 작업 패널. 2026-07-27 — `AlertsPanelContext`의 `expanded`로 펼침/접힘, 접힘+호버 시 상위 4개 `ScrollCard` 미리보기 추가(오류 및 기능 미흡 발견 #7) |
 | `features/purchasing/components/ErpImpactPanel.tsx` | ERP 영향 자재 재고 계약 분석 패널 |
 | `features/purchasing/components/ImportDependencyPanel.tsx` | 수입 의존도 도넛차트 패널(Phase 9.4 신규) |
 | `features/purchasing/components/ImportDependencyRow.tsx` | 수입 의존도+원자재 가격 추이 2컬럼 행(Phase 9.4 신규) |
@@ -67,14 +68,18 @@
 | `lib/AuthContext.ts` | 인증 상태 Context 객체 정의 |
 | `lib/AuthProvider.tsx` | 인증 상태 Provider 컴포넌트 |
 | `lib/dashboardPaths.ts` | org_tier별 대시보드 경로 매핑 |
+| `lib/AlertsPanelContext.ts` | AlertsPanel 펼침/접힘 상태 Context 객체 정의(2026-07-27 신규, SideNavContext와 동일 패턴) |
+| `lib/AlertsPanelProvider.tsx` | AlertsPanel 펼침/접힘 상태 Provider 컴포넌트(2026-07-27 신규) — `DEFAULT_ALERTS_EXPANDED` 기본값 상수도 이 파일에 있음 |
 | `lib/riskEventId.ts` | risk_event_id 날짜 파싱 유틸 |
+| `lib/selectAlertEvents.ts` | 알림 대상 risk_event 필터 함수(2026-07-27 신규, `AlertsPanel.tsx`에서 분리 — react-refresh 규칙상 컴포넌트 파일은 컴포넌트만 export해야 해서) — `AlertsPanel`(전체 목록)과 `AlertsBellButton`의 배지 숫자 양쪽이 재사용 |
 | `lib/SideNavContext.ts` | SideNav 접기/펼치기 상태 Context 객체 정의(Phase 9.4 신규) |
 | `lib/SideNavProvider.tsx` | SideNav 접기/펼치기 상태 Provider 컴포넌트(Phase 9.4 신규) |
 | `lib/tierLabels.ts` | org_tier별 한글 라벨 매핑 |
+| `lib/useAlertsPanelState.ts` | AlertsPanel 펼침/접힘 상태 접근 훅(2026-07-27 신규) |
 | `lib/useAuthState.ts` | 인증 상태 접근 훅 |
 | `lib/scrollHorizontalByPage.ts` | 형제 카드 캐러셀형 "카드 1장 겹치는" 페이징 스크롤 유틸(2026-07-27 신규, `MaterialRiskOverviewRow`/`MaterialRiskOverviewSection` `HorizontalScrollHint` 클릭 핸들러에서 사용) |
 | `lib/useHorizontalDragScroll.ts` | 가로 스크롤 grab-to-scroll 드래그 훅(2026-07-27 신규, `MaterialRiskOverviewRow`에서 추출해 공용화) |
-| `lib/useHoverDisclosure.ts` | 2단계 hover 디스클로저 상태 훅(2026-07-27 신규, `PageSectionDots`에서 처음 사용 — WCAG 1.4.13 hoverable/dismissible/persistent 충족용, 향후 GlobalRiskBoard 마커 호버 툴팁 재사용 후보) |
+| `lib/useHoverDisclosure.ts` | 2단계 hover 디스클로저 상태 훅(2026-07-27 신규, `PageSectionDots`에서 처음 사용 — WCAG 1.4.13 hoverable/dismissible/persistent 충족용). **소급 정정**: GlobalRiskBoard 마커 hover(#3)에서는 실제로 재사용하지 않기로 확정됨(근거는 `docs/roadmap-candidates.md` C9), AlertsPanel hover 프리뷰(#7)에서도 "벗어나면 항상 초기화" 모델이 pin 요구사항과 안 맞아 재사용하지 않음(`design-tokens.md` "카드 레이아웃·스크롤 규칙" e항 참고) — 지금까지 실사용처는 `PageSectionDots` 한 곳뿐 |
 | `lib/useScrollOverflowHint.ts` | 스크롤 오버플로 힌트 감지 훅(Phase 9.4/10.7, `axis` 파라미터로 세로/가로 축 지원) |
 | `lib/useSideNavState.ts` | SideNav 접기/펼치기 상태 접근 훅(Phase 9.4 신규) |
 
@@ -179,10 +184,15 @@
 |---|---|---|
 | `Footer` | 공통 푸터 컴포넌트 | 모든 화면 하단에 운영기관 식별 정보 표시 |
 
+### `components/layout/AlertsBellButton.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `AlertsBellButton` | 헤더 알림 벨 아이콘 컴포넌트 | 2026-07-27 신규(오류 및 기능 미흡 발견 #7). `Header`의 `accountExtra` 슬롯에 들어감. `count`(배지 숫자, 펼침/접힘과 무관하게 항상 표시)/`expanded`/`onToggle`/`onMouseEnter`/`onMouseLeave` props. 클릭 시 `AlertsPanelContext`의 `expanded` 토글, hover 이벤트는 그대로 상위(`PurchasingDashboardPage`)로 올려보내 디바운스 판단은 호출부가 맡는다(트리거와 콘텐츠가 화면상 떨어져 있어서) |
+
 ### `components/layout/Header.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `Header` | 공통 헤더 컴포넌트 | 좌측에 홈 아이콘 링크(브랜드 텍스트 링크와 별개)+브랜드 텍스트 링크(둘 다 "/" 이동, sticky 상단 고정) + 우측 액션 슬롯(children). 로그인 상태면 계정 정보(이메일·계층)와 로그아웃 버튼, 미로그인 상태면 로그인/회원가입 버튼을 표시(Phase 8.5부터 모든 화면·비로그인 공개 대시보드 포함 대칭 적용) — 로그아웃은 SPA navigate와 인증 상태 갱신 간 경쟁을 피하려 하드 리다이렉트(`window.location.href`) 사용 |
+| `Header` | 공통 헤더 컴포넌트 | 좌측에 홈 아이콘 링크(브랜드 텍스트 링크와 별개)+브랜드 텍스트 링크(둘 다 "/" 이동, sticky 상단 고정) + 우측 액션 슬롯(children). 로그인 상태면 계정 정보(이메일·계층)와 로그아웃 버튼, 미로그인 상태면 로그인/회원가입 버튼을 표시(Phase 8.5부터 모든 화면·비로그인 공개 대시보드 포함 대칭 적용) — 로그아웃은 SPA navigate와 인증 상태 갱신 간 경쟁을 피하려 하드 리다이렉트(`window.location.href`) 사용. 2026-07-27 — `accountExtra`(선택) prop 추가 — 계정 정보와 로그아웃 버튼 사이에 렌더링(예: `AlertsBellButton`), 미전달 시 기존과 완전히 동일(다른 소비처 무변경) |
 
 ### `components/layout/SideNav.tsx`
 | physical | logical | 역할 |
@@ -348,7 +358,9 @@
 ### `features/purchasing/components/AlertsPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `AlertsPanel` | 주요 알림 및 빠른 작업 패널 컴포넌트 | 등급 '심각' 또는 신뢰도 '경고' 항목 우선 노출 |
+| `AlertsPanel` | 주요 알림 및 빠른 작업 패널 컴포넌트 | 등급 '심각' 또는 신뢰도 '경고' 항목 우선 노출(필터링은 `selectAlertEvents`, 소비처가 미리 걸러 `alerts` prop으로 전달). 2026-07-27 — `expanded`(펼침, `AlertsPanelContext`)/`isPreviewing`(접힘+호버 미리보기, 로컬) 두 상태로 분기: 펼침은 기존과 동일한 자체 sticky 패널+`useScrollOverflowHint`, 접힘은 `.wrapper`가 폭 0(SideNav 접기와 동일한 width 트랜지션), 그 상태에서 `isPreviewing`이면 상위 4개(`PREVIEW_COUNT`)를 `ScrollCard`로 감싼 `position:absolute` 오버레이가 opacity+transform으로 떠오름(항상 DOM에 렌더링해두고 클래스로만 토글 — 조건부 마운트면 등장/퇴장에 transition이 안 먹어서) |
+| `AlertItem` | 알림 목록 항목(내부 헬퍼) | 등급/신뢰도 배지+요약, 전체 목록과 미리보기 양쪽에서 재사용 |
+| `PREVIEW_COUNT` | 미리보기 표시 개수 상수(4) | design-tokens.md d항목("리스트 항목 4개 초과 시 overflow")과 일관되게 4로 고정 |
 
 ### `features/purchasing/components/ErpImpactPanel.tsx`
 | physical | logical | 역할 |
@@ -408,7 +420,8 @@
 ### `features/purchasing/pages/PurchasingDashboardPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바(+`SideNavToggleButton`) + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역 3종(`MaterialRiskOverviewSection` → 승격된 `GlobalRiskBoard` → `ImportDependencyRow`)을 기존 4단 패널 위에 추가 |
+| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바(+`SideNavToggleButton`) + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역 3종(`MaterialRiskOverviewSection` → 승격된 `GlobalRiskBoard` → `ImportDependencyRow`)을 기존 4단 패널 위에 추가. 2026-07-27 — `selectAlertEvents`로 알림 필터링 후 `Header`의 `accountExtra`(`AlertsBellButton`)와 `AlertsPanel` 양쪽에 전달, hover 미리보기 디바운스(`PREVIEW_CLOSE_DELAY_MS`=150ms)+ESC 닫기 로컬 상태 관리 |
+| `PREVIEW_CLOSE_DELAY_MS` | 알림 미리보기 닫힘 디바운스(150ms) | 트리거(헤더 벨)·콘텐츠(AlertsPanel)가 화면상 떨어져 있어 둘 다 벗어난 뒤 이 시간만큼 지나야 닫힘 |
 
 ### `lib/AuthContext.ts`
 | physical | logical | 역할 |
@@ -430,6 +443,28 @@
 | physical | logical | 역할 |
 |---|---|---|
 | `parseRiskEventDate` | risk_event_id 날짜 파싱 함수 | `'RISK-YYYY-MMDD-NNN'` → `'YYYY-MM-DD'` |
+
+### `lib/AlertsPanelContext.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `AlertsPanelContextValue` | AlertsPanel Context 값 타입 | 2026-07-27 신규. `expanded`(펼침 여부)/`toggle`(토글 함수) — `SideNavContextValue`와 동일 형태 |
+| `AlertsPanelContext` | AlertsPanel Context 객체 | `AlertsPanelProvider`/`useAlertsPanelState`가 공유하는 React Context — `SideNavContext`와 동일 패턴 |
+
+### `lib/AlertsPanelProvider.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `DEFAULT_ALERTS_EXPANDED` | AlertsPanel 기본 펼침 상태 상수(`true`) | 이 값 하나만 바꾸면 기본 동작(펼침/접힘)이 전체적으로 뒤집힌다(하드코딩 대신 이름 붙은 상수로 한 곳에 선언) |
+| `AlertsPanelProvider` | AlertsPanel 펼침/접힘 상태 Provider 컴포넌트 | 2026-07-27 신규. `App.tsx`에서 `SideNavProvider` 안·`AppRoutes` 바깥에 래핑 — 지금은 `PurchasingDashboardPage` 하나만 쓰지만 페이지 이동(예: 브리핑 상세) 간에도 펼침 상태 유지가 필요해 `SideNavContext`와 동일하게 앱 최상위에 둠(실측: Purchasing→브리핑 상세→뒤로가기 왕복에서 유지 확인) |
+
+### `lib/useAlertsPanelState.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `useAlertsPanelState` | AlertsPanel 펼침/접힘 상태 접근 훅 | 2026-07-27 신규. `AlertsPanelProvider` 내부에서 `expanded`/`toggle` 제공, 범위 밖 사용 시 예외 발생(`useSideNavState`와 동일 패턴) |
+
+### `lib/selectAlertEvents.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `selectAlertEvents` | 알림 대상 risk_event 필터 함수 | 2026-07-27 신규, `AlertsPanel.tsx`에서 분리(react-refresh 규칙 — 컴포넌트 파일은 컴포넌트만 export). 등급 '심각' 또는 신뢰도 '경고'인 이벤트만 남김. `PurchasingDashboardPage`가 한 번 계산해 `AlertsPanel`(전체 목록)과 `AlertsBellButton`(배지 숫자, `alerts.length`) 양쪽에 내려줌 |
 
 ### `lib/SideNavContext.ts`
 | physical | logical | 역할 |

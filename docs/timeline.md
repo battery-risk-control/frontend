@@ -475,3 +475,58 @@ C11에 "QueryClientProvider 도입 안 함" 결정 보강(기존 내용과 어�
 두 소비처 모두에서 클릭 가능해졌다는 점 갱신. `docs/naming-glossary.md`
 (`HorizontalScrollHint`/`scrollHorizontalByPage`/`MaterialRiskOverviewRow`/
 `MaterialRiskOverviewSection` 갱신).
+
+## AlertsPanel 접기/펼치기 + hover 미리보기+고정 (#7, 2026-07-27)
+
+"오류 및 기능 미흡 발견" #7("알림 섹션에 대해서도 접기 버튼 추가... 계정정보와 로그아웃
+사이에 아이콘 배치... 숫자로 알림 개수 표시") 구현. 조사 → 설계 확정 → 상태 관리 방식
+정정(로컬 useState→Context) → 추가 조사 → 구현 순으로 진행했다(10.10에서 예정으로
+남겨뒀던 3차 라운드의 마지막 항목, #6-1과 짝).
+
+- **조사**: `AlertsPanel`은 `ScrollCard`를 안 쓰는 자체 sticky 패널(SideNav와 동급 "앱
+  뼈대")이고, 접기 기능 자체가 전혀 없었으며(신규 기능), 소비처가 `PurchasingDashboardPage`
+  하나뿐임을 확인. design-tokens.md d항목("리스트 4개 초과 시 overflow")과 일관되게
+  미리보기 개수 N=4로 제안·승인. `useHoverDisclosure`는 "벗어나면 항상 초기화" 모델이라
+  "미리보기→클릭 시 고정(pin, 영구)" 요구사항과 안 맞고, 트리거(헤더 벨)-콘텐츠(우측
+  sticky 컬럼)가 화면상 떨어져 있어 도트 인디케이터의 DOM 포함 관계 트릭도 그대로는
+  안전하지 않아 재사용하지 않기로 결정 — 대신 트리거·콘텐츠 어느 쪽 호버든 유지되고 둘
+  다 벗어난 뒤 150ms 디바운스로 닫는 방식 채택.
+- **상태 관리 방식 정정**: 최초 설계는 `expanded`를 `PurchasingDashboardPage`의 로컬
+  `useState`로 뒀으나, "페이지 이동 시 상태 유지" 요구사항이 확인되며 `SideNavContext`와
+  동일한 Context/Provider/hook 3파일 패턴(`AlertsPanelContext`)으로 정정. 추가 조사로
+  `SideNavProvider`가 `App.tsx` 최상위(`AppRoutes` 바깥)에서 전 라우트를 커버함을 확인하고,
+  Purchasing→브리핑 상세→(`page.goBack()`, React Router 클라이언트 사이드 내비게이션)
+  Purchasing 왕복에서 `collapsed` 상태가 실제로 유지되는 걸 실측 재현해 "정상적으로
+  유지되는 패턴"을 먼저 확인한 뒤 `AlertsPanelContext`도 같은 위치에 그대로 따라 배치.
+  `isPreviewing`(hover 미리보기)은 페이지 이동으로 유지될 필요가 없어 로컬 상태로 유지
+  (상태 분리 원칙은 `docs/design-tokens.md` "카드 레이아웃·스크롤 규칙" e항에 일반화해
+  기록).
+- **구현**: `Header`에 `accountExtra`(선택) prop 신규(계정정보-로그아웃 사이 슬롯, 미전달
+  시 무변경) — `AlertsBellButton`(신규, 배지+토글+hover 이벤트 전달)을 그 슬롯에 꽂음.
+  `AlertsPanel.tsx`의 필터 로직은 react-refresh 규칙(컴포넌트 파일은 컴포넌트만 export)에
+  걸려 `lib/selectAlertEvents.ts`로 분리. `AlertsPanel`은 `expanded`일 때 기존과 동일한
+  전체 목록(자체 sticky, `useScrollOverflowHint`), `!expanded`일 때 `.wrapper`가 폭 0(SideNav
+  접기와 동일한 width 트랜지션), 그 상태에서 `isPreviewing`이면 상위 4개를 `ScrollCard`로
+  감싼 오버레이가 `position:absolute`+opacity/transform으로 떠오름 — 조건부 마운트 대신
+  항상 DOM에 렌더링해두고 클래스로만 토글(HorizontalScrollHint와 동일 이유, 등장/퇴장
+  transition을 살리기 위함). ESC로도 미리보기 닫힘.
+
+검증: tsc/eslint/build 통과. Playwright로 (1) 기본 펼침 확인, (2) 배지 숫자(`alerts.length`)
+일치, (3) 클릭 시 접힘(wrapper 0px), (4) 접힘+벨 호버 시 미리보기(4개 이하, ScrollCard)
+등장, (5) 마우스 이탈 150ms 후 정확히 사라짐(100ms 시점엔 opacity 1, 400ms 시점엔 0), (6)
+트리거→콘텐츠 이동 시 안 사라짐, (7) 미리보기 중 클릭 시 고정(펼침, wrapper 280px), (8)
+재클릭 시 닫힘, (9) ESC 닫힘, (10) **Purchasing→브리핑 상세→뒤로가기 왕복 시 expanded 상태
+유지**(신규 검증 항목) 전부 확인. 공개 대시보드·경영진 대시보드(accountExtra 미전달)에
+벨 아이콘이 안 나타남(Header 회귀 없음)도 확인. 스크린샷으로 헤더 배지·미리보기 카드
+렌더링 육안 확인.
+
+조사 중 함께 발견: `docs/naming-glossary.md`의 `useHoverDisclosure` 항목이 "향후
+GlobalRiskBoard 마커 hover 재사용 후보"라고 적혀 있었으나 실제로는 C9에서 재사용하지
+않기로 이미 확정됐던 상태(문서가 그 결정을 반영하지 못하고 있었음) — 이번에 함께 정정.
+
+문서 동기화: `docs/design-tokens.md` "카드 레이아웃·스크롤 규칙" e항 신규(트리거-콘텐츠
+분리형 hover 프리뷰+고정 패턴, 상태 분리 일반 원칙). `docs/naming-glossary.md`
+(`AlertsBellButton`/`Header`/`AlertsPanel`/`AlertsPanelContext`/`AlertsPanelProvider`/
+`useAlertsPanelState`/`selectAlertEvents`/`PurchasingDashboardPage`/`App.tsx`/
+`useHoverDisclosure` 정정 갱신). `docs/roadmap.md` Phase 10.12로 3차 라운드(#6-1+#7)
+완료 반영.

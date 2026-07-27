@@ -246,7 +246,7 @@
 ### `components/widgets/GlobalRiskBoard.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `GlobalRiskBoard` | 글로벌 리스크 관제 맵 컴포넌트 | Phase 9.1 구현, Phase 9.4에서 `features/public/components/`→여기로 승격(구매팀 대시보드도 재사용, 로직 변경 없음). `react-leaflet`+`world-atlas`+`topojson-client` 기반 인터랙티브 세계지도. "이벤트뷰"(개별 좌표 마커)/"국가뷰"(country_code 기준 집계, 대표 이벤트=최고 심각도) 토글, 마커 클릭 시 컴포넌트 내부 상세 패널에 관련 risk_event 리스트 표시. country_code 없는 이벤트는 마커 제외. `ScrollCard` 도입(지도는 `pinnedTop`으로 항상 고정 노출, 뷰토글은 `actions`, 클릭 시 상세 리스트만 스크롤 영역인 `children`) |
+| `GlobalRiskBoard` | 글로벌 리스크 관제 맵 컴포넌트 | Phase 9.1 구현, Phase 9.4에서 `features/public/components/`→여기로 승격(구매팀 대시보드도 재사용, 로직 변경 없음). `react-leaflet`+`world-atlas`+`topojson-client` 기반 인터랙티브 세계지도. "이벤트뷰"(개별 좌표 마커)/"국가뷰"(country_code 기준 집계, 대표 이벤트=최고 심각도) 토글, 마커 클릭 시 컴포넌트 내부 상세 패널에 관련 risk_event 리스트 표시. country_code 없는 이벤트는 마커 제외. `ScrollCard` 도입(지도는 `pinnedTop`으로 항상 고정 노출, 뷰토글은 `actions`, 클릭 시 상세 리스트만 스크롤 영역인 `children`). 2026-07-27 — 마커 hover 시 `confidence_label`을 permanent Tooltip 안에 조건부로 추가 노출(`hoveredKey` state, `CircleMarker`의 `eventHandlers.mouseover`/`mouseout`로 갱신) — Leaflet은 레이어 하나에 Tooltip을 하나만 바인딩할 수 있어 별도 hover 전용 Tooltip을 새로 못 붙이는 제약 때문에 기존 permanent Tooltip을 그대로 확장하는 방식을 씀(`useHoverDisclosure`/커스텀 오버레이는 채택 안 함, 근거는 `docs/roadmap-candidates.md` C9 참고). 국가뷰는 대표(`representative`) 이벤트의 confidence_label을 그대로 사용 |
 
 ### `components/widgets/MaterialPriceDetail.tsx`
 | physical | logical | 역할 |

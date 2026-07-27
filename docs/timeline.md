@@ -274,3 +274,33 @@ mock 쪽 strictPort를 해제했다. 수정 후 `dev:live`(5173) 먼저 띄우�
 design-tokens.md에 scroll-margin-top 관련 서술 자체가 없었음(grep 0건). 해당 서술은
 docs/naming-glossary.md에만 있었음. 검토하지 않은 사실을 검토한 것처럼 보고한 사례 —
 5566491 커밋에서 grep 재확인 후 정정.
+
+## GlobalRiskBoard 마커 hover 툴팁 — confidence_label 노출 (#3, 2026-07-27)
+
+`PageSectionDots` 도트 hover(#1) 직후 같은 종류로 예정돼 있던 `GlobalRiskBoard` 마커 hover
+작업. 조사(읽기 전용) → 설계 확정 → 구현 순으로 진행했다.
+
+- **조사 결과**: 마커 클릭 시 열리는 상세 패널이 이미 `material`/`grade`/`confidence_label`/
+  `event_summary`를 보여주고, 마커 색상은 이미 `grade`를 반영(`GRADE_COLOR` 미러링), permanent
+  Tooltip도 이미 국가명+자재명(이벤트뷰) 또는 국가명+등급+건수(국가뷰)를 상시 표시 중이라,
+  클릭 전까지 어디에도 안 보이는 필드는 `confidence_label`뿐임을 확인. react-leaflet의
+  `<Tooltip>`은 `permanent`를 빼면 Leaflet이 hover 자동 처리를 하지만, 국가뷰가 이미 겪은
+  제약(레이어 하나에 Tooltip 두 개 못 붙임, `bindTooltip`이 마지막 호출만 유지)이 여기도
+  적용됨을 확인.
+- **설계 확정(개발자 승인)**: 내용은 `confidence_label`만(가장 간결, 클릭 패널과 중복 없음,
+  Seq 20 신뢰도 라벨 상시 표시 원칙과 부합). 구현 방식은 네이티브 `<Tooltip>` —
+  `useHoverDisclosure`/좌표 기반 커스텀 오버레이는 채택 안 함(근거를
+  `docs/roadmap-candidates.md` C9에 기록, 후속 재질문 방지 목적).
+- **구현**: 위 제약 때문에 별도 hover 전용 Tooltip을 새로 붙이지 못해, 기존 permanent
+  Tooltip 안에 `hoveredKey` state(`CircleMarker`의 `eventHandlers.mouseover`/`mouseout`로
+  갱신)로 `ConfidenceBadge`를 조건부 렌더링하는 방식으로 구현 — "완전히 Leaflet 자동 처리에만
+  맡기는" 애초 구상보다는 최소한의 커스텀 state가 필요했다. 국가뷰는 여러 `risk_event`를
+  대표(`representative`, 최고 심각도)로 집계하는 기존 방식과 일관되게 대표 이벤트의
+  `confidence_label`을 그대로 씀(새 집계 규칙 없음, 이벤트뷰와 다른 처리 불필요).
+  `.markerLabelConfidence`는 `display:block`으로 부모 `.markerLabel`의 `white-space:nowrap`과
+  무관하게 새 줄에 배지가 오도록 함.
+
+검증: tsc/eslint/build 통과. Playwright로 이벤트뷰/국가뷰 각각 마커 hover 시 툴팁 텍스트에
+신뢰도 라벨("확정" 등)이 추가되고 hover 해제 시 사라짐, 클릭 시 기존 상세 패널이 정상적으로
+열림(회귀 없음) 전부 재현 확인. 스크린샷으로 배지가 permanent 라벨 아래 새 줄에 올바르게
+표시되는 것 육안 확인.

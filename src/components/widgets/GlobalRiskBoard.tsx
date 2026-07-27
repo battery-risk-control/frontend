@@ -147,6 +147,17 @@ function groupByCountry(items: LocatedItem[]): CountryGroup[] {
  * ScrollCard의 pinnedTop(스크롤 밖 고정)에, 뷰토글은 actions에, 클릭 시 나타나는 상세
  * 리스트만 children(스크롤 영역)에 둔다 — 지도가 항상 보이는 상태를 유지하기 위함이다.
  *
+ * 마커 hover 시 클릭 전까지 어디에도 안 보이던 `confidence_label`을 라벨 안에 추가로
+ * 표시한다(2026-07-27). 마커 색상(등급)과 상시 라벨(국가명·자재명 등)은 이미 hover 없이도
+ * 보이므로 새 정보가 아니라 굳이 반복하지 않는다 — 클릭 패널과의 중복을 피하고 신뢰도
+ * 라벨만 추가한 최소 구성(개발자 확정). Leaflet은 레이어 하나에 Tooltip을 하나만 바인딩할
+ * 수 있어(위 국가뷰 주석 참고) 별도 hover 전용 Tooltip을 새로 붙이지 못하고, 기존 permanent
+ * Tooltip 안에 `hoveredKey` state(CircleMarker의 `eventHandlers.mouseover`/`mouseout`로
+ * 갱신)로 조건부 렌더링하는 방식을 쓴다 — `useHoverDisclosure`(PageSectionDots)나 좌표→픽셀
+ * 변환 기반 커스텀 오버레이는 필요 없다고 판단했다(이유: 노출 정보가 confidence_label
+ * 하나뿐이고 비대화형이라 WCAG 1.4.13 hoverable/dismissible 요구가 상대적으로 약함,
+ * `docs/roadmap-candidates.md` 참고).
+ *
  * 사용 예:
  *   <GlobalRiskBoard items={items} />
  */
@@ -154,6 +165,14 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('event')
   const [selected, setSelected] = useState<SelectedDetail | null>(null)
   const [panelExpanded, setPanelExpanded] = useState(false)
+  // hover 시 confidence_label 노출용. Leaflet은 레이어 하나당 Tooltip을 하나만 바인딩할 수
+  // 있어(위 국가뷰 라벨+건수 병합 주석 참고, bindTooltip이 마지막 호출만 유지) 기존 상시
+  // 라벨용 Tooltip과 별개로 두 번째 Tooltip을 마커에 추가할 수 없다. 대신 기존 permanent
+  // Tooltip 하나를 그대로 유지하면서, 그 안에 hover 중인 마커일 때만 ConfidenceBadge를 추가로
+  // 렌더링하는 방식으로 우회한다 — 그래서 hover 감지 자체는 CircleMarker의
+  // eventHandlers(mouseover/mouseout)로 이 state를 갱신하는 최소한의 커스텀 로직이 필요하다
+  // (완전히 Leaflet 자동 처리에만 맡기는 방식은 이 제약 때문에 불가능).
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null)
 
   const locatedItems = items.filter(isLocated)
   const countryGroups = groupByCountry(locatedItems)
@@ -227,7 +246,11 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
                         fillColor: GRADE_COLOR[item.grade],
                         fillOpacity: 0.9,
                       }}
-                      eventHandlers={{ click: () => handleSelectEvent(item) }}
+                      eventHandlers={{
+                        click: () => handleSelectEvent(item),
+                        mouseover: () => setHoveredKey(item.risk_event_id),
+                        mouseout: () => setHoveredKey(null),
+                      }}
                     >
                       <Tooltip
                         permanent
@@ -237,6 +260,11 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
                         className={styles.markerLabel}
                       >
                         {item.country_name ?? item.country_code} · {item.material}
+                        {hoveredKey === item.risk_event_id && (
+                          <span className={styles.markerLabelConfidence}>
+                            <ConfidenceBadge label={item.confidence_label} />
+                          </span>
+                        )}
                       </Tooltip>
                     </CircleMarker>
                   )
@@ -252,14 +280,28 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
                       fillColor: GRADE_COLOR[group.representative.grade],
                       fillOpacity: 0.9,
                     }}
-                    eventHandlers={{ click: () => handleSelectCountry(group) }}
+                    eventHandlers={{
+                      click: () => handleSelectCountry(group),
+                      mouseover: () => setHoveredKey(group.countryCode),
+                      mouseout: () => setHoveredKey(null),
+                    }}
                   >
                     {/* react-leaflet은 레이어 하나에 <Tooltip>을 여러 개 붙이면 bindTooltip이
                         마지막 호출만 유지해 이전 것을 덮어쓴다 — 라벨과 건수를 반드시 하나의
-                        Tooltip으로 합쳐야 한다(둘로 나누면 이벤트 2건 이상 국가에서 라벨이 사라짐). */}
+                        Tooltip으로 합쳐야 한다(둘로 나누면 이벤트 2건 이상 국가에서 라벨이 사라짐).
+                        hover 시 confidence_label을 추가로 보여줄 때도 같은 이유로 두 번째
+                        Tooltip을 새로 붙이지 않고 이 Tooltip 안에 조건부로 끼워넣는다. 여러
+                        risk_event를 대표하는 국가뷰 마커라 confidence_label도 이미 색상/등급
+                        텍스트에 쓰는 것과 같은 대표값(representative)을 그대로 쓴다 — 새로운
+                        집계 규칙을 만들지 않는다. */}
                     <Tooltip permanent direction="top" offset={[0, -6]} opacity={0.95} className={styles.markerLabel}>
                       {group.countryName} · {group.representative.grade}
                       {group.events.length > 1 && ` ×${group.events.length}`}
+                      {hoveredKey === group.countryCode && (
+                        <span className={styles.markerLabelConfidence}>
+                          <ConfidenceBadge label={group.representative.confidence_label} />
+                        </span>
+                      )}
                     </Tooltip>
                   </CircleMarker>
                 ))}

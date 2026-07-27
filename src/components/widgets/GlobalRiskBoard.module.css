@@ -56,6 +56,14 @@
   display: none;
 }
 
+/* hover 시 permanent 라벨 안에 추가로 끼워넣는 ConfidenceBadge 줄. .markerLabel의
+   white-space:nowrap과 무관하게 항상 새 줄에 오도록 display:block(블록 박스는 부모의
+   white-space 설정과 상관없이 스스로 줄바꿈을 만든다)을 쓴다. */
+.markerLabelConfidence {
+  display: block;
+  margin-top: 2px;
+}
+
 .legend {
   position: absolute;
   top: var(--space-2);

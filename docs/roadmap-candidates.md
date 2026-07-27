@@ -140,3 +140,35 @@ C7 재현 조사 중 함께 발견됐으나 C7(마지막 섹션 전용 구조적
 도트가 0개가 됨 — 짧은 섹션들 사이 전환 중 발생하는 통상적 스크롤스파이 아티팩트로 추정.
 C7 해소 작업 범위에서는 의도적으로 손대지 않았다. 착수 여부·해결 방식(rootMargin 값 자체
 조정, 섹션 간 최소 간격 확보 등) 모두 미결정.
+
+## C9 — GlobalRiskBoard 마커 hover 툴팁: 네이티브 Tooltip 채택, useHoverDisclosure/커스텀 오버레이 불필요 (반영 완료, 2026-07-27)
+
+`PageSectionDots`의 도트 hover 2단계 툴팁(#1) 작업 직후, 같은 종류의 요구사항으로 예정돼
+있던 `GlobalRiskBoard` 마커 hover 툴팁(#3) 착수 전 조사에서 확정한 설계 근거를 남긴다 —
+후속 작업자가 "왜 도트 인디케이터처럼 `useHoverDisclosure`+커스텀 위치 계산으로 안
+만들었냐"고 재질문하는 것을 막기 위한 목적.
+
+- **노출 정보가 `confidence_label` 하나뿐**: 마커 클릭 시 열리는 상세 패널(`material`/
+  `grade`/`confidence_label`/`event_summary`)과 이미 상시 표시 중인 정보(마커 색상=`grade`,
+  permanent Tooltip=국가명+자재명 또는 국가명+등급+건수)를 대조한 결과, 클릭 전까지 어디에도
+  안 보이는 필드는 `confidence_label`(과 상대적으로 덜 중요한 `event_summary`)뿐이었다.
+  `PageSectionDots`는 8개 섹션 제목 "전체"를 보여줘야 해서 위치 계산이 복잡했지만, 여기는
+  배지 하나만 추가하면 되는 문제라 요구 자체의 성격이 다르다.
+- **비대화형이라 WCAG 1.4.13 요구가 약함**: 배지는 클릭/선택 대상이 아닌 순수 정보 표시라
+  "hoverable"(트리거→콘텐츠 이동 중 유지)이 필요 없다 — 그냥 마우스가 마커를 벗어나면
+  사라지면 충분하다. `useHoverDisclosure`가 해결하려던 문제(트리거-콘텐츠 간 마우스 이동
+  보존) 자체가 이 상황엔 없다.
+- **Leaflet 자체 hover 메커니즘 재사용**: react-leaflet `<Tooltip>`은 `permanent`를 빼면
+  Leaflet이 hover 시 자동으로 보여주고 숨긴다 — 별도 React state/이벤트 배선이 원래는
+  전혀 필요 없었을 것이다. 다만 실제로는 국가뷰가 이미 겪은 제약(레이어 하나에 Tooltip을
+  두 개 못 붙임, `bindTooltip`이 마지막 호출만 유지)이 여기도 그대로 적용돼, 기존
+  permanent Tooltip 안에 `hoveredKey` state(`CircleMarker`의 `eventHandlers.mouseover`/
+  `mouseout`로 갱신)로 confidence_label을 조건부 렌더링하는 방식을 썼다 — "완전히 커스텀
+  코드 0줄"은 아니지만, `useHoverDisclosure`나 좌표→픽셀 변환 기반 커스텀 오버레이보다는
+  훨씬 가볍다.
+- **좌표 기반 앵커링은 도트 컬럼과 근본적으로 다름**: `PageSectionDots`의 "li 중앙=도트
+  중앙" CSS 정렬 기법은 애초에 검토·재사용하지 않았다 — Leaflet 마커는 지리좌표를
+  Leaflet 자신이 픽셀로 변환해 위치를 정하지, CSS 형제 요소 간 `top`/`transform` 관계로
+  정하지 않는다(개발자가 사전에 명시한 제한사항, 실측으로도 재확인).
+
+상세 구현/검증은 `docs/timeline.md` 참고.

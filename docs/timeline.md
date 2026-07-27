@@ -155,3 +155,44 @@ mock 쪽 strictPort를 해제했다. 수정 후 `dev:live`(5173) 먼저 띄우�
 `Port 5173 is in use, trying another one...` 메시지와 함께 5174에서 정상 기동, 두 서버 동시
 응답(curl 200/200)까지 확인. `docs/backend-integration-guide.md`(dev:live 섹션에 동시 구동
 안내 추가)와 CLAUDE.md(환경 3단계 섹션에 strictPort 비대칭 의도 명시)도 함께 갱신했다.
+
+## 오류 및 기능 미흡 2차 라운드 — C7 최하단 사각지대 해소 + 도트 hover 2단계 툴팁 (2026-07-27)
+
+1차 라운드(#2/#4/#5/#6) 후속 — C7(도트 인디케이터 최하단 섹션 사각지대)을 해소하고,
+`PageSectionDots`에 도트 hover 시 섹션 제목을 보여주는 2단계 툴팁을 신규 추가한 라운드.
+조사(읽기 전용) 후 수정을 분리해 진행했다.
+
+- **C7 해소**: Playwright로 마지막 섹션(`구매 대응 우선순위`) 도트가 문서 맨 끝까지
+  스크롤해도 활성화되지 않는 현상을 재현·정확한 원인을 특정 — rootMargin 기반
+  IntersectionObserver가 요구하는 스크롤 위치(`scrollY ≥ 2088.98px`, 1400px 뷰포트 기준)가
+  문서의 실제 최대 스크롤(`1976px`)보다 약 113px 더 필요해 구조적으로 도달 불가능했음.
+  rootMargin 예외값 대신 "문서 하단 도달"을 별도 감지(`scrollY + innerHeight ≥ scrollHeight
+  - 2px`)해 근접 시 마지막 섹션 id를 강제로 active에 포함시키는 방식(개발자 확정안)으로
+  해소(9c69569). 조사 중 함께 발견된 원인이 다른 사각지대 2곳(섹션 전환 구간의 통상적
+  스크롤스파이 아티팩트)은 손대지 않고 `docs/roadmap-candidates.md` C8로 별도 기록.
+- **도트 hover 2단계 툴팁(#1)**: 도트에 마우스를 올리면 1단계(같은 높이에 섹션 제목 알약
+  1개) → 그 알약 위로 마우스가 이동하면 2단계(8개 섹션 평면 리스트로 확장, 현재 활성 섹션
+  강조)로 열리는 hover 툴팁을 신규 구현. 배지 텍스트는 기존 `SECTION_DOTS_SECTIONS`의
+  `section.id`를 그대로 재사용(heading textContent 별도 조회 불필요). WCAG 1.4.13
+  (hoverable/dismissible/persistent) 충족을 위해 순수 CSS `:hover` 대신 상태로 관리하는
+  `useHoverDisclosure` 훅을 신설(`src/lib/`) — 트리거+콘텐츠를 하나의 `<ul>`로 감싸고
+  그 `<ul>`에만 `onMouseLeave`를 걸어 트리거→팝오버 이동 중엔 안 닫히게 했고, `Escape`로도
+  닫히게 했다. 애니메이션은 1단계 등장/퇴장에 opacity+transform, 2단계 확장(1개→8개
+  리스트)에 기존 disclosure 패턴과 동일한 max-height+opacity를 적용(모두 `--transition-fast`).
+  구현 중 발견/수정: 최초 구현은 패널을 `top:50%`+`transform:translateY(-50%)`로 도트에
+  퍼센트 기반 세로 중앙 정렬했는데, 이 경우 2단계로 확장(max-height 40px→500px)되면 늘어난
+  높이의 절반만큼 위로도 커져 목록 맨 위쪽 도트(첫 섹션)에서는 그 절반이 sticky Header
+  뒤로 가려짐을 스크린샷으로 발견 — `top`을 li 상단 기준 고정 px 오프셋(`-8px`)으로 바꿔
+  확장이 항상 아래쪽으로만 일어나게 해 해결.
+  이 hover 상태 관리 로직(`useHoverDisclosure`)은 재사용을 염두에 두고 컴포넌트 밖으로
+  분리했다 — 다음 순서(#3, GlobalRiskBoard 마커 hover 툴팁)도 같은 종류의 hoverable/
+  dismissible 요구사항이라 재사용 후보로 판단했으나, 실제 재사용 여부는 #3 구현 시점에
+  마커 트리거의 이벤트 배선 방식에 따라 확정된다.
+
+검증: 각 커밋 tsc/eslint/build 통과. Playwright로 (1) C7 — 최대 스크롤 지점에서 마지막
+도트 active, 그 지점에서 500px 위로 이동 시 강제 active 해제, 기존 도트 클릭 이동 회귀
+없음, (2) hover 툴팁 — 호버 전 완전히 숨김(opacity 0/pointer-events none) → 도트 호버 시
+1단계(알약 1개, max-height 40px) → 배지 호버 시 2단계(8개 리스트, max-height 500px) →
+완전히 벗어나면 닫힘 → 재호버 후 Escape로도 닫힘, 2단계 리스트에서 현재 활성 섹션(스크롤
+위치 기준, 마지막 섹션 강제 active 케이스 포함) 강조 표시 전부 재현 확인. 스크린샷으로
+헤더 비겹침·강조 표시 육안 확인 완료.

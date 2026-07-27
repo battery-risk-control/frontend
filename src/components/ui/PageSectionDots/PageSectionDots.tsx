@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useHoverDisclosure } from '../../../lib/useHoverDisclosure'
 import styles from './PageSectionDots.module.css'
 
 export interface PageSectionDotsSection {
@@ -37,6 +38,17 @@ interface PageSectionDotsProps {
  * "사용자가 더 스크롤할 수 없는 지점"이라는 절대적 조건이라 콘텐츠/뷰포트 크기가 달라져도
  * 구조적으로 성립한다.
  *
+ * 도트에 마우스를 올리면 2단계 hover 툴팁이 뜬다(`useHoverDisclosure` 공용 훅) — 1단계는
+ * 해당 도트와 같은 높이에 섹션 제목 알약 1개만, 그 알약 위로 마우스를 옮기면 2단계로
+ * 8개 섹션 전체가 세로 평면 리스트(계층 들여쓰기 없음)로 확장된다. 트리거(각 `<li>`)와
+ * 팝오버를 같은 `<ul>` 안에 두고 `<ul>`에만 `onMouseLeave`를 걸어(개별 트리거는
+ * `onMouseEnter`만) DOM 포함 관계상 트리거→팝오버 이동 중엔 안 닫히게 한다(WCAG 1.4.13
+ * hoverable). 팝오버는 `right: 100%` + `padding-right`로 트리거에 맞닿게 배치해(마진이
+ * 아니라 패딩으로 여백을 줌) 트리거-팝오버 사이에 아무 요소도 없는 빈 공간이 생기지 않게
+ * 했다 — 빈 공간이 있으면 그 위를 지나는 순간 컨테이너 밖으로 취급돼 깜빡이며 닫힐 수
+ * 있다. `Escape`로도 닫힌다(dismissible). 2단계 리스트에서는 현재 활성 도트와 같은 섹션의
+ * 알약을 강조 표시한다.
+ *
  * 사용 예:
  *   <PageSectionDots
  *     variant="withAside"
@@ -50,6 +62,7 @@ const BOTTOM_THRESHOLD_PX = 2
 export function PageSectionDots({ sections, variant }: PageSectionDotsProps) {
   const [activeIds, setActiveIds] = useState<Set<string>>(new Set())
   const [nearBottom, setNearBottom] = useState(false)
+  const hover = useHoverDisclosure<string>()
 
   useEffect(() => {
     const entries = sections
@@ -125,11 +138,40 @@ export function PageSectionDots({ sections, variant }: PageSectionDotsProps) {
   const railClassName =
     variant === 'withAside' ? `${styles.rail} ${styles.railWithAside}` : `${styles.rail} ${styles.railStandalone}`
 
+  function renderHoverPanel(section: PageSectionDotsSection) {
+    const isHovered = hover.hovered === section.id
+    const panelClassName = [
+      styles.hoverPanel,
+      isHovered && styles.hoverPanelVisible,
+      isHovered && hover.expanded && styles.hoverPanelExpanded,
+    ]
+      .filter(Boolean)
+      .join(' ')
+
+    return (
+      <div className={panelClassName} onMouseEnter={hover.expandHover} aria-hidden={!isHovered}>
+        {isHovered && !hover.expanded && <span className={styles.hoverPill}>{section.id}</span>}
+        {isHovered && hover.expanded && (
+          <ul className={styles.hoverList}>
+            {sections.map((s) => (
+              <li
+                key={s.id}
+                className={displayActiveIds.has(s.id) ? `${styles.hoverPill} ${styles.hoverPillCurrent}` : styles.hoverPill}
+              >
+                {s.id}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )
+  }
+
   return (
     <nav className={railClassName} aria-label="페이지 섹션 이동">
-      <ul className={styles.dots}>
+      <ul className={styles.dots} onMouseLeave={hover.closeHover}>
         {sections.map((section) => (
-          <li key={section.id}>
+          <li key={section.id} className={styles.dotItem} onMouseEnter={() => hover.openHover(section.id)}>
             <button
               type="button"
               className={displayActiveIds.has(section.id) ? `${styles.dot} ${styles.dotActive}` : styles.dot}
@@ -137,6 +179,7 @@ export function PageSectionDots({ sections, variant }: PageSectionDotsProps) {
               aria-label={`${section.id}로 이동`}
               aria-current={displayActiveIds.has(section.id)}
             />
+            {renderHoverPanel(section)}
           </li>
         ))}
       </ul>

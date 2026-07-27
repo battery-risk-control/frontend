@@ -73,6 +73,7 @@
 | `lib/tierLabels.ts` | org_tier별 한글 라벨 매핑 |
 | `lib/useAuthState.ts` | 인증 상태 접근 훅 |
 | `lib/useHorizontalDragScroll.ts` | 가로 스크롤 grab-to-scroll 드래그 훅(2026-07-27 신규, `MaterialRiskOverviewRow`에서 추출해 공용화) |
+| `lib/useHoverDisclosure.ts` | 2단계 hover 디스클로저 상태 훅(2026-07-27 신규, `PageSectionDots`에서 처음 사용 — WCAG 1.4.13 hoverable/dismissible/persistent 충족용, 향후 GlobalRiskBoard 마커 호버 툴팁 재사용 후보) |
 | `lib/useScrollOverflowHint.ts` | 스크롤 오버플로 힌트 감지 훅(Phase 9.4/10.7, `axis` 파라미터로 세로/가로 축 지원) |
 | `lib/useSideNavState.ts` | SideNav 접기/펼치기 상태 접근 훅(Phase 9.4 신규) |
 
@@ -223,7 +224,8 @@
 | physical | logical | 역할 |
 |---|---|---|
 | `PageSectionDotsSection` | 도트 섹션 정의 타입 | `id`(표시명)+`headingId`(관찰 대상 heading의 DOM id) |
-| `PageSectionDots` | 페이지 섹션 이동 도트 인디케이터 컴포넌트 | Phase 10.7 신규. `sections`의 heading들을 `IntersectionObserver`로 다중 관찰해 뷰포트에 보이는 섹션 도트를 활성 표시(여러 개 동시 활성 가능), 클릭 시 `scrollIntoView`. 2026-07-27 — `rootMargin: -{header-height}px 0px -60% 0px`를 추가해 sticky Header에 가려지는 상단을 관찰 대상에서 제외하고 "뷰포트 상단 40%" 기준선으로 좁힘(통상적 스크롤스파이 기법), heading 쪽은 `ScrollCard.module.css`의 `.title`에 `scroll-margin-top: var(--header-height)`를 줘 `scrollIntoView`도 함께 보정. 페이지 맨 아래(마지막 섹션 부근)에는 이 조정만으로 해소되지 않는 사각지대가 남아있음을 실측 확인(추가 설계는 후속 과제로 보류) |
+| `PageSectionDots` | 페이지 섹션 이동 도트 인디케이터 컴포넌트 | Phase 10.7 신규. `sections`의 heading들을 `IntersectionObserver`로 다중 관찰해 뷰포트에 보이는 섹션 도트를 활성 표시(여러 개 동시 활성 가능), 클릭 시 `scrollIntoView`. 2026-07-27 — `rootMargin: -{header-height}px 0px -60% 0px`를 추가해 sticky Header에 가려지는 상단을 관찰 대상에서 제외하고 "뷰포트 상단 40%" 기준선으로 좁힘(통상적 스크롤스파이 기법), heading 쪽은 `ScrollCard.module.css`의 `.title`에 `scroll-margin-top: var(--header-height)`를 줘 `scrollIntoView`도 함께 보정. 같은 날 후속 수정 2건 — (1) 마지막 섹션이 rootMargin 조건을 영영 만족 못 해 active가 안 되던 사각지대(C7)를 "문서 하단 도달" 별도 감지로 해소, (2) 도트 호버 시 `useHoverDisclosure` 기반 2단계 툴팁(1단계: 섹션 제목 알약 1개, 2단계: 8개 섹션 평면 리스트로 확장, 현재 활성 섹션 강조) 추가 |
+| `BOTTOM_THRESHOLD_PX` | 문서 하단 도달 판정 여유값(2px) | C7 해소용 — 특정 콘텐츠의 부족분을 메우는 값이 아니라 픽셀 반올림 오차만 흡수하는 값 |
 
 ### `components/ui/RiskGauge.tsx`
 | physical | logical | 역할 |
@@ -456,6 +458,12 @@
 |---|---|---|
 | `HorizontalDragScrollHandlers` | 가로 드래그 스크롤 핸들러 타입 | `isDragging`+`onMouseDown`/`onMouseMove`/`onMouseUp`/`onMouseLeave` |
 | `useHorizontalDragScroll` | 가로 스크롤 grab-to-scroll 드래그 훅 | mousedown 시작 좌표/scrollLeft 기록 → mousemove로 scrollLeft 갱신 → mouseup/mouseleave 종료. `MaterialRiskOverviewRow`에서 처음 구현 후 `MaterialRiskOverviewSection`도 쓰게 되며 공용 훅으로 추출(2026-07-27) |
+
+### `lib/useHoverDisclosure.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `HoverDisclosure<T>` | 2단계 hover 디스클로저 상태 타입 | `hovered`(어느 트리거가 호버됐는지, 제네릭)+`expanded`(2단계 확장 여부)+`openHover`/`expandHover`/`closeHover` |
+| `useHoverDisclosure` | 2단계 hover 디스클로저 상태 훅 | 순수 CSS `:hover` 대신 상태로 열림/확장/닫힘을 관리 — 트리거+콘텐츠를 하나의 컨테이너로 감싸고 컨테이너에만 `onMouseLeave`를 걸면(개별 트리거는 `onMouseEnter`만) DOM 포함 관계상 트리거→콘텐츠 이동 중엔 안 닫힘(WCAG 1.4.13 hoverable), `Escape`로도 닫힘(dismissible). `PageSectionDots`에서 처음 사용(2026-07-27) |
 
 ### `lib/useSideNavState.ts`
 | physical | logical | 역할 |

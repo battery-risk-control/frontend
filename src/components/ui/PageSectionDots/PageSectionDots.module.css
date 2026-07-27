@@ -31,6 +31,12 @@
 }
 
 .dot {
+  /* button의 기본 display:inline-block이 인라인 서식 문맥을 만들어, 부모 <li>의 렌더링
+     높이가 이 버튼 자체의 8px이 아니라 상속된 line-height(16px 폰트 기준 약 19px)로
+     부풀려지고, 버튼도 그 안에서 기본 vertical-align:baseline으로 배치돼 li 중앙과도
+     어긋난다(실측 확인 — hoverPanel 정렬 버그의 근본 원인). display:block으로 이 인라인
+     서식 문맥 자체를 없애 li 높이가 정확히 이 버튼의 8px과 일치하게 한다. */
+  display: block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -65,15 +71,19 @@
    mouseleave로 오인돼 닫힐 수 있다(패딩은 이 요소 자신의 hit box라 안전). 항상 DOM에
    렌더링해두고 opacity+pointer-events로만 켜고 끈다(조건부 마운트면 등장/퇴장에 transition이
    안 먹는다 — "from" 상태가 없어서).
-   top은 `top:50%; transform:translateY(-50%)`(퍼센트 기반 세로 중앙 정렬) 대신 li 상단
-   기준 고정 px 오프셋을 쓴다 — 목록 맨 위쪽 도트(예: 첫 번째 섹션)에서 퍼센트 중앙 정렬이면
-   패널이 위로도 확장돼 sticky Header 뒤로 가려질 수 있다(이전 설계에서 실측 확인). 지금은
-   배지 높이가 고정이라 이 문제 자체가 없지만, 일관성을 위해 고정 px 오프셋을 유지한다. */
+   top은 li 상단 기준 고정 px 오프셋(예: -8px) 대신 `top:50%; transform:translateY(-50%)`
+   (li 중앙 기준 퍼센트 정렬)를 쓴다 — li 높이가 `.dot`의 `display:block` 덕분에 정확히
+   도트 자체의 8px과 같아졌으므로(위 `.dot` 주석 참고), li 중앙 = 도트 중앙이 구조적으로
+   보장된다. 예전에는 이 자리에 퍼센트 중앙 정렬을 쓰면 배지가 500px까지 확장될 때 그
+   절반만큼 위로도 자라 목록 맨 위쪽 도트에서 sticky Header 뒤로 가려지는 문제가 있어(당시
+   실측 확인) 고정 px 오프셋으로 바꿨었지만, 지금은 배지 높이가 24px 고정이라(리스트 전체가
+   아니라 배지 1개만 렌더링, 5566491) 그 문제가 재발하지 않는다 — 반경 12px 이내의 확장이라
+   Header를 침범하지 않는다(실측 확인). */
 .hoverPanel {
   position: absolute;
-  top: -8px;
+  top: 50%;
   right: 100%;
-  transform: translateX(4px);
+  transform: translateY(-50%) translateX(4px);
   padding-right: var(--space-2);
   z-index: 20;
   opacity: 0;
@@ -86,7 +96,7 @@
 .hoverPanelVisible {
   opacity: 1;
   pointer-events: auto;
-  transform: translateX(0);
+  transform: translateY(-50%) translateX(0);
 }
 
 .hoverPill {

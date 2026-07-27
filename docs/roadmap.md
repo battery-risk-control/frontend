@@ -43,6 +43,15 @@
   - [x] 10.6 — `ScrollCard` 카드 내부 오버플로 시각 신호(그라데이션+화살표 힌트) 도입 + `design-tokens.md` "카드 레이아웃·스크롤 규칙" 문서화(2026-07-25, `8080101`), 이후 3개 패널(원자재 공급사 리스크 현황/ERP 영향/구매 대응 우선순위)에 실측 기반 `maxBodyHeight` 적용해 4개 초과 시 실제 스크롤 트리거하도록 후속 수정(2026-07-25, `588fe73`).
   - [x] 10.7 — 구매팀 대시보드 페이지 섹션 도트 인디케이터(`PageSectionDots`, 2026-07-26, `c73b654`) + SideNav/AlertsPanel 독립 스크롤 전환(`useScrollOverflowHint` 공용 훅 분리 포함, `dd3e07a`) + 공개 대시보드 컷오프 기법 적용(`37e011d`) + 미사용 `ScrollHint` 컴포넌트 삭제 및 문서 정리(`71d8787`).
   - [ ] 10.9(후보) — SideNav 실기능 연결: **미착수**. `SIDE_NAV_ITEMS`가 Phase 4부터 `href="#..."` 순수 placeholder였고(원 목적: React key 중복 경고 회피), Phase 8에서 "실제 라우트로 교체"했다는 기록과 달리 실제로는 여전히 미기능 상태임을 Playwright 6개 시나리오로 실측 확인(2026-07-24). 앵커 스크롤/신규 페이지 분리/surin `Briefing.tsx` 이식 등 착수 방향 전부 미결정. 상세는 `docs/roadmap-candidates.md` "C3" 참고
+  - [x] 10.10 — "오류 및 기능 미흡 발견" 2차 라운드(#1 도트 hover 2단계 툴팁 → #3 관제맵 마커
+    hover 툴팁) + C7(도트 최하단 사각지대) 병합 완료(2026-07-27): C7 해소(`9c69569`) → #1
+    `PageSectionDots` 도트 hover 2단계 툴팁 신규(`e80922c`) → 사용자 재검토로 발견된 버그 3건
+    수정(expanded 리셋 누락/배지가 호버 도트 근처에 뭉침/`scroll-margin-top` 타겟이 heading
+    대신 `ScrollCard`의 `.panel`이어야 함, `5566491`) → 배지-도트 세로 중앙 정렬 불일치 보정
+    (`.dot`의 기본 `display:inline-block`이 원인, `0dd37cd`) → #3 `GlobalRiskBoard` 마커
+    hover 시 `confidence_label` 노출(`18cd9e0`). 미검증 상태로 남은 사항(중간 사각지대 2곳,
+    완전히 겹친 마커 간 hover 전환)은 각각 `docs/roadmap-candidates.md` "C8"/"C10" 참고.
+    다음 순서는 3차 라운드(#6-1 → #7 변경) 예정.
 
 ## 재사용 규칙 (Phase 3에서 결정되는 인터페이스는 이후 Phase가 그대로 따른다)
 - `ConfidenceBadge`/`RiskGradeBadge`의 props 타입은 이후 모든 화면에서 동일하게 재사용한다 — 화면별로 별도 배지를 새로 만들지 않는다.

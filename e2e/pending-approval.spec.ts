@@ -12,10 +12,14 @@ test.describe('승인 대기(PENDING) 플로우', () => {
   })
 
   test('회원가입을 제출하면 항상 승인 대기 화면으로 전환된다', async ({ page }) => {
+    // 고정 이메일을 쓰면 mock(무상태)에선 항상 통과하지만, 실 백엔드(영구 DB, 이메일 유니크
+    // 제약)에선 같은 DB에 반복 실행 시 두 번째부터 중복으로 실패한다(실측 확인) — 실행마다
+    // 고유한 이메일을 써서 실 DB 대상 반복 실행에도 안전하게 한다.
+    const uniqueEmail = `hong-${Date.now()}@company.com`
     await page.goto('/auth')
     await page.getByRole('tab', { name: '권한 신청' }).click()
     await page.getByLabel('임직원 성명').fill('홍길동')
-    await page.getByLabel('회사 이메일 계정 (ID)').fill('hong@company.com')
+    await page.getByLabel('회사 이메일 계정 (ID)').fill(uniqueEmail)
     await page.getByLabel('접속 비밀번호 설정').fill('Passw0rd!!')
     await page.locator('input[type="radio"][value="purchasing"]').check()
     await page.getByRole('button', { name: '가입 및 계정 승인 요청' }).click()

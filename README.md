@@ -108,13 +108,15 @@ VITE_MOCK_DELAY_MS=0 npm run dev
 | [docs/architecture.md](docs/architecture.md) | 시스템 아키텍처 (⚠️ 일부 미확정 — 문서 내 명시) |
 | [docs/requirements-frontend.md](docs/requirements-frontend.md) | 화면별 요구사항(Seq ID 매핑) |
 | [docs/mock-schemas.md](docs/mock-schemas.md) | API mock 스키마(잠정 계약 — 아래 "API 명세" 참고) |
+| [docs/backend-api-contracts.md](docs/backend-api-contracts.md) | 실 백엔드와 검증 완료된 확정 API 계약(2026-07-27 신설) |
 | [docs/design-tokens.md](docs/design-tokens.md) | 색상·타이포·spacing 디자인 토큰과 근거 |
 | [docs/roadmap.md](docs/roadmap.md) | 개발 로드맵(Phase 계획) |
+| [docs/frontend-demo-guide.md](docs/frontend-demo-guide.md) | mock 단독(①단계) 전체 화면 시연 절차(2026-07-27 신설) |
 | [docs/timeline.md](docs/timeline.md) | 실제 개발 이력(Phase별 진행 기록, append-only) |
 
 ## API 명세
 
-백엔드 API 계약은 아직 확정되지 않았습니다. 현재는 [docs/mock-schemas.md](docs/mock-schemas.md)(그리고 `CLAUDE.md`에 정의된 1계층 `risk_event` 스키마)를 **잠정 계약**으로 삼아, `src/api/` 아래 mock 함수로 프론트엔드를 우선 구현했습니다. 응답 타입을 `src/api/types.ts`에 먼저 정의해뒀기 때문에, 실제 계약이 확정되면 각 `api/*.api.ts` 파일의 구현부(mock 데이터를 실제 fetch 호출로 교체)만 바꾸면 됩니다.
+백엔드 API 계약은 대부분 아직 확정되지 않았습니다. 현재는 [docs/mock-schemas.md](docs/mock-schemas.md)(그리고 `CLAUDE.md`에 정의된 1계층 `risk_event` 스키마)를 **잠정 계약**으로 삼아, `src/api/` 아래 mock 함수로 프론트엔드를 우선 구현했습니다. 응답 타입을 `src/api/types.ts`에 먼저 정의해뒀기 때문에, 실제 계약이 확정되면 각 `api/*.api.ts` 파일의 구현부(mock 데이터를 실제 fetch 호출로 교체)만 바꾸면 됩니다. 일부(인증, 공개 지도)는 이미 실 백엔드와 검증까지 끝나 [docs/backend-api-contracts.md](docs/backend-api-contracts.md)로 옮겨졌습니다 — 확정된 계약과 아직 제안 단계인 계약을 구분해서 봐야 합니다.
 
 현재 프론트엔드는 세 가지 실행 단계를 구분합니다:
 1. **프론트엔드 단독** — mock 데이터 + 의도적 로딩 지연(스켈레톤 UI 검증·단독 시연용).
@@ -124,7 +126,7 @@ VITE_MOCK_DELAY_MS=0 npm run dev
 
 단계 전환 방법은 아래 "실행 방법"을 참고하세요.
 
-백엔드를 실제로 연결해 시연/테스트하는 방법은 [docs/backend-integration-guide.md](docs/backend-integration-guide.md) 참고.
+mock 단독(①단계)으로 전체 화면을 순서대로 시연하는 절차는 [docs/frontend-demo-guide.md](docs/frontend-demo-guide.md) 참고. 백엔드를 실제로 연결해 시연/테스트하는 방법(②단계)은 [docs/backend-integration-guide.md](docs/backend-integration-guide.md) 참고 — 둘은 서로 다른 절차라 문서가 분리돼 있습니다.
 
 ## ERD
 

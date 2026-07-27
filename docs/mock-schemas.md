@@ -2,6 +2,10 @@
 
 > 1계층 `risk_event` 스키마(CLAUDE.md 참고)를 원천으로 하되, 계층별 목적에 맞게 집계·가공한 형태다.
 > **이 문서는 데모용 제안이며, 프로젝트 진행 중 실제 BE 계약이 나오면 계속 바뀐다.** 필드 추가/삭제가 쉽도록 각 객체를 평탄하지 않게(중첩 객체 단위로) 설계했다.
+>
+> **2026-07-27부터**: 실 백엔드와 검증 완료된 계약은 이 문서에서 `docs/backend-api-contracts.md`로
+> 이동한다(현재 인증, 공개 지도 2건) — 이 문서에는 이동했다는 안내 한 줄만 남긴다. 아직 여기
+> 남아있는 나머지 섹션은 전부 제안 단계다.
 
 ## 1. 2계층 — 경영기획팀 대시보드
 
@@ -68,37 +72,9 @@
 
 ## 3. 인증
 
-**회원가입** `POST /api/auth/signup`
-```json
-{
-  "name": "홍길동",
-  "email": "user@company.com",
-  "password": "********",
-  "org_tier": "purchasing",   // purchasing | planning | executive
-  "org_name": "OO배터리"
-}
-```
-응답:
-```json
-{ "user_id": "USR-0001", "status": "PENDING", "message": "관리자 승인 대기 중입니다." }
-```
-
-- `name`(임직원 성명)은 최초 제안 스키마에는 없었으나 Figma 회원가입 와이어프레임에 입력 필드로 존재해 확장 원칙에 따라 추가.
-- `org_name`은 반대로 Figma 와이어프레임에는 입력 필드가 없다. 소속 회사 선택 UI가 추가되기 전까지 FE는 고정값(`OO배터리`)을 채워 보낸다 — 실제 입력 UI가 생기면 이 필드만 폼 값으로 교체하면 된다.
-
-**로그인** `POST /api/auth/login`
-```json
-{ "email": "user@company.com", "password": "********" }
-```
-성공 응답:
-```json
-{ "access_token": "mock.jwt.token", "org_tier": "purchasing", "status": "APPROVED" }
-```
-승인 대기 중 로그인 시도:
-```json
-{ "error": "PENDING_APPROVAL", "message": "관리자 승인 대기 중입니다." }
-```
-→ FE는 이 응답을 받으면 Seq 35의 보안 락 화면으로 라우팅한다.
+→ **확정됨.** `docs/backend-api-contracts.md` "1. 인증" 참고(2026-07-27, 실 백엔드 연동
+시연 4개 시나리오 + Playwright e2e 24/24로 검증 — 이동하며 URL 버전 접두사(`/api/v1/`)와
+회원가입 응답 필드(`message`→`org_tier`) 오류도 함께 정정됨).
 
 ## 4. 비로그인 공개 대시보드 — 원자재 가격 추이
 
@@ -120,49 +96,10 @@
 - **①②단계**에서는 이 엔드포인트를 실 데이터처럼 취급하면 안 된다 — **③단계** 진입(계약 확정) 시 이 스키마 전체(특히 `price_index`)를 교체해야 한다.
 - 통화 단위 절대값 대신 "기준일=100" 상대 지수를 쓰는 이유: 근거 없는 절대 가격 수치를 문서에 확정값처럼 남기지 않기 위함.
 
-## 4-1. 비로그인 공개 대시보드 — 글로벌 리스크 관제 지도 (실제 백엔드 계약, 2026-07-27 확정)
+## 4-1. 비로그인 공개 대시보드 — 글로벌 리스크 관제 지도
 
-위 4번(가격 추이)과 달리 이 엔드포인트는 **제안이 아니라 백엔드에 실제로 구현·연동된
-계약**이다 — `backend` 레포 `spring-backend/.../controller/PublicController.java`,
-`dto/RiskEventDto.java`(`RiskBoardItem`), `service/RiskEventService.java`(`b8d44b9`) 코드로
-직접 확인.
-
-`GET /api/v1/public/risk-board` (`SecurityConfig`에서 `permitAll` — 토큰 불필요)
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "risk_event_id": "RISK-2026-0721-001",
-      "material": "니켈",
-      "grade": "심각",
-      "confidence_label": "확정",
-      "event_summary": "인도네시아 니켈 수출 관세 인상 발표로 현물가 18% 급등",
-      "country_code": "ID",
-      "country_name": "인도네시아",
-      "coordinates": { "lat": -6.2088, "lng": 106.8456 }
-    }
-  ],
-  "timestamp": "2026-07-27T16:29:51.425389337+09:00"
-}
-```
-
-- CLAUDE.md `risk_event` 스키마 전체가 아니라, **공개용으로 의도적으로 축약된 별도 구조**
-  (`RiskBoardItem`)다 — `erp_view`/`quality_check`/`rag_view`는 백엔드가 명시적으로 제외한다
-  (컨트롤러 주석: "ERP 내부 상세를 제외한 공개 안전 subset").
-- `api/types.ts`의 `GlobalRiskBoardItem`과 **필드가 1:1로 정확히 일치**한다(백엔드 DTO
-  주석에도 "프론트 GlobalRiskBoardItem 계약과 1:1"로 명시) — 변환 로직 없이 응답 `data`
-  배열을 그대로 `GlobalRiskBoardItem[]`로 쓸 수 있다.
-- **데이터 내용은 아직 placeholder다** — 백엔드 컨트롤러 주석: "데이터 내용은 F3/F4
-  모델·뉴스 파이프라인 배선 전까지 결정론적 placeholder다(리스크 이벤트 원본과 동일)."
-  응답에 이를 나타내는 별도 플래그 필드는 없다(경영진 대시보드의 `savings_simulation.
-  is_simulation`과 달리) — FE 쪽에서도 별도 placeholder 표시 UI는 추가하지 않기로 결정
-  (공개 대시보드의 다른 3개 패널도 전부 mock 기반이나 화면에 별도 표시가 없는 기존 관례와
-  일관되게 유지, `docs/timeline.md` 참고).
-- FE 연동: `src/api/public.api.ts`의 `fetchPublicRiskBoard()`가 `VITE_API_BASE_URL` 설정
-  시 이 엔드포인트를, 미설정 시(①단계) `purchasing.api.ts`의 `fetchGlobalRiskBoard()`(mock)
-  를 그대로 반환한다. 구매팀 대시보드가 쓰는 `fetchGlobalRiskBoard()`는 이 변경과 무관하게
-  mock 그대로 유지된다(의도된 분리 — 이번 연동은 공개 대시보드 지도에만 적용).
+→ **확정됨.** `docs/backend-api-contracts.md` "2. 비로그인 공개 대시보드 — 글로벌 리스크
+관제 지도" 참고(2026-07-27, 백엔드 코드 직접 확인 + curl + Playwright 실측 검증).
 
 ## 5. 1계층 — 브리핑 자료 열람 (Seq 24)
 

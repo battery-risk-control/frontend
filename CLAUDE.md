@@ -8,8 +8,10 @@
 @docs/architecture.md
 @docs/requirements-frontend.md
 @docs/mock-schemas.md
+@docs/backend-api-contracts.md
 @docs/design-tokens.md
 @docs/roadmap.md
+@docs/frontend-demo-guide.md
 @docs/qa-checklist.md
 
 ## 화면 구조 (requirements-frontend.md 기준)

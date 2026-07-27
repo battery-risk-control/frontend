@@ -573,3 +573,38 @@ GlobalRiskBoard 마커 hover 재사용 후보"라고 적혀 있었으나 실제�
 
 위 "범위 밖 발견 2"(SideNav 펼침 상태 650px 이하 재오버플로)를 `docs/roadmap-candidates.md`
 C13으로 정식 등재. 코드 변경 없음, 문서 전용.
+
+## 문서 재구성 — 확정 계약 분리 + mock 시연 가이드 신설 (2026-07-27)
+
+`docs/mock-schemas.md`가 "제안"과 "실측 검증된 확정 계약"을 구분 없이 한 문서에 섞고
+있던 것을 분리하고, mock 단독 시연 절차를 담은 문서를 신설한 라운드.
+
+- **조사**: `docs/mock-schemas.md`의 어떤 섹션이 실제로 백엔드와 검증됐는지 확인 —
+  "3. 인증"(실 백엔드 연동 시연 4개 시나리오 + Playwright e2e 24/24)과 "4-1"(공개 지도,
+  백엔드 코드 직접 확인+curl+Playwright 실측) 2건만 확정. 나머지(2계층/3계층/브리핑/구매팀
+  확장)는 관련 컨트롤러(`DashboardController`/`BriefingController` 등)가 백엔드에 이미
+  존재하긴 하지만 이번 세션에서 실측 검증한 적이 없어 이동 대상에서 제외(향후 별도 라운드
+  후보로만 기록).
+- **이동 중 발견한 불일치(정정)**: "3. 인증" 섹션을 실제 코드(`src/api/auth.api.ts`)와
+  대조하다 두 가지 오류 발견 — (1) URL이 `/api/auth/...`로 적혀 있었으나 실제는
+  `/api/v1/auth/...`(버전 접두사 누락), (2) 회원가입 응답이 `{user_id, status, message}`로
+  적혀 있었으나 실제 백엔드는 `message` 필드가 없고 `org_tier`를 내려주며 FE가 안내
+  문구를 직접 합성한다(코드 주석으로 확인). CLAUDE.md 드리프트 수정 원칙에 따라 이동하며
+  함께 정정.
+- **`docs/backend-api-contracts.md` 신규**: 위 확정 2건(인증, 공개 지도) 이동. 응답 봉투
+  (`{success,data,timestamp}`)를 `fetchJson`이 벗겨서 넘긴다는 점, 로그인/회원가입 실패
+  케이스(`INVALID_CREDENTIALS`/`DUPLICATE_USERNAME` 등, mock에는 없던 케이스)도 코드
+  확인 내용을 추가로 기록. `mock-schemas.md`의 해당 섹션 자리에는 "→ 확정됨, 이동 위치"
+  한 줄만 남김(이력 추적용).
+- **`docs/frontend-demo-guide.md` 신규**: `npm run dev`(①단계) 기준 전체 화면 시연 순서 —
+  공개 대시보드 → 로그인(테스트 계정 표) → 구매팀 대시보드(패널 순서대로) → 브리핑 상세 →
+  2/3계층 대시보드. 이번 3차 라운드에서 새로 생긴 기능(도트 2단계 hover, 스크롤힌트
+  페이징, 알림 패널 hover-고정, 마커 hover confidence_label)도 각 시연 지점에 간단히
+  언급. `docs/backend-integration-guide.md`(②단계 절차)와 책임 분리를 문서 상단에 명시.
+- **문서 체계 갱신**: CLAUDE.md "프로젝트 문서" `@import` 목록에 두 신규 문서 추가.
+  README.md "참고 문서" 표에 추가하고, "API 명세"/"실행 방법" 문단도 확정 계약 분리
+  사실을 반영해 갱신. `docs/naming-glossary.md`는 코드 물리/논리명 사전이라 문서 파일
+  자체는 등재 대상이 아니라고 판단해 갱신하지 않음(기존에도 문서를 인용만 함, 별도
+  항목 없음).
+
+코드 변경 없음 — 문서 전용 라운드.

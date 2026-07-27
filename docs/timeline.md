@@ -142,3 +142,16 @@ Phase 10.2(스켈레톤 UI)가 착수 전 상태라 이 환경변수를 읽는 �
   함께 보정했다(2026-07-27, `36d0fa6`). 단, 페이지 최하단 섹션 부근(약 936px 구간)에는 이
   조정만으로 해소되지 않는 사각지대가 실측으로 확인돼 미해소 상태로 남았다 — 후속 라운드 과제,
   `docs/roadmap-candidates.md` "C7" 참고.
+
+## vite.config.ts strictPort — dev/dev:live 동시 구동 불가 버그 수정 (2026-07-27)
+
+`server.strictPort: true`가 mode 분기 없이 `npm run dev`(①mock)/`npm run dev:live`(②실
+백엔드) 양쪽에 공통 적용돼 있어, 둘 중 하나가 5173을 점유한 상태에서 나머지 하나를 실행하면
+포트가 자동으로 밀리지 않고 즉시 `Error: Port 5173 is already in use`로 죽는 것을 Playwright가
+아닌 실제 `npm run dev`/`npm run dev:live` 프로세스 재현으로 확인했다. 원래 의도는 "live만 포트
+고정, mock은 자유롭게 밀려서 두 화면을 동시에 띄워 비교 시연 가능"이었으므로, `vite.config.ts`를
+`defineConfig(({ mode }) => ({ server: { strictPort: mode === 'live' } }))` 형태로 분기해
+mock 쪽 strictPort를 해제했다. 수정 후 `dev:live`(5173) 먼저 띄우고 `dev`를 추가로 띄우면
+`Port 5173 is in use, trying another one...` 메시지와 함께 5174에서 정상 기동, 두 서버 동시
+응답(curl 200/200)까지 확인. `docs/backend-integration-guide.md`(dev:live 섹션에 동시 구동
+안내 추가)와 CLAUDE.md(환경 3단계 섹션에 strictPort 비대칭 의도 명시)도 함께 갱신했다.

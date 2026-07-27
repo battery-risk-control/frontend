@@ -44,8 +44,17 @@ docker-compose 기준 기본값 `http://localhost:8080`).
 ⚠️ dev:live 종료 후 재실행 전에는 `netstat -ano | findstr :5173`으로 포트가 실제로
 비어있는지 확인할 것 — Ctrl+C→Y로도 vite 프로세스가 완전히 안 죽는 경우가 있다
 (Windows/node 조합에서 보고되는 이슈). 남아있다면 `tasklist /FI "PID eq <PID>"`로 확인 후
-`taskkill /PID <PID> /F`로 정리. strictPort 설정으로 포트 충돌 시 즉시 에러가 뜨므로
-최소한 문제 발생 자체는 바로 알아챌 수 있다.
+`taskkill /PID <PID> /F`로 정리. `vite.config.ts`의 `strictPort`는 `mode === 'live'`일 때만
+적용되므로(5173 고정), dev:live가 5173을 점유한 상태에서 dev:live를 또 띄우면(또는 dev:live가
+먼저 5173을 차지한 뒤 다른 dev:live 인스턴스를 또 띄우면) 조용히 다른 포트로 밀리지 않고
+즉시 에러가 떠 문제 발생 자체는 바로 알아챌 수 있다.
+
+**mock(dev)과 live(dev:live) 동시 구동**: `npm run dev`(mock)는 위 strictPort 대상이 아니라
+Vite 기본 동작(포트 점유 시 5174 등으로 자동 이동)을 그대로 따른다. 따라서 `dev:live`를 먼저
+띄워 5173에 고정한 뒤 `npm run dev`를 추가로 띄우면 mock은 자동으로 5174에서 뜬다 — 두 브라우저
+탭을 나란히 열어 mock 화면과 실제 백엔드 연결 화면을 직접 비교하며 시연할 수 있다. 반대로
+mock을 먼저 띄운 상태에서 `dev:live`를 실행하면(5173이 이미 점유돼 있으므로) strictPort 때문에
+즉시 에러가 난다 — live는 5173 고정이 전제라 `dev:live`를 먼저 띄우는 순서를 권장한다.
 
 ```bash
 npm run dev:live

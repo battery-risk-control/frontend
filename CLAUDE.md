@@ -83,6 +83,12 @@ Agent 구조는 §4.2 텍스트 기준 **ERP 에이전트 + RAG 에이전트 병
 `.env.live`(gitignore 대상)에 `VITE_API_BASE_URL`을 두고, 기본 `npm run dev`는 이 파일을
 안 읽으므로 항상 ①단계로 뜬다. 시연 절차 상세는 `docs/backend-integration-guide.md` 참고.
 
+`vite.config.ts`의 `server.strictPort`는 `mode === 'live'`일 때만 적용된다 — 백엔드
+`CORS_ALLOWED_ORIGINS`가 5173 기준이라 `dev:live`는 포트가 밀리면 안 되지만, 기본 `npm run dev`
+(①mock)는 Vite 기본 동작(포트 점유 시 자동으로 다른 포트로 이동)을 그대로 따른다. 이 비대칭은
+의도된 설계다 — `dev:live`로 5173을 고정한 뒤 `npm run dev`를 추가로 띄우면 mock 화면과 실
+백엔드 연결 화면을 동시에 띄워 나란히 비교 시연할 수 있다.
+
 ①단계는 어떤 `.env` 파일도 요구하지 않는다 — `VITE_API_BASE_URL`이 undefined면
 `auth.api.ts`가 자동으로 mock 분기로 빠진다(구조적 보장, 파일 존재 여부와 무관).
 

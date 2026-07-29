@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  fetchAiRecommendations,
   fetchMaterialPriceSummaries,
   fetchMaterialPriceTrends,
   fetchNewsFeed,
+  fetchPublicAiRecommendations,
   fetchPublicRiskBoard,
 } from '../../../api/public.api'
-import type { GlobalRiskBoardItem } from '../../../api/types'
+import type { AiRecommendation, GlobalRiskBoardItem } from '../../../api/types'
 import { useAuthState } from '../../../lib/useAuthState'
 import { Header } from '../../../components/layout/Header'
 import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
@@ -33,16 +33,18 @@ const TIER_TABS = [
  * 스크롤 규칙" a 참고, 폐기된 IntersectionObserver 기반 `ScrollHint`를 대체). 실험적,
  * 전체 반응형 Phase 전까지의 임시 대응이라는 점은 동일.
  *
- * 글로벌 리스크 관제 지도만 `fetchPublicRiskBoard()`로 실 API(`GET /api/v1/public/risk-board`,
- * ②/③단계) 또는 mock(①단계)을 비동기로 조회한다(2026-07-27) — 나머지 3개 패널은 아직 동기
- * mock 함수 그대로다. 로딩 중에는 최소 텍스트만 표시(정식 스켈레톤 UI는 Phase 10.2, 미착수).
+ * 글로벌 리스크 관제 지도(`fetchPublicRiskBoard`)와 AI 기반 권고 조치 리스트
+ * (`fetchPublicAiRecommendations`)를 실 API(②/③단계) 또는 mock(①단계)으로 비동기 조회한다
+ * — 나머지 2개 패널(자재 가격, 뉴스 속보)은 아직 동기 mock 함수 그대로다.
+ * 두 API는 백엔드에서 같은 분석 집합을 공유하므로 지도와 권고 리스트의 자재·등급이 항상 일치한다.
+ * 로딩 중에는 최소 텍스트만 표시(정식 스켈레톤 UI는 Phase 10.2, 미착수).
  */
 export function PublicDashboardPage() {
   const navigate = useNavigate()
   const { orgTier } = useAuthState()
   const [riskBoardItems, setRiskBoardItems] = useState<GlobalRiskBoardItem[]>([])
   const [riskBoardLoading, setRiskBoardLoading] = useState(true)
-  const recommendations = fetchAiRecommendations()
+  const [recommendations, setRecommendations] = useState<AiRecommendation[]>([])
   const priceSeries = fetchMaterialPriceTrends()
   const priceSummaries = fetchMaterialPriceSummaries()
   const newsItems = fetchNewsFeed()
@@ -51,6 +53,7 @@ export function PublicDashboardPage() {
   // 비동기 API 연동이라 QueryClientProvider 도입 여부를 별도로 확정하기 전까지는 이렇게
   // 둔다(docs/roadmap-candidates.md C11 참고). ①단계(mock)에서는 fetchPublicRiskBoard가
   // 동기 mock을 그대로 Promise로 감싸 반환하므로 로딩 상태가 사실상 즉시 끝난다.
+  // 두 조회는 서로 독립적으로 처리한다 — 한쪽이 실패해도 다른 패널은 그대로 그려야 하기 때문이다.
   useEffect(() => {
     let cancelled = false
     fetchPublicRiskBoard()
@@ -62,6 +65,13 @@ export function PublicDashboardPage() {
       })
       .finally(() => {
         if (!cancelled) setRiskBoardLoading(false)
+      })
+    fetchPublicAiRecommendations()
+      .then((items) => {
+        if (!cancelled) setRecommendations(items)
+      })
+      .catch((err) => {
+        console.error('공개 권고 조치 리스트 조회 실패', err)
       })
     return () => {
       cancelled = true

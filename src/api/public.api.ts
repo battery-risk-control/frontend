@@ -49,8 +49,32 @@ const RECOMMENDATION_BY_GRADE: Record<RiskGrade, string> = {
 }
 
 /**
+ * 비로그인 공개 대시보드 AI 기반 권고 조치 리스트 조회. `fetchPublicRiskBoard`와 동일한 mode
+ * 분기 컨벤션 — `VITE_API_BASE_URL`이 있으면 실 API(`GET /api/v1/public/recommendations`),
+ * 없으면(①단계) `fetchAiRecommendations()`(mock)를 반환한다.
+ *
+ * 백엔드는 이 리스트를 risk-board와 **같은 분석 집합에서 파생**하므로 지도와 권고 리스트가 서로
+ * 다른 자재를 가리키는 일이 생기지 않는다(지도만 실 API로 바꿨을 때 실제로 어긋났던 부분).
+ * 응답 필드는 `AiRecommendation`과 1:1이라 별도 변환이 없다.
+ *
+ * 사용 예:
+ *   const recommendations = await fetchPublicAiRecommendations()
+ */
+export async function fetchPublicAiRecommendations(): Promise<AiRecommendation[]> {
+  if (!API_BASE_URL) {
+    return fetchAiRecommendations()
+  }
+  const result = await fetchJson<AiRecommendation[]>('/api/v1/public/recommendations')
+  if ('error' in result) {
+    throw new Error(result.message)
+  }
+  return result
+}
+
+/**
  * AI 기반 권고 조치 리스트 mock 함수. 공개 화면이므로 ERP 내부 상세(재고 소진 일수,
  * 대체 공급사명)는 노출하지 않고 등급 기반 일반 권고 문구만 제공한다.
+ * ①단계(mock)와 `fetchPublicAiRecommendations`의 폴백 경로에서 쓰인다.
  *
  * 사용 예:
  *   const recommendations = fetchAiRecommendations()

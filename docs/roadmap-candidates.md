@@ -44,8 +44,14 @@ surin에는 `pages/ErpImpact.tsx`(`/erp-impact` 라우트, 네비 라벨 "ERP �
 
 ## C3 — SideNav 내비게이션 항목 미기능(placeholder) 및 개념 불일치 (미결정 — 상태 어휘 5종에 미해당, 착수 방향 3안 중 택일 필요, 2026-07-24)
 
-`SideNav`(Purchasing/BriefingDetail/Planning 3개 페이지)의 하위 항목이 실제로는 기능하지
-않는 placeholder라는 사실과, 이를 둘러싼 여러 미결정 설계 이슈를 기록한다.
+`SideNav`/`AlertsPanel`은 `/purchasing`·`/planning`·`/executive` 3개 계층의 레이아웃 셸
+레벨에서 적용 여부·내용이 결정된다. `BriefingDetailPage`(`/purchasing/briefing/:riskEventId`)는
+`/purchasing` 셸을 공유하는 하위 라우트일 뿐이며, 계층과 병렬로 나열해 개별 판단할 대상이
+아니다 — 2026-07-24 이 문서 최초 작성 시 'SideNav가 Purchasing/BriefingDetail/Planning
+3개 페이지에 존재한다'는 코드 사실을 그대로 옮기며 계층과 하위 라우트를 같은 레벨처럼
+서술했고, 이 착시가 이후 v6·v7 두 세션에서 반복 발생했다(2026-07-24 v6에서 1차 정정,
+2026-07-29 v7에서 재발 후 이 문서 자체를 정정). 이 절은 SideNav의 하위 항목이 실제로는
+기능하지 않는 placeholder라는 사실과, 이를 둘러싼 여러 미결정 설계 이슈를 기록한다.
 
 - **원래부터 placeholder였음**: `SIDE_NAV_ITEMS`(Purchasing/BriefingDetail:
   "리스크 현황판"/"브리핑 자료", Planning: "노출도 비교"/"협력사 이력")는 Phase 4부터

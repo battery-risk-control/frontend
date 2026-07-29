@@ -165,6 +165,8 @@ export interface NewsFeedItem {
   risk_event_id: string
   date: string
   material: string
+  /** 분석(F3)이 붙은 뉴스에만 있다 — 수집만 된 기사는 판정 결과가 없어 배지를 생략한다. */
+  grade?: RiskGrade
   source: string
   headline: string
   confidence_label: ConfidenceLabel

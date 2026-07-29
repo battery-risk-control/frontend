@@ -1,7 +1,19 @@
-import { fetchGlobalRiskBoard, fetchRiskEvents } from './purchasing.api'
+import {
+  fetchGlobalRiskBoard,
+  fetchMaterialPriceSummaries,
+  fetchMaterialPriceTrends,
+  fetchRiskEvents,
+} from './purchasing.api'
 import { fetchJson } from './http'
 import { parseRiskEventDate } from '../lib/riskEventId'
-import type { AiRecommendation, GlobalRiskBoardItem, NewsFeedItem, RiskGrade } from './types'
+import type {
+  AiRecommendation,
+  GlobalRiskBoardItem,
+  MaterialPriceSeries,
+  MaterialPriceSummary,
+  NewsFeedItem,
+  RiskGrade,
+} from './types'
 
 /**
  * fetchMaterialPriceTrends/fetchMaterialPriceSummaries는 원래 이 파일에 있었으나, 구매팀
@@ -112,6 +124,49 @@ export async function fetchPublicNewsFeed(): Promise<NewsFeedItem[]> {
 }
 
 /**
+ * 비로그인 공개 대시보드 원자재 가격 추이 조회. `fetchPublicRiskBoard`와 동일한 mode 분기 컨벤션 —
+ * `VITE_API_BASE_URL`이 있으면 실 API(`GET /api/v1/public/price-trends`), 없으면(①단계) mock.
+ *
+ * 백엔드는 자재별 대표 종목 주가(yfinance)를 프록시로 삼아 구간 첫 거래일=100 지수를 만든다.
+ * mock이 3종(니켈/리튬/코발트)인 것과 달리 실 API는 7종을 내려주며, 화면의 "원자재" 드롭다운은
+ * 데이터에서 자동 생성되므로 프론트 수정 없이 항목이 늘어난다.
+ *
+ * 사용 예:
+ *   const series = await fetchPublicPriceTrends()
+ */
+export async function fetchPublicPriceTrends(): Promise<MaterialPriceSeries[]> {
+  if (!API_BASE_URL) {
+    return fetchMaterialPriceTrends()
+  }
+  const result = await fetchJson<MaterialPriceSeries[]>('/api/v1/public/price-trends')
+  if ('error' in result) {
+    throw new Error(result.message)
+  }
+  return result
+}
+
+/**
+ * 비로그인 공개 대시보드 원자재 요약 카드 조회. 가격 추이와 **같은 구간·같은 데이터**에서
+ * 파생하므로 카드와 차트가 어긋나지 않는다.
+ *
+ * mock의 risk_score는 시각 구성을 위한 임시값이었으나, 실 API는 연율화 변동성(일간 변동성 × √252)을
+ * 백분율로 환산한 값이다 — 임의 수치가 아니라 표준 지표다.
+ *
+ * 사용 예:
+ *   const summaries = await fetchPublicPriceSummaries()
+ */
+export async function fetchPublicPriceSummaries(): Promise<MaterialPriceSummary[]> {
+  if (!API_BASE_URL) {
+    return fetchMaterialPriceSummaries()
+  }
+  const result = await fetchJson<MaterialPriceSummary[]>('/api/v1/public/price-summaries')
+  if ('error' in result) {
+    throw new Error(result.message)
+  }
+  return result
+}
+
+/**
  * 실시간 뉴스 속보 mock 함수. risk_event_id에 담긴 날짜 기준 최신순으로 정렬한다.
  * ①단계(mock)와 `fetchPublicNewsFeed`의 폴백 경로에서 쓰인다.
  *
@@ -124,6 +179,9 @@ export function fetchNewsFeed(): NewsFeedItem[] {
       risk_event_id: event.risk_event_id,
       date: parseRiskEventDate(event.risk_event_id),
       material: event.market_context.material,
+      // mock은 risk_event(분석 결과)에서 파생하므로 등급이 항상 있다. 실 API에서는 분석이
+      // 붙지 않은 수집 뉴스가 있어 생략될 수 있다.
+      grade: event.grade,
       source: event.market_context.source,
       headline: event.market_context.event_summary,
       confidence_label: event.confidence_label,

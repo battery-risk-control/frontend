@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  fetchMaterialPriceSummaries,
-  fetchMaterialPriceTrends,
   fetchPublicAiRecommendations,
   fetchPublicNewsFeed,
+  fetchPublicPriceSummaries,
+  fetchPublicPriceTrends,
   fetchPublicRiskBoard,
 } from '../../../api/public.api'
-import type { AiRecommendation, GlobalRiskBoardItem, NewsFeedItem } from '../../../api/types'
+import type {
+  AiRecommendation,
+  GlobalRiskBoardItem,
+  MaterialPriceSeries,
+  MaterialPriceSummary,
+  NewsFeedItem,
+} from '../../../api/types'
 import { useAuthState } from '../../../lib/useAuthState'
 import { Header } from '../../../components/layout/Header'
 import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
@@ -33,11 +39,11 @@ const TIER_TABS = [
  * 스크롤 규칙" a 참고, 폐기된 IntersectionObserver 기반 `ScrollHint`를 대체). 실험적,
  * 전체 반응형 Phase 전까지의 임시 대응이라는 점은 동일.
  *
- * 글로벌 리스크 관제 지도(`fetchPublicRiskBoard`)·AI 기반 권고 조치 리스트
- * (`fetchPublicAiRecommendations`)·실시간 뉴스 속보(`fetchPublicNewsFeed`)를 실 API(②/③단계)
- * 또는 mock(①단계)으로 비동기 조회한다 — 자재 가격 추이만 아직 동기 mock 함수 그대로다.
- * 지도와 권고 리스트는 백엔드에서 같은 분석 집합을 공유하므로 자재·등급이 항상 일치하고,
- * 뉴스 속보는 분석 이전의 수집 원본이라 별개 집합이다.
+ * 4개 패널 전부 실 API(②/③단계) 또는 mock(①단계)을 비동기 조회한다 — `fetchPublicRiskBoard`,
+ * `fetchPublicAiRecommendations`, `fetchPublicNewsFeed`, `fetchPublicPriceTrends`,
+ * `fetchPublicPriceSummaries`. 백엔드에서 지도와 권고 리스트는 같은 분석 집합을, 가격 차트와 요약
+ * 카드는 같은 가격 구간을 공유하므로 짝지어진 화면이 서로 어긋나지 않는다. 뉴스 속보만 분석 이전의
+ * 수집 원본이라 별개 집합이다.
  * 로딩 중에는 최소 텍스트만 표시(정식 스켈레톤 UI는 Phase 10.2, 미착수).
  */
 export function PublicDashboardPage() {
@@ -47,8 +53,8 @@ export function PublicDashboardPage() {
   const [riskBoardLoading, setRiskBoardLoading] = useState(true)
   const [recommendations, setRecommendations] = useState<AiRecommendation[]>([])
   const [newsItems, setNewsItems] = useState<NewsFeedItem[]>([])
-  const priceSeries = fetchMaterialPriceTrends()
-  const priceSummaries = fetchMaterialPriceSummaries()
+  const [priceSeries, setPriceSeries] = useState<MaterialPriceSeries[]>([])
+  const [priceSummaries, setPriceSummaries] = useState<MaterialPriceSummary[]>([])
 
   // useQuery(TanStack Query) 대신 useState/useEffect로 최소 구현 — 이 화면이 최초의 실제
   // 비동기 API 연동이라 QueryClientProvider 도입 여부를 별도로 확정하기 전까지는 이렇게
@@ -80,6 +86,22 @@ export function PublicDashboardPage() {
       })
       .catch((err) => {
         console.error('공개 뉴스 속보 조회 실패', err)
+      })
+    // 차트와 요약 카드는 백엔드에서 같은 구간·같은 데이터로 파생하지만, 한쪽이 실패해도 다른
+    // 쪽은 그려야 하므로 조회는 분리한다.
+    fetchPublicPriceTrends()
+      .then((series) => {
+        if (!cancelled) setPriceSeries(series)
+      })
+      .catch((err) => {
+        console.error('공개 원자재 가격 추이 조회 실패', err)
+      })
+    fetchPublicPriceSummaries()
+      .then((summaries) => {
+        if (!cancelled) setPriceSummaries(summaries)
+      })
+      .catch((err) => {
+        console.error('공개 원자재 요약 카드 조회 실패', err)
       })
     return () => {
       cancelled = true

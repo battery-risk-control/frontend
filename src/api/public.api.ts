@@ -90,7 +90,30 @@ export function fetchAiRecommendations(): AiRecommendation[] {
 }
 
 /**
+ * 비로그인 공개 대시보드 실시간 뉴스 속보 조회. `fetchPublicRiskBoard`와 동일한 mode 분기 컨벤션 —
+ * `VITE_API_BASE_URL`이 있으면 실 API(`GET /api/v1/public/news-feed`), 없으면(①단계) mock.
+ *
+ * 지도·권고 리스트가 **분석 결과**를 보여주는 것과 달리 이쪽은 **수집 원본**(raw_events)이라
+ * F3 분석(LLM)이 돌지 않아도 채워진다. 백엔드는 자재가 특정된 뉴스만 내려보내고, 그런 뉴스가
+ * 아직 없으면 placeholder로 폴백한다 — 공급망과 무관한 기사가 속보 패널에 뜨지 않게 하기 위함.
+ *
+ * 사용 예:
+ *   const feed = await fetchPublicNewsFeed()
+ */
+export async function fetchPublicNewsFeed(): Promise<NewsFeedItem[]> {
+  if (!API_BASE_URL) {
+    return fetchNewsFeed()
+  }
+  const result = await fetchJson<NewsFeedItem[]>('/api/v1/public/news-feed')
+  if ('error' in result) {
+    throw new Error(result.message)
+  }
+  return result
+}
+
+/**
  * 실시간 뉴스 속보 mock 함수. risk_event_id에 담긴 날짜 기준 최신순으로 정렬한다.
+ * ①단계(mock)와 `fetchPublicNewsFeed`의 폴백 경로에서 쓰인다.
  *
  * 사용 예:
  *   const feed = fetchNewsFeed()

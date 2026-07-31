@@ -166,6 +166,26 @@
   없고 대신 **코발트**가 있다 — 두 영역의 자재 구성이 서로 다르다는 뜻이며, 아래 "임시 mock 값"
   표에도 등재해 둔다.
 
+## 7. 1계층 — 구매팀 대시보드 확장(뉴스속보·환율정보 티커, 2차 데모)
+
+`risk_event` 스키마를 원천으로 하지 않는, 2차 데모(UX-01-DB, `NewsExchangeTicker`) 전용
+mock — `api/purchasing.api.ts`의 `fetchExchangeRates()`. `NewsExchangeTicker`의 "뉴스속보"
+행은 신규 mock이 아니라 기존 `fetchNewsFeed()`를 표현만 다르게(세로 롤링) 재사용한다.
+
+```json
+// fetchExchangeRates()
+[
+  { "currency_code": "USD", "currency_name": "미국 달러", "rate": 1391.5, "change_label": "▲ 0.3%" },
+  { "currency_code": "CNY", "currency_name": "중국 위안", "rate": 191.2, "change_label": "▼ 0.1%" },
+  { "currency_code": "EUR", "currency_name": "유로", "rate": 1508.7, "change_label": "▲ 0.5%" }
+]
+```
+
+- `risk_event` 계열과 무관한 완전 신규 개념(환율)이라 원천 데이터에서 파생하지 않고 주요
+  통화 3종(USD/CNY/EUR)을 그대로 하드코딩했다 — `rate`/`change_label` 모두 실제 계산
+  로직 없는 mock 임시값이다. 필드 구성(`currency_code`/`currency_name`/`rate`/
+  `change_label`)은 `api/types.ts`의 `ExchangeRateItem` 타입 정의를 그대로 옮겼다.
+
 ## 임시 mock 값 (후속 정리 필요)
 
 Phase 9.3(원자재 가격 추이 "상세보기", surin `RiskMonitoring.tsx` 시각 이식)에서 시각 구성을 우선하기 위해 실제 계산 로직 없이 하드코딩한 필드 목록. 각 필드는 코드에도 `// mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요` 주석이 달려 있다. 앞으로도 실제 계산 로직 없이 mock 값으로 구현하는 필드가 생기면, 이 섹션에 반드시 등재하고 코드에도 `// mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요` 주석을 남긴다.
@@ -180,6 +200,7 @@ Phase 9.3(원자재 가격 추이 "상세보기", surin `RiskMonitoring.tsx` 시
 | `MaterialRiskGaugeItem`(전체 필드) | `api/types.ts`, `api/purchasing.api.ts`의 `fetchMaterialRiskGauges()`(Phase 9.4, surin `materialRiskGauges` 이식) | `features/purchasing/components/MaterialRiskOverviewRow.tsx` 게이지 카드 3장 | surin 값을 그대로 가져왔다. 자재 구성이 리튬/니켈/**흑연**인데, 같은 페이지의 `risk_event` mock 6건(다른 패널이 쓰는 원천 데이터)에는 흑연이 없고 코발트가 있어 — 이 5칸 그리드만 다른 패널과 자재 구성이 어긋난다. `grade`도 surin 4단계를 3단계 `RiskGrade`로 매핑(경고→심각)한 값이라 실제 계산 로직은 없다. |
 | `ScoreCardItem`(전체 필드) | `api/types.ts`, `api/purchasing.api.ts`의 `fetchScoreCards()`(Phase 9.4, surin `summaryScores` 이식) | `features/purchasing/components/MaterialRiskOverviewRow.tsx` 점수 카드 2장 | surin `summaryScores`(외부 리스크 종합 점수 72/ERP 영향 점수 65)를 그대로 가져왔다. `grade`도 surin 원본 문구("높음"/"주의")를 3단계 `RiskGrade`로 매핑(높음→심각)한 값이라 실제 계산 로직은 없다. |
 | `ImportDependencyData`(전체 필드) | `api/types.ts`, `api/purchasing.api.ts`의 `fetchImportDependency()`(Phase 9.4, surin `importDependency` 이식) | `features/purchasing/components/ImportDependencyPanel.tsx` 도넛차트+범례 | `risk_event` 스키마에는 없는 개념(국가별 수입 비중)이라 surin 값을 그대로 가져왔다. 국가별 `color`(hex)도 surin 원본을 그대로 썼다. |
+| `ExchangeRateItem`(전체 필드) | `api/types.ts`, `api/purchasing.api.ts`의 `fetchExchangeRates()`(2차 데모 신규) | `features/purchasing/components/NewsExchangeTicker.tsx` | 실제 환율 API 연동 전 mock — 통화 3종(USD/CNY/EUR)을 하드코딩했다. |
 
 ## 확장 원칙
 - 새 화면·지표가 추가되면 기존 필드를 변경하지 말고 옆에 새 필드를 추가한다 (breaking change 최소화).

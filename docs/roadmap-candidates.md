@@ -260,3 +260,28 @@ SideNav(220px)+PageSectionDots 레일(40px)+AlertsPanel(280px, 기본 펼침)이
 범위를 벗어나는 페이지 레이아웃 셸 문제라 별도 조사·설계 필요(예: 특정 폭 이하에서
 SideNav/AlertsPanel도 자동 접힘, 또는 셸 요소 자체에 최소 폭 이하로는 `<main>`이 안
 줄어들도록 하한 설정 등 — 방향 미정).
+
+## C14 — 가격 추이 카드 폭 오버플로(1280px, 페이지 레벨 스크롤바 미발생이라 기존 판정 방식으로는 미검출) (착수 전, 2026-07-29)
+
+`youngjin/2nd-demo-layout` 브랜치 작업(수정 4, ImportDependencyRow 940px 규칙 검증) 중
+발견됐으나, **이 브랜치의 변경과 무관한 기존 drift**다 — `git stash`로 base 브랜치
+(`dev-김영진_merge-test`, 이 브랜치가 갈라지기 전 상태)와 A/B 비교한 결과, 아래 수치가
+완전히 동일하게 나와 이 브랜치가 생기기 전부터 이미 있던 버그임을 확인했다.
+
+- 뷰포트 1280px, SideNav 펼침 기준: `<main>` 폭 664px → `ImportDependencyRow`의 `.row` 폭
+  616px → 고정 340px 컬럼 + `1fr` 컬럼(원자재 가격 추이, `MaterialPriceDetail`)의 실제
+  렌더 폭이 298.86px로, `.row` 우측 경계를 46.86px 초과해 렌더링된다(`MaterialPriceDetail`
+  내부 콘텐츠의 min-content 폭이 이 시점의 "공정 분배" 폭 252px보다 커서 발생 — CSS Grid
+  `1fr` 트랙의 기본 `min-width:auto`가 원인).
+- `.main{min-width:0}`이 이 내부 오버플로가 `.body`/문서 전체로 전파되는 것을 막아
+  `document.documentElement.scrollWidth`가 `window.innerWidth`와 같게 유지된다 — 그래서
+  기존 940px 임계값 판정(C13 이전 원 조사, "페이지 전체 가로 스크롤바 발생 여부"만으로
+  이분 탐색)으로는 애초에 검출될 수 없었던 사각지대다. 실제로는 940px보다 훨씬 넓은
+  뷰포트(1280px 등)에서도 "원자재 가격 추이" 카드 우측(3번째 자재 요약 칸·x축 마지막 라벨
+  등)이 시각적으로 잘려 보인다.
+- `youngjin/2nd-demo-layout` 브랜치의 수정 1(QuickActionsPanel을 AlertsPanel 하위로 통합)이
+  이 브랜치 작업 중 일시적으로 이 문제를 악화시켰던 부분(`<main>` 폭이 388px까지 좁아져
+  거의 항상 클리핑 발생)은 이미 원상 복구했다 — 여기 남은 건 그 복구 이후에도 여전히
+  남아있는, 이 브랜치와 무관한 원래 버그다.
+- 착수 방향(예: `MaterialPriceDetail` 내부 콘텐츠에 `min-width:0` 적용, 또는 940px
+  판정 자체를 "페이지 스크롤바"가 아니라 "카드별 실제 렌더 폭"으로 재정의) 모두 미결정.

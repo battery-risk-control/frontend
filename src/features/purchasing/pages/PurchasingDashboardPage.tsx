@@ -16,6 +16,7 @@ import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { AlertsBellButton } from '../../../components/layout/AlertsBellButton'
 import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
+import type { SelectedDetail } from '../../../components/widgets/GlobalRiskBoard'
 import { SupplyNewsFeed } from '../../../components/widgets/SupplyNewsFeed'
 import { PageSectionDots } from '../../../components/ui/PageSectionDots/PageSectionDots'
 import { useAlertsPanelState } from '../../../lib/useAlertsPanelState'
@@ -93,9 +94,19 @@ export function PurchasingDashboardPage() {
   const exchangeRates = fetchExchangeRates()
   const alerts = selectAlertEvents(events)
 
-  const { expanded: alertsExpanded, toggle: toggleAlertsExpanded } = useAlertsPanelState()
+  const { expanded: alertsExpanded, toggle: toggleAlertsExpanded, expand: expandAlerts } = useAlertsPanelState()
   const [isPreviewing, setIsPreviewing] = useState(false)
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // 마커/국가 클릭 결과(2차 데모 수정 2-3) — GlobalRiskBoard의 onSelect 콜백으로 받아
+  // AlertsPanel의 "빠른 작업 > 마커뉴스" 서브섹션으로 그대로 내려준다.
+  const [markerNews, setMarkerNews] = useState<SelectedDetail | null>(null)
+
+  function handleMarkerSelect(detail: SelectedDetail | null) {
+    setMarkerNews(detail)
+    // 접혀있어도 마커 클릭 시 자동 펼침(2-4) — toggle이 아니라 expand(강제 펼침)를 써야
+    // 이미 펼쳐진 상태에서 또 클릭해도 접히지 않는다.
+    if (detail) expandAlerts()
+  }
 
   function handlePreviewMouseEnter() {
     if (closeTimeoutRef.current) {
@@ -153,7 +164,11 @@ export function PurchasingDashboardPage() {
           <h1 className={styles.heading}>구매팀 대시보드</h1>
           <KpiSummaryPanel events={events} />
           <NewsExchangeTicker news={newsItems} exchangeRates={exchangeRates} />
-          <GlobalRiskBoard items={riskBoardItems} mapHeight={GLOBAL_RISK_BOARD_MAP_HEIGHT} />
+          <GlobalRiskBoard
+            items={riskBoardItems}
+            mapHeight={GLOBAL_RISK_BOARD_MAP_HEIGHT}
+            onSelect={handleMarkerSelect}
+          />
           <SupplyNewsFeed items={newsItems} />
           <ImportDependencyRow
             importDependency={importDependency}
@@ -164,11 +179,12 @@ export function PurchasingDashboardPage() {
         </main>
         <PageSectionDots variant="withAside" sections={SECTION_DOTS_SECTIONS} />
         <AlertsPanel
-          alerts={alerts}
           expanded={alertsExpanded}
           isPreviewing={isPreviewing}
           onPreviewMouseEnter={handlePreviewMouseEnter}
           onPreviewMouseLeave={handlePreviewMouseLeave}
+          markerNews={markerNews}
+          onCloseMarkerNews={() => setMarkerNews(null)}
         />
       </div>
       <Footer />

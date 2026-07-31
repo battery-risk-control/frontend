@@ -62,59 +62,11 @@
   color: var(--color-primary);
 }
 
-/* 수정 1(2026-07-29) — "주요 알림 및 빠른 작업" 패널 내부 두 서브섹션("주요 알림"/
-   "빠른 작업") 구분용. */
-.subsection {
-  margin-bottom: var(--space-4);
-}
-
-.subsectionTitle {
-  margin: 0 0 var(--space-2);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
+/* 수정 1(2026-07-29) — "빠른 작업"(QuickActionsPanel) 구분용. 수정 2-1에서 "주요 알림"
+   서브섹션 표시가 제거되며 현재는 이 하나만 남았다(그래서 상단 여백 대신 구분선만 유지). */
 .quickActionsSection {
   padding-top: var(--space-4);
   border-top: 1px solid var(--color-border);
-}
-
-.empty {
-  margin: 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-}
-
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.item {
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.item:last-child {
-  border-bottom: none;
-}
-
-.badges {
-  display: flex;
-  gap: var(--space-1);
-}
-
-.summary {
-  margin: var(--space-2) 0 0;
-  font-size: var(--font-size-xs);
-  color: var(--color-text);
 }
 
 .overflowHintTop,

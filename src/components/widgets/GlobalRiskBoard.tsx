@@ -17,6 +17,13 @@ interface GlobalRiskBoardProps {
    * 안 주고, 구매팀 대시보드(2차 데모)만 1.5배(330px)로 확대해 쓴다. 두 화면이 이 컴포넌트를
    * 공유하므로 CSS 기본값을 직접 바꾸지 않고 prop으로 화면별 override한다. */
   mapHeight?: number
+  /** 마커/국가 클릭 시 알림(2차 데모, 수정 A). 전달되면 이 컴포넌트가 내부에 렌더링하던
+   * "마커 클릭 시 정보 표시" 패널(.panelHeader/.panelBody)을 완전히 생략하고, 대신 클릭
+   * 결과를 이 콜백으로만 전달한다 — 구매팀 대시보드는 AlertsPanel의 "마커뉴스"
+   * 서브섹션에서 표시한다. 생략하면(공개 대시보드) 기존과 동일하게 이 컴포넌트가 직접
+   * 표시한다 — mapHeight와 동일한 원칙(공유 컴포넌트라 CSS/구조 기본값을 직접 바꾸지
+   * 않고 prop으로 화면별 override). 닫기 클릭 시 `null`로 호출된다. */
+  onSelect?: (detail: SelectedDetail | null) => void
 }
 
 type ViewMode = 'event' | 'country'
@@ -34,7 +41,7 @@ interface CountryGroup {
   representative: LocatedItem
 }
 
-interface SelectedDetail {
+export interface SelectedDetail {
   label: string
   events: GlobalRiskBoardItem[]
 }
@@ -150,6 +157,9 @@ function groupByCountry(items: LocatedItem[]): CountryGroup[] {
  * 우측 상단에는 RiskGradeBadge와 동일한 색상의 등급 범례를 고정 표시한다. 지도(+범례)는
  * ScrollCard의 pinnedTop(스크롤 밖 고정)에, 뷰토글은 actions에, 클릭 시 나타나는 상세
  * 리스트만 children(스크롤 영역)에 둔다 — 지도가 항상 보이는 상태를 유지하기 위함이다.
+ * `onSelect` prop이 전달되면(2차 데모, 구매팀 대시보드) 이 children 상세 리스트 자체를
+ * 렌더링하지 않고 클릭 결과를 콜백으로만 전달한다 — 표시는 호출부(AlertsPanel "마커뉴스")
+ * 몫이다. prop 미전달(공개 대시보드)이면 기존과 동일하게 이 컴포넌트가 직접 표시한다.
  *
  * 마커 hover 시 클릭 전까지 어디에도 안 보이던 `confidence_label`을 라벨 안에 추가로
  * 표시한다(2026-07-27). 마커 색상(등급)과 상시 라벨(국가명·자재명 등)은 이미 hover 없이도
@@ -165,7 +175,7 @@ function groupByCountry(items: LocatedItem[]): CountryGroup[] {
  * 사용 예:
  *   <GlobalRiskBoard items={items} />
  */
-export function GlobalRiskBoard({ items, mapHeight }: GlobalRiskBoardProps) {
+export function GlobalRiskBoard({ items, mapHeight, onSelect }: GlobalRiskBoardProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('event')
   const [selected, setSelected] = useState<SelectedDetail | null>(null)
   const [panelExpanded, setPanelExpanded] = useState(false)
@@ -188,13 +198,22 @@ export function GlobalRiskBoard({ items, mapHeight }: GlobalRiskBoardProps) {
   }
 
   function handleSelectEvent(item: LocatedItem) {
-    setSelected({ label: item.material, events: [item] })
+    const detail: SelectedDetail = { label: item.material, events: [item] }
+    setSelected(detail)
     setPanelExpanded(true)
+    onSelect?.(detail)
   }
 
   function handleSelectCountry(group: CountryGroup) {
-    setSelected({ label: group.countryName, events: group.events })
+    const detail: SelectedDetail = { label: group.countryName, events: group.events }
+    setSelected(detail)
     setPanelExpanded(true)
+    onSelect?.(detail)
+  }
+
+  function handleCloseSelected() {
+    setSelected(null)
+    onSelect?.(null)
   }
 
   return (
@@ -320,44 +339,48 @@ export function GlobalRiskBoard({ items, mapHeight }: GlobalRiskBoardProps) {
         </div>
       }
     >
-      <div className={styles.panelHeader}>
-        <p className={styles.placeholder}>지도에서 마커를 클릭하면 관련 리스크 정보가 여기에 표시됩니다.</p>
-        <button
-          type="button"
-          className={styles.panelToggleButton}
-          onClick={() => setPanelExpanded((prev) => !prev)}
-          aria-expanded={panelExpanded}
-          aria-label={panelExpanded ? '리스크 정보 패널 접기' : '리스크 정보 패널 펼치기'}
-        >
-          <ChevronIcon expanded={panelExpanded} />
-        </button>
-      </div>
-      <div className={panelExpanded ? `${styles.panelBody} ${styles.panelBodyExpanded}` : styles.panelBody}>
-        <div className={styles.panelBodyInner}>
-          {selected && (
-            <>
-              <div className={styles.detailHeader}>
-                <span className={styles.detailLabel}>{selected.label}</span>
-                <button type="button" className={styles.closeButton} onClick={() => setSelected(null)}>
-                  닫기
-                </button>
-              </div>
-              <ul className={styles.list}>
-                {selected.events.map((item) => (
-                  <li key={item.risk_event_id} className={styles.item}>
-                    <div className={styles.itemHeader}>
-                      <span className={styles.material}>{item.material}</span>
-                      <RiskGradeBadge grade={item.grade} />
-                      <ConfidenceBadge label={item.confidence_label} />
-                    </div>
-                    <p className={styles.summary}>{item.event_summary}</p>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-      </div>
+      {!onSelect && (
+        <>
+          <div className={styles.panelHeader}>
+            <p className={styles.placeholder}>지도에서 마커를 클릭하면 관련 리스크 정보가 여기에 표시됩니다.</p>
+            <button
+              type="button"
+              className={styles.panelToggleButton}
+              onClick={() => setPanelExpanded((prev) => !prev)}
+              aria-expanded={panelExpanded}
+              aria-label={panelExpanded ? '리스크 정보 패널 접기' : '리스크 정보 패널 펼치기'}
+            >
+              <ChevronIcon expanded={panelExpanded} />
+            </button>
+          </div>
+          <div className={panelExpanded ? `${styles.panelBody} ${styles.panelBodyExpanded}` : styles.panelBody}>
+            <div className={styles.panelBodyInner}>
+              {selected && (
+                <>
+                  <div className={styles.detailHeader}>
+                    <span className={styles.detailLabel}>{selected.label}</span>
+                    <button type="button" className={styles.closeButton} onClick={handleCloseSelected}>
+                      닫기
+                    </button>
+                  </div>
+                  <ul className={styles.list}>
+                    {selected.events.map((item) => (
+                      <li key={item.risk_event_id} className={styles.item}>
+                        <div className={styles.itemHeader}>
+                          <span className={styles.material}>{item.material}</span>
+                          <RiskGradeBadge grade={item.grade} />
+                          <ConfidenceBadge label={item.confidence_label} />
+                        </div>
+                        <p className={styles.summary}>{item.event_summary}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </ScrollCard>
   )
 }

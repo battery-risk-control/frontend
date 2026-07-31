@@ -27,6 +27,7 @@ export function AlertsPanelProvider({ children }: { children: ReactNode }) {
     () => ({
       expanded,
       toggle: () => setExpanded((prev) => !prev),
+      expand: () => setExpanded(true),
     }),
     [expanded],
   )

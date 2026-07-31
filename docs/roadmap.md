@@ -92,6 +92,16 @@
     전파되는 걸 막아 기존 판정 방식으로는 검출 불가능했던 사각지대)임을 확인 — 940px
     규칙 자체는 미변경. 이 사전 발견 버그는 `docs/roadmap-candidates.md` C14로 별도
     커밋(`8943260`)에 등재(레이아웃 수정 커밋과 분리).
+  - 수정 5 — `GlobalRiskBoard`가 자체 렌더링하던 "마커 클릭 시 정보 표시" 패널을
+    `AlertsPanel`의 "빠른 작업 > 마커뉴스" 서브섹션으로 이양. `GlobalRiskBoard`에 선택적
+    `onSelect` 콜백 prop 추가(전달 시 자체 표시 생략, 미전달 시 — 공개 대시보드 — 기존
+    그대로 유지, `mapHeight`와 동일한 공유 컴포넌트 override 원칙), 마커 클릭 시 접혀있던
+    `AlertsPanel`이 자동으로 펼쳐지도록 `AlertsPanelContext`에 `toggle`과 별도인 `expand`
+    (강제 펼침) 액션 추가. 구현 중 "주요 알림" 서브섹션(수정 1에서 만든 것)을 마저
+    제거하는 걸 누락했다가 검증 단계에서 발견해 별도 커밋으로 수정 — 제거 후 "주요 알림
+    상위 4건"을 따로 하드코딩해 보여주던 접힘 상태 hover 미리보기 로직도 함께 정리하고
+    펼침 패널과 동일한 `QuickActionsPanel`을 재사용하도록 통일(두 상태가 항상 같은
+    콘텐츠를 보여줌). 상세 이력은 `docs/timeline.md` 참고(2026-07-29 두 라운드에 걸쳐 진행).
   - QA: docs/qa-checklist.md E(mock-schemas.md 반영)는 이 Phase 완료 후 별도 확인 후
     진행, 나머지 A~H 특이사항 없음. tsc/eslint/build 통과.
 

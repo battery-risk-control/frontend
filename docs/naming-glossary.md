@@ -33,7 +33,7 @@
 | `components/ui/RiskGauge.tsx` | 3단계 리스크 게이지(Phase 9.4 신규, surin RiskStepGauge 이식) |
 | `components/ui/RiskGradeBadge.tsx` | 리스크 등급 배지 |
 | `components/ui/ScrollCard/ScrollCard.tsx` | 카드형 UI 공통 컨테이너(스크롤 캡슐화) |
-| `components/widgets/GlobalRiskBoard.tsx` | 글로벌 리스크 관제 맵(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용). 2026-07-29 — 선택적 `mapHeight` prop 추가(공개 대시보드는 미전달로 기존 220px 유지, 구매팀 대시보드만 330px로 1.5배 확대) |
+| `components/widgets/GlobalRiskBoard.tsx` | 글로벌 리스크 관제 맵(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용). 2026-07-29 — 선택적 `mapHeight` prop 추가(공개 대시보드는 미전달로 기존 220px 유지, 구매팀 대시보드만 330px로 1.5배 확대). 2026-07-29 후속 — 선택적 `onSelect` 콜백 prop 추가(전달되면 자체 "마커 클릭 시 정보 표시" 패널 렌더링을 생략하고 콜백만 호출 — 구매팀 대시보드가 `AlertsPanel`의 "마커뉴스"로 이양받음, 공개 대시보드는 미전달로 기존 자체 표시 그대로), `SelectedDetail` 타입도 이때 `export`로 전환 |
 | `components/widgets/MaterialPriceDetail.tsx` | 원자재 가격 추이(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용) |
 | `components/widgets/SupplyNewsFeed.tsx` | 실시간 뉴스 속보(2026-07-29 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용. 같은 날 카드 형식 변경 — 상단 source뱃지+date/중간 headline 굵게 2줄 클램프/하단 material 태그+ConfidenceBadge) |
 | `features/auth/components/AuthTabs.tsx` | 로그인/권한 신청 탭 토글 |
@@ -52,7 +52,7 @@
 | `features/planning/pages/PlanningDashboardPage.tsx` | 2계층 경영기획팀 대시보드 페이지 |
 | `features/public/components/AiPriorityList.tsx` | AI 기반 권고 조치 리스트 |
 | `features/public/pages/PublicDashboardPage.tsx` | 비로그인 공개 대시보드 페이지 |
-| `features/purchasing/components/AlertsPanel.tsx` | 주요 알림 및 빠른 작업 패널. 2026-07-27 — `AlertsPanelContext`의 `expanded`로 펼침/접힘, 접힘+호버 시 상위 4개 `ScrollCard` 미리보기 추가(오류 및 기능 미흡 발견 #7). 2026-07-29(2차 데모 수정 1) — 패널 내부를 "주요 알림"(기존 리스트)/"빠른 작업"(`QuickActionsPanel`) 두 서브섹션으로 재구성 — `QuickActionsPanel`을 최상위 형제로 따로 안 두고 이 컴포넌트의 자식으로 렌더링(제목 자체가 이미 "주요 알림 및 빠른 작업"으로 두 개념을 포괄) |
+| `features/purchasing/components/AlertsPanel.tsx` | 주요 알림 및 빠른 작업 패널. 2026-07-27 — `AlertsPanelContext`의 `expanded`로 펼침/접힘, 접힘+호버 시 미리보기 추가(오류 및 기능 미흡 발견 #7). 2026-07-29(2차 데모 수정 1) — `QuickActionsPanel`을 최상위 형제로 따로 안 두고 이 컴포넌트의 자식(서브섹션)으로 렌더링. 2026-07-29 후속(수정 2-1) — 펼침 상태의 "주요 알림" 서브섹션(제목+리스트) 표시 코드 제거(같은 원본 데이터를 다루는 "마커뉴스"와 중복 판단, `alerts` prop 자체를 컴포넌트에서 제거, `fetchRiskEvents`/`selectAlertEvents` 등 데이터는 불변) — 이제 "빠른 작업" 하나만 렌더링. 같은 날 추가 후속 — 접힘+호버 미리보기도 더 이상 "주요 알림 상위 4개"를 별도 하드코딩(`AlertItem`/`PREVIEW_COUNT`)해 보여주지 않고, 펼침 패널과 동일한 `QuickActionsPanel`을 그대로 재사용(두 상태가 같은 소스를 표시하도록 통일) — 이때 래퍼 `ScrollCard`(`alerts-preview-heading`)도 제거(`QuickActionsPanel`이 이미 자체 `ScrollCard`를 가져 이중 타이틀바를 피함). 마커 클릭 시 `GlobalRiskBoard`의 `onSelect`에서 올라온 `markerNews`/`onCloseMarkerNews` props를 `QuickActionsPanel`로 그대로 전달 |
 | `features/purchasing/components/ErpImpactPanel.tsx` | ERP 영향 자재 재고 계약 분석 패널. 2026-07-29 — `PurchasingDashboardPage` 본문에서 제거(SideNav 전용으로 이동 예정, 실제 라우트 연결은 다음 단계) — 컴포넌트 파일 자체는 유지, 현재 실사용처 없음 |
 | `features/purchasing/components/ImportDependencyPanel.tsx` | 수입 의존도 도넛차트 패널(Phase 9.4 신규) |
 | `features/purchasing/components/ImportDependencyRow.tsx` | 수입 의존도+원자재 가격 추이 2컬럼 행(Phase 9.4 신규). 2026-07-27 — `940px` 이하 1컬럼 전환 미디어 쿼리 추가(신설 이후 처음, 미구현 상태였음). ⚠️ 이 규칙 자체는 2026-07-29(2차 데모) 이후에도 미변경·정상 동작하나, 940px보다 넓은 뷰포트에서도 발생하는 별개의 기존 카드 폭 오버플로가 발견됨(`docs/roadmap-candidates.md` C14 참고, 이 브랜치와 무관한 기존 drift) |
@@ -63,15 +63,15 @@
 | `features/purchasing/components/MaterialRiskSummaryCard.tsx` | 원자재 리스크 요약 카드(더보기 토글 보유) |
 | `features/purchasing/components/NewsExchangeTicker.tsx` | 뉴스속보·환율정보 세로 롤링 티커(2026-07-29 신규, 2차 데모) — 관제 맵 바로 위 |
 | `features/purchasing/components/PurchasePriorityPanel.tsx` | 구매 대응 우선순위 패널. 2026-07-29 — `PurchasingDashboardPage` 본문에서 제거 — 컴포넌트 파일 자체는 유지, 현재 실사용처 없음(구매대응순위 개념은 `QuickActionsPanel`의 "빠른 작업" 서브섹션 프레임으로 재등장했으나 콘텐츠 로직은 아직 이 패널과 연결돼 있지 않음) |
-| `features/purchasing/components/QuickActionsPanel.tsx` | "빠른 작업" 서브섹션(2026-07-29 신규, 2차 데모) — 구매대응순위·마커뉴스·데이터 업데이트 상태 3개 프레임만(콘텐츠 로직은 다음 단계). 최상위 형제가 아니라 `AlertsPanel`의 자식으로 렌더링 |
+| `features/purchasing/components/QuickActionsPanel.tsx` | "빠른 작업" 서브섹션(2026-07-29 신규, 2차 데모) — 구매대응순위·마커뉴스·데이터 업데이트 상태 3개 프레임으로 시작(콘텐츠 로직은 다음 단계). 최상위 형제가 아니라 `AlertsPanel`의 자식으로 렌더링. 2026-07-29 후속 — "마커뉴스"만 실제로 연동됨: `markerNews`(`SelectedDetail \| null`)/`onCloseMarkerNews` props 추가, `GlobalRiskBoard`의 `onSelect`에서 올라온 선택 결과를 surin 패턴("주요 뉴스/이벤트 · {label}" 부제+닫기 버튼+리스트)으로 표시(구매대응순위/데이터 업데이트 상태는 여전히 "준비 중입니다" placeholder). `AlertsPanel`의 접힘+호버 미리보기에서도 이 컴포넌트를 그대로 재사용 |
 | `features/purchasing/components/ScoreCardPanel.tsx` | 점수 카드(외부 리스크 종합/ERP 영향) — 더보기 구조 재정의로 신규 분리 |
 | `features/purchasing/pages/BriefingDetailPage.tsx` | 1계층 브리핑 자료 열람 페이지. 2026-07-29 — `SIDE_NAV_ITEMS` 라벨 5종(브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향)으로 갱신 |
 | `features/purchasing/pages/PurchasingDashboardPage.tsx` | 1계층 구매팀 대시보드 페이지. 2026-07-29(2차 데모, UX-01-DB) — 본문 순서 재배치 + `SIDE_NAV_ITEMS` 라벨 5종 갱신 |
 | `lib/AuthContext.ts` | 인증 상태 Context 객체 정의 |
 | `lib/AuthProvider.tsx` | 인증 상태 Provider 컴포넌트 |
 | `lib/dashboardPaths.ts` | org_tier별 대시보드 경로 매핑 |
-| `lib/AlertsPanelContext.ts` | AlertsPanel 펼침/접힘 상태 Context 객체 정의(2026-07-27 신규, SideNavContext와 동일 패턴) |
-| `lib/AlertsPanelProvider.tsx` | AlertsPanel 펼침/접힘 상태 Provider 컴포넌트(2026-07-27 신규) — `DEFAULT_ALERTS_EXPANDED` 기본값 상수도 이 파일에 있음 |
+| `lib/AlertsPanelContext.ts` | AlertsPanel 펼침/접힘 상태 Context 객체 정의(2026-07-27 신규, SideNavContext와 동일 패턴). 2026-07-29 — `expand`(강제 펼침, `toggle`과 별도) 액션 추가 — 마커 클릭 시 이미 펼쳐진 상태에서도 접히지 않고 항상 펼쳐지게 하는 용도 |
+| `lib/AlertsPanelProvider.tsx` | AlertsPanel 펼침/접힘 상태 Provider 컴포넌트(2026-07-27 신규) — `DEFAULT_ALERTS_EXPANDED` 기본값 상수도 이 파일에 있음. 2026-07-29 — `expand: () => setExpanded(true)` 구현 추가 |
 | `lib/riskEventId.ts` | risk_event_id 날짜 파싱 유틸 |
 | `lib/selectAlertEvents.ts` | 알림 대상 risk_event 필터 함수(2026-07-27 신규, `AlertsPanel.tsx`에서 분리 — react-refresh 규칙상 컴포넌트 파일은 컴포넌트만 export해야 해서) — `AlertsPanel`(전체 목록)과 `AlertsBellButton`의 배지 숫자 양쪽이 재사용 |
 | `lib/SideNavContext.ts` | SideNav 접기/펼치기 상태 Context 객체 정의(Phase 9.4 신규) |
@@ -268,7 +268,8 @@
 ### `components/widgets/GlobalRiskBoard.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `GlobalRiskBoard` | 글로벌 리스크 관제 맵 컴포넌트 | Phase 9.1 구현, Phase 9.4에서 `features/public/components/`→여기로 승격(구매팀 대시보드도 재사용, 로직 변경 없음). `react-leaflet`+`world-atlas`+`topojson-client` 기반 인터랙티브 세계지도. "이벤트뷰"(개별 좌표 마커)/"국가뷰"(country_code 기준 집계, 대표 이벤트=최고 심각도) 토글, 마커 클릭 시 컴포넌트 내부 상세 패널에 관련 risk_event 리스트 표시. country_code 없는 이벤트는 마커 제외. `ScrollCard` 도입(지도는 `pinnedTop`으로 항상 고정 노출, 뷰토글은 `actions`, 클릭 시 상세 리스트만 스크롤 영역인 `children`). 2026-07-27 — 마커 hover 시 `confidence_label`을 permanent Tooltip 안에 조건부로 추가 노출(`hoveredKey` state, `CircleMarker`의 `eventHandlers.mouseover`/`mouseout`로 갱신) — Leaflet은 레이어 하나에 Tooltip을 하나만 바인딩할 수 있어 별도 hover 전용 Tooltip을 새로 못 붙이는 제약 때문에 기존 permanent Tooltip을 그대로 확장하는 방식을 씀(`useHoverDisclosure`/커스텀 오버레이는 채택 안 함, 근거는 `docs/roadmap-candidates.md` C9 참고). 국가뷰는 대표(`representative`) 이벤트의 confidence_label을 그대로 사용. 2026-07-29(2차 데모) — 선택적 `mapHeight`(px) prop 추가, `pinnedTop`의 `.mapWrapper`에 인라인 `style`로 적용 — 공개 대시보드(2x2 그리드, 미전달)와 구매팀 대시보드(전달, 330px)가 이 컴포넌트를 공유하므로 CSS 기본값(220px)을 직접 바꾸지 않고 화면별로 prop으로만 override |
+| `GlobalRiskBoard` | 글로벌 리스크 관제 맵 컴포넌트 | Phase 9.1 구현, Phase 9.4에서 `features/public/components/`→여기로 승격(구매팀 대시보드도 재사용, 로직 변경 없음). `react-leaflet`+`world-atlas`+`topojson-client` 기반 인터랙티브 세계지도. "이벤트뷰"(개별 좌표 마커)/"국가뷰"(country_code 기준 집계, 대표 이벤트=최고 심각도) 토글, 마커 클릭 시 컴포넌트 내부 상세 패널에 관련 risk_event 리스트 표시. country_code 없는 이벤트는 마커 제외. `ScrollCard` 도입(지도는 `pinnedTop`으로 항상 고정 노출, 뷰토글은 `actions`, 클릭 시 상세 리스트만 스크롤 영역인 `children`). 2026-07-27 — 마커 hover 시 `confidence_label`을 permanent Tooltip 안에 조건부로 추가 노출(`hoveredKey` state, `CircleMarker`의 `eventHandlers.mouseover`/`mouseout`로 갱신) — Leaflet은 레이어 하나에 Tooltip을 하나만 바인딩할 수 있어 별도 hover 전용 Tooltip을 새로 못 붙이는 제약 때문에 기존 permanent Tooltip을 그대로 확장하는 방식을 씀(`useHoverDisclosure`/커스텀 오버레이는 채택 안 함, 근거는 `docs/roadmap-candidates.md` C9 참고). 국가뷰는 대표(`representative`) 이벤트의 confidence_label을 그대로 사용. 2026-07-29(2차 데모) — 선택적 `mapHeight`(px) prop 추가, `pinnedTop`의 `.mapWrapper`에 인라인 `style`로 적용 — 공개 대시보드(2x2 그리드, 미전달)와 구매팀 대시보드(전달, 330px)가 이 컴포넌트를 공유하므로 CSS 기본값(220px)을 직접 바꾸지 않고 화면별로 prop으로만 override. 2026-07-29 후속 — 선택적 `onSelect?: (detail: SelectedDetail \| null) => void` prop 추가. 전달되면(`PurchasingDashboardPage`) `handleSelectEvent`/`handleSelectCountry`/닫기 클릭 시 내부 `selected` state 갱신과 별개로 이 콜백도 호출하고, 컴포넌트 자체의 "마커 클릭 시 정보 표시" `.panelHeader`/`.panelBody` JSX 블록 전체를 `{!onSelect && (...)}`로 감싸 렌더링을 생략한다(표시는 호출부인 `AlertsPanel`의 "마커뉴스"가 맡음). 미전달(공개 대시보드)이면 기존과 100% 동일하게 이 컴포넌트가 직접 표시 |
+| `SelectedDetail` | 마커/국가 클릭 선택 결과 타입 | `{ label: string; events: GlobalRiskBoardItem[] }` — 원래 `GlobalRiskBoard.tsx` 내부 비공개 타입이었으나 2026-07-29 `onSelect` prop 추가와 함께 `export`로 전환(`AlertsPanel`/`QuickActionsPanel`/`PurchasingDashboardPage`가 import) |
 
 ### `components/widgets/MaterialPriceDetail.tsx`
 | physical | logical | 역할 |
@@ -364,8 +365,7 @@
 ### `features/purchasing/components/AlertsPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `AlertsPanel` | 주요 알림 및 빠른 작업 패널 컴포넌트 | 등급 '심각' 또는 신뢰도 '경고' 항목 우선 노출(필터링은 `selectAlertEvents`, 소비처가 미리 걸러 `alerts` prop으로 전달). 2026-07-27 — `expanded`(펼침, `AlertsPanelContext`)/`isPreviewing`(접힘+호버 미리보기, 로컬) 두 상태로 분기: 펼침은 기존과 동일한 자체 sticky 패널+`useScrollOverflowHint`, 접힘은 `.wrapper`가 폭 0(SideNav 접기와 동일한 width 트랜지션), 그 상태에서 `isPreviewing`이면 상위 4개(`PREVIEW_COUNT`)를 `ScrollCard`로 감싼 `position:absolute` 오버레이가 opacity+transform으로 떠오름(항상 DOM에 렌더링해두고 클래스로만 토글 — 조건부 마운트면 등장/퇴장에 transition이 안 먹어서). 2026-07-29(2차 데모 수정 1) — 펼침 상태의 `.panel` 내부를 `<section>`으로 감싼 "주요 알림"(기존 리스트, `<h3 id="alerts-subsection-heading">`)과 "빠른 작업"(`<QuickActionsPanel />`, 구분선 `.quickActionsSection`) 두 서브섹션으로 재구성. 접힘+미리보기 오버레이는 기존과 동일하게 알림 상위 4개만 표시(빠른 작업은 미리보기에 포함하지 않음 — 프레임뿐인 placeholder라 정보 가치 없이 공간만 차지) |
-| `AlertItem` | 알림 목록 항목(내부 헬퍼) | 등급/신뢰도 배지+요약, 전체 목록과 미리보기 양쪽에서 재사용 |
+| `AlertsPanel` | 주요 알림 및 빠른 작업 패널 컴포넌트 | 2026-07-27 — `expanded`(펼침, `AlertsPanelContext`)/`isPreviewing`(접힘+호버 미리보기, 로컬) 두 상태로 분기: 펼침은 기존과 동일한 자체 sticky 패널+`useScrollOverflowHint`, 접힘은 `.wrapper`가 폭 0(SideNav 접기와 동일한 width 트랜지션). 2026-07-29(2차 데모 수정 1) — `QuickActionsPanel`을 펼침 `.panel` 내부 서브섹션(`.quickActionsSection`)으로 통합. **2026-07-29 후속(수정 2-1)** — 펼침 상태에 있던 "주요 알림" 서브섹션(제목+리스트, `AlertItem`/`alerts` prop) 표시 코드를 완전히 제거 — `GlobalRiskBoard`의 "마커 클릭 시 정보 표시" 기능이 "빠른 작업 > 마커뉴스"로 이양되며 같은 원본 데이터를 다루는 두 UI가 중복이라는 판단(데이터/타입 자체는 불변, `alerts` prop만 이 컴포넌트에서 제거). 이어서 접힘+호버 미리보기도 "주요 알림 상위 4개"를 별도 하드코딩(`PREVIEW_COUNT`)해 보여주던 방식을 버리고 펼침 패널과 동일한 `<QuickActionsPanel />`을 그대로 재사용(래퍼 `ScrollCard` 제거 — `QuickActionsPanel`이 이미 자체 `ScrollCard`를 가져 이중 타이틀바를 피함) — 이제 펼침/접힘 두 상태가 항상 같은 콘텐츠(마커 클릭 결과 포함)를 보여준다. `markerNews`/`onCloseMarkerNews` props를 받아 `QuickActionsPanel`로 그대로 전달 |
 | `PREVIEW_COUNT` | 미리보기 표시 개수 상수(4) | design-tokens.md d항목("리스트 항목 4개 초과 시 overflow")과 일관되게 4로 고정 |
 
 ### `features/purchasing/components/ErpImpactPanel.tsx`
@@ -418,7 +418,7 @@
 ### `features/purchasing/components/QuickActionsPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `QuickActionsPanel` | "빠른 작업" 서브섹션 컴포넌트 | 2026-07-29 신규(2차 데모) — 구매대응순위·마커뉴스·데이터 업데이트 상태 3개 서브섹션의 틀(제목+영역 구분)만 우선 구현, 콘텐츠 로직은 다음 단계(CLAUDE.md placeholder 원칙, 각 서브섹션은 "준비 중입니다" 안내만). 최초 구현(수정 3단계 이전)은 `AlertsPanel`과 나란히 놓인 최상위 형제 컴포넌트(자체 `ScrollCard`+sticky wrapper)였으나, 수정 1(2026-07-29)에서 `AlertsPanel`의 "빠른 작업" 서브섹션 자식으로 통합되며 자체 sticky/폭 wrapper(`.wrapper`)를 제거 — `ScrollCard`만 반환 |
+| `QuickActionsPanel` | "빠른 작업" 서브섹션 컴포넌트 | 2026-07-29 신규(2차 데모) — 구매대응순위·마커뉴스·데이터 업데이트 상태 3개 서브섹션의 틀(제목+영역 구분)만 우선 구현, 콘텐츠 로직은 다음 단계(CLAUDE.md placeholder 원칙, 각 서브섹션은 "준비 중입니다" 안내만). 최초 구현(수정 3단계 이전)은 `AlertsPanel`과 나란히 놓인 최상위 형제 컴포넌트(자체 `ScrollCard`+sticky wrapper)였으나, 수정 1(2026-07-29)에서 `AlertsPanel`의 "빠른 작업" 서브섹션 자식으로 통합되며 자체 sticky/폭 wrapper(`.wrapper`)를 제거 — `ScrollCard`만 반환. **2026-07-29 후속** — `markerNews: SelectedDetail \| null`/`onCloseMarkerNews: () => void` props 추가, "마커뉴스" 서브섹션만 실제로 연동(`markerNews`가 있으면 "주요 뉴스/이벤트 · {label}" 부제+닫기 버튼+`RiskGradeBadge`/`ConfidenceBadge`를 포함한 리스트, 없으면 기존 안내 문구). `AlertsPanel`의 펼침 패널과 접힘+호버 미리보기 양쪽이 이 컴포넌트를 그대로 재사용해 두 상태의 콘텐츠가 항상 일치한다 |
 
 ### `features/purchasing/components/PurchasePriorityPanel.tsx`
 | physical | logical | 역할 |
@@ -438,7 +438,7 @@
 ### `features/purchasing/pages/PurchasingDashboardPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바(+`SideNavToggleButton`) + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역 3종(`MaterialRiskOverviewSection` → 승격된 `GlobalRiskBoard` → `ImportDependencyRow`)을 기존 4단 패널 위에 추가. 2026-07-27 — `selectAlertEvents`로 알림 필터링 후 `Header`의 `accountExtra`(`AlertsBellButton`)와 `AlertsPanel` 양쪽에 전달, hover 미리보기 디바운스(`PREVIEW_CLOSE_DELAY_MS`=150ms)+ESC 닫기 로컬 상태 관리. **2026-07-29(2차 데모, UX-01-DB 재배치)** — 본문 순서를 KPI 요약 → `NewsExchangeTicker`(신규) → `GlobalRiskBoard`(`mapHeight=330`으로 1.5배 확대) → 승격된 `SupplyNewsFeed`(신규 소비처) → `ImportDependencyRow` → `MaterialRiskOverviewSection`(2번 위치→맨 아래로 이동)으로 재배치, `MaterialRiskStatusPanel`/`ErpImpactPanel`/`PurchasePriorityPanel`은 본문에서 제거(SideNav 전용 이동 예정, 파일은 유지), `SIDE_NAV_ITEMS`를 브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향 5개로 갱신, `SECTION_DOTS_SECTIONS`도 위 재배치에 맞춰 8→7개로 갱신. 최초 구현(수정 1 이전)엔 `QuickActionsPanel`을 `AlertsPanel`과 나란한 별도 최상위 형제로 뒀으나, 수정 1에서 `AlertsPanel`의 "빠른 작업" 서브섹션으로 통합되며 이 페이지에서의 직접 렌더링은 제거됨 |
+| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바(+`SideNavToggleButton`) + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역 3종(`MaterialRiskOverviewSection` → 승격된 `GlobalRiskBoard` → `ImportDependencyRow`)을 기존 4단 패널 위에 추가. 2026-07-27 — `selectAlertEvents`로 알림 필터링 후 `Header`의 `accountExtra`(`AlertsBellButton`)와 `AlertsPanel` 양쪽에 전달, hover 미리보기 디바운스(`PREVIEW_CLOSE_DELAY_MS`=150ms)+ESC 닫기 로컬 상태 관리. **2026-07-29(2차 데모, UX-01-DB 재배치)** — 본문 순서를 KPI 요약 → `NewsExchangeTicker`(신규) → `GlobalRiskBoard`(`mapHeight=330`으로 1.5배 확대) → 승격된 `SupplyNewsFeed`(신규 소비처) → `ImportDependencyRow` → `MaterialRiskOverviewSection`(2번 위치→맨 아래로 이동)으로 재배치, `MaterialRiskStatusPanel`/`ErpImpactPanel`/`PurchasePriorityPanel`은 본문에서 제거(SideNav 전용 이동 예정, 파일은 유지), `SIDE_NAV_ITEMS`를 브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향 5개로 갱신, `SECTION_DOTS_SECTIONS`도 위 재배치에 맞춰 8→7개로 갱신. 최초 구현(수정 1 이전)엔 `QuickActionsPanel`을 `AlertsPanel`과 나란한 별도 최상위 형제로 뒀으나, 수정 1에서 `AlertsPanel`의 "빠른 작업" 서브섹션으로 통합되며 이 페이지에서의 직접 렌더링은 제거됨. **2026-07-29 후속** — `markerNews`(`SelectedDetail \| null`) 로컬 상태 신규, `handleMarkerSelect(detail)`이 `GlobalRiskBoard`의 `onSelect`로 연결돼 `setMarkerNews` + (선택 시) `useAlertsPanelState()`의 `expand()`(강제 펼침, 토글 아님)를 호출해 접혀있어도 마커 클릭 시 자동으로 펼쳐짐. `<AlertsPanel>`에는 더 이상 `alerts` prop을 전달하지 않고(수정 2-1로 그쪽 표시 자체가 제거됨) 대신 `markerNews`/`onCloseMarkerNews={() => setMarkerNews(null)}`를 전달 |
 | `GLOBAL_RISK_BOARD_MAP_HEIGHT` | 관제 맵 확대 높이 상수(330px) | 2026-07-29 신규 — 기존 220px 기준 1.5배. `GlobalRiskBoard`는 공개 대시보드와 공유하는 컴포넌트라 CSS 기본값을 직접 바꾸지 않고 이 페이지에서만 `mapHeight` prop으로 override |
 | `PREVIEW_CLOSE_DELAY_MS` | 알림 미리보기 닫힘 디바운스(150ms) | 트리거(헤더 벨)·콘텐츠(AlertsPanel)가 화면상 떨어져 있어 둘 다 벗어난 뒤 이 시간만큼 지나야 닫힘 |
 
@@ -466,7 +466,7 @@
 ### `lib/AlertsPanelContext.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `AlertsPanelContextValue` | AlertsPanel Context 값 타입 | 2026-07-27 신규. `expanded`(펼침 여부)/`toggle`(토글 함수) — `SideNavContextValue`와 동일 형태 |
+| `AlertsPanelContextValue` | AlertsPanel Context 값 타입 | 2026-07-27 신규. `expanded`(펼침 여부)/`toggle`(토글 함수) — `SideNavContextValue`와 동일 형태. 2026-07-29 — `expand`(강제 펼침, 이미 펼쳐진 상태에서 호출해도 접히지 않음) 필드 추가, 마커 클릭 시 자동 펼침(`PurchasingDashboardPage`의 `handleMarkerSelect`) 용도 |
 | `AlertsPanelContext` | AlertsPanel Context 객체 | `AlertsPanelProvider`/`useAlertsPanelState`가 공유하는 React Context — `SideNavContext`와 동일 패턴 |
 
 ### `lib/AlertsPanelProvider.tsx`
@@ -478,12 +478,12 @@
 ### `lib/useAlertsPanelState.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `useAlertsPanelState` | AlertsPanel 펼침/접힘 상태 접근 훅 | 2026-07-27 신규. `AlertsPanelProvider` 내부에서 `expanded`/`toggle` 제공, 범위 밖 사용 시 예외 발생(`useSideNavState`와 동일 패턴) |
+| `useAlertsPanelState` | AlertsPanel 펼침/접힘 상태 접근 훅 | 2026-07-27 신규. `AlertsPanelProvider` 내부에서 `expanded`/`toggle` 제공, 범위 밖 사용 시 예외 발생(`useSideNavState`와 동일 패턴). 2026-07-29 — `expand`(강제 펼침) 추가 제공 |
 
 ### `lib/selectAlertEvents.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `selectAlertEvents` | 알림 대상 risk_event 필터 함수 | 2026-07-27 신규, `AlertsPanel.tsx`에서 분리(react-refresh 규칙 — 컴포넌트 파일은 컴포넌트만 export). 등급 '심각' 또는 신뢰도 '경고'인 이벤트만 남김. `PurchasingDashboardPage`가 한 번 계산해 `AlertsPanel`(전체 목록)과 `AlertsBellButton`(배지 숫자, `alerts.length`) 양쪽에 내려줌 |
+| `selectAlertEvents` | 알림 대상 risk_event 필터 함수 | 2026-07-27 신규, `AlertsPanel.tsx`에서 분리(react-refresh 규칙 — 컴포넌트 파일은 컴포넌트만 export). 등급 '심각' 또는 신뢰도 '경고'인 이벤트만 남김. `PurchasingDashboardPage`가 계산해 `AlertsBellButton`의 배지 숫자(`alerts.length`)로 사용 — 2026-07-29 후속(수정 2-1)부터는 `AlertsPanel`에는 더 이상 전달하지 않는다(그쪽 "주요 알림" 표시가 제거됨) |
 
 ### `lib/SideNavContext.ts`
 | physical | logical | 역할 |

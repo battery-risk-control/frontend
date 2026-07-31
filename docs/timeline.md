@@ -683,3 +683,65 @@ UX-01-DB) 2차 명세에 맞춰 구매팀 대시보드 본문을 재배치하고
   전체 소비처 grep 확인 — 공개 대시보드는 `mapHeight` 미전달로 기존 동작 유지) 확인.
   E(mock-schemas.md 반영)는 5단계로 분리해 별도 확인 후 진행. 나머지 특이사항 없음.
   tsc/eslint/build 전부 통과.
+
+## Phase 11 후속 — GlobalRiskBoard 마커뉴스 연동 + AlertsPanel "주요 알림" 정리 (`youngjin/2nd-demo-layout`, 2026-07-29)
+
+같은 브랜치에서 이어진 후속 라운드. 1단계 조사(코드 경로 확인) → 2단계 설계 제안(A/B/C
+확인점) → 승인 → 3단계 구현 → 4단계 검증 순으로 진행, 검증 단계에서 사용자가 지적한
+구현 누락(아래) 때문에 실제로는 두 차례 커밋으로 나뉨.
+
+- **1단계 조사**: "주요 알림"과 `GlobalRiskBoard`가 같은 원본(`fetchRiskEvents`)에서
+  파생됨을 grep으로 확인(표시 코드만 지우면 됨, 데이터는 안전). `GlobalRiskBoard`의
+  마커 클릭 정보 패널이 컴포넌트 내부에 완전히 캡슐화돼 있어 공개 대시보드와 공유하는
+  이상 "완전히 삭제" 요구가 그대로는 성립하지 않음을 발견 — 설계 단계로 이관.
+  `SideNavProvider`/`AlertsPanelProvider` 둘 다 이미 기본값이 펼침(`collapsed:false`/
+  `DEFAULT_ALERTS_EXPANDED:true`)이라 "기본 펼침으로 변경" 요구는 코드 변경 불필요임을
+  확인. `MaterialRiskOverviewSection`의 "더보기" 기본값(`useState(true)`)은 변경 필요로
+  확인.
+- **2단계 설계(A/B/C 확인 후 승인)**:
+  - A — `GlobalRiskBoard`에 선택적 `onSelect?: (detail: SelectedDetail | null) => void`
+    prop 추가. 전달 시(구매팀) 자체 표시(.panelHeader/.panelBody) 렌더링을
+    `{!onSelect && (...)}`로 생략하고 콜백만 호출, 미전달 시(공개 대시보드) 기존 100%
+    동일 — `mapHeight`와 동일한 "공유 컴포넌트는 CSS/구조 기본값을 직접 안 바꾸고 prop
+    으로 화면별 override" 원칙 재사용. `SelectedDetail`을 `export`로 전환.
+  - B — 2-5(SideNav/AlertsPanel 기본 펼침)는 1단계 조사대로 스킵.
+  - C — `AlertsPanelContext`에 `toggle`과 별도인 `expand()`(강제 펼침) 액션 신규 —
+    이미 펼쳐진 상태에서 마커를 또 클릭해도 접히지 않아야 하므로 토글로는 불가능.
+- **3단계 구현**: `AlertsPanelProvider`에 `expand` 구현,
+  `GlobalRiskBoard`의 `handleSelectEvent`/`handleSelectCountry`/닫기 클릭에 `onSelect`
+  호출 추가, `PurchasingDashboardPage`에 `markerNews` 상태+`handleMarkerSelect`(선택 시
+  `expandAlerts()` 호출)+`GlobalRiskBoard onSelect`/`AlertsPanel markerNews`/
+  `onCloseMarkerNews` 배선, `QuickActionsPanel`의 "마커뉴스" 서브섹션을 surin 패턴
+  ("주요 뉴스/이벤트 · {label}" 부제+닫기+리스트)으로 실제 연동. **네트워크 중단 발생** —
+  재개 시 `git diff --stat`/`git status`/`npm run typecheck`로 실제 상태 재확인(이
+  과정에서 `npx tsc --noEmit`이 이 repo의 `tsconfig.json`(`files:[]`+`references`
+  프로젝트 참조 구조)에서는 아무것도 검사하지 않고 조용히 통과하는 함정을 발견 —
+  올바른 명령은 `npm run typecheck`=`tsc -b`. 이후 이 문서를 포함해 앞으로도 이 repo의
+  타입 검증은 항상 `tsc -b` 기준으로 보고한다).
+- **4단계 검증 1차 — 사용자가 지적한 구현 누락 발견**: 4-1~4-6 검증 보고에서 "주요 알림
+  서브섹션이 정상 표시됨"이라는 문구가 2-1(주요 알림 표시 코드 제거) 요구와 모순된다는
+  사용자 지적. 코드 재확인 결과 (b) — 이전 라운드("수정 1", AlertsPanel 통합)에서 만든
+  `<section aria-labelledby="alerts-subsection-heading">`(제목 "주요 알림"+리스트)를
+  이번 라운드(2-1)에서 다시 빼는 작업 자체를 빠뜨렸음을 확인. 즉시 제거 후 재검증
+  (heading 목록이 `["주요 알림 및 빠른 작업","빠른 작업"]`로 바뀜, 스크린샷 확인) —
+  이제 쓰이지 않는 CSS(`.subsection`/`.subsectionTitle`)도 함께 정리.
+- **4단계 검증 2차 — 미리보기 통일**: 위 수정 직후 접힘 상태 hover 미리보기가 여전히
+  "주요 알림 상위 4건"을 별도 하드코딩(`AlertItem`/`PREVIEW_COUNT`/`alerts` prop)해
+  보여주고 있어 펼침 패널(이제 "빠른 작업"만 있음)과 콘텐츠가 어긋나는 비대칭을 발견,
+  보고 후 사용자 확정: "미리보기는 펼침 상태와 같은 내용을 보여주면 된다"는 지시에 따라
+  `AlertItem`/`PREVIEW_COUNT`/`alerts` prop을 전부 제거하고 미리보기가 펼침 패널과
+  동일한 `<QuickActionsPanel markerNews={...} onCloseMarkerNews={...} />`를 그대로
+  재사용하도록 통일(래퍼 `ScrollCard`도 제거 — 이중 타이틀바 방지). 이제 `alerts`가
+  `AlertsPanel`에서 완전히 빠지며 `PurchasingDashboardPage`의 `<AlertsPanel>` 호출에서도
+  `alerts` prop 제거(단, `alerts` 변수 자체는 `AlertsBellButton`의 배지 숫자용으로
+  계속 필요해 유지). 이제 쓰이지 않는 CSS(`.empty`/`.list`/`.item`/`.badges`/`.summary`)
+  정리. tsc -b/eslint/build 재통과, hover 미리보기 스크린샷으로 "빠른 작업" 콘텐츠 노출
+  확인. 위 3단계~4단계 전체(onSelect/expand 배선부터 미리보기 통일까지)가 커밋 시점
+  이전에 한 번에 완료돼 **단일 커밋(`5f53cf8`)**으로 반영됐다.
+- **검증 요약**: (1) 마커 클릭 → `AlertsPanel` 자동 펼침(실측: 0px→280px)+마커뉴스
+  갱신, (2) 공개 대시보드 마커 클릭 시 기존 자체 패널 회귀 없음(`onSelect` 미전달
+  경로), (3) hover 미리보기가 펼침 패널과 동일한 콘텐츠 표시, (4) 모바일(375px) 기존
+  붕괴는 그대로(`docScrollWidth 664 vs 375`) — 악화 없음(범위 밖, 손대지 않음).
+  QA A~H: B(GlobalRiskBoard 소비처 전수 grep, 공개 대시보드 회귀 스크린샷으로 확인)/
+  D(마커뉴스 닫기 버튼에 `text-decoration:underline`)/G(`.scratch/` 임시 스크립트,
+  git status 정상) 확인. E(mock-schemas.md)는 5단계로 분리.

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  fetchExchangeRates,
   fetchGlobalRiskBoard,
   fetchImportDependency,
   fetchMaterialPriceSummaries,
   fetchMaterialPriceTrends,
   fetchMaterialRiskGauges,
+  fetchNewsFeed,
   fetchRiskEvents,
   fetchScoreCards,
 } from '../../../api/purchasing.api'
@@ -14,46 +16,63 @@ import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { AlertsBellButton } from '../../../components/layout/AlertsBellButton'
 import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
+import { SupplyNewsFeed } from '../../../components/widgets/SupplyNewsFeed'
 import { PageSectionDots } from '../../../components/ui/PageSectionDots/PageSectionDots'
 import { useAlertsPanelState } from '../../../lib/useAlertsPanelState'
 import { selectAlertEvents } from '../../../lib/selectAlertEvents'
 import { KpiSummaryPanel } from '../components/KpiSummaryPanel'
+import { NewsExchangeTicker } from '../components/NewsExchangeTicker'
 import { MaterialRiskOverviewSection } from '../components/MaterialRiskOverviewSection'
 import { ImportDependencyRow } from '../components/ImportDependencyRow'
-import { MaterialRiskStatusPanel } from '../components/MaterialRiskStatusPanel'
-import { ErpImpactPanel } from '../components/ErpImpactPanel'
-import { PurchasePriorityPanel } from '../components/PurchasePriorityPanel'
 import { AlertsPanel } from '../components/AlertsPanel'
 import styles from './PurchasingDashboardPage.module.css'
+
+/** 관제 맵 확대 배율(2차 데모) — 기존 220px 기준 1.5배. GlobalRiskBoard는 공개 대시보드와
+ * 공유하는 컴포넌트라 CSS 기본값을 직접 바꾸지 않고 prop으로 이 화면에만 override한다. */
+const GLOBAL_RISK_BOARD_MAP_HEIGHT = 330
 
 /** 미리보기 표시/숨김 디바운스 — 트리거(헤더 벨)와 콘텐츠(AlertsPanel 미리보기)가 화면상
  * 떨어져 있어(도트 인디케이터처럼 인접하지 않음) DOM 포함 관계 트릭 대신, 둘 중 하나라도
  * 호버 중이면 유지하고 둘 다 벗어난 뒤 이 시간만큼 지나야 닫는 디바운스 방식을 쓴다. */
 const PREVIEW_CLOSE_DELAY_MS = 150
 
+// 2차 데모(2026-07-29) — 원자재 공급사 리스크 현황/ERP 영향은 SideNav 전용으로 이동하며
+// 라벨을 5개로 갱신(href는 기존과 동일한 해시 placeholder 패턴 유지, 실제 라우트 연결은
+// 다음 단계). BriefingDetailPage.tsx에도 동일 배열이 별도로 존재해 함께 갱신했다.
 const SIDE_NAV_ITEMS = [
-  { label: '리스크 현황판', href: '/purchasing#risk-board' },
-  // 별도 목록 화면이 없어 대시보드 내 각 리스크 항목의 "브리핑 보기" 링크로 진입한다.
-  // href는 SideNav의 React key 중복을 피하기 위해 /purchasing 뒤에 서로 다른 해시를 붙였다.
-  { label: '브리핑 자료', href: '/purchasing#briefing' },
+  { label: '브리핑', href: '/purchasing#briefing' },
+  { label: '문서 관리', href: '/purchasing#documents' },
+  { label: '계약 검색', href: '/purchasing#contracts' },
+  { label: '원자재 공급사 리스크 현황', href: '/purchasing#material-risk' },
+  { label: 'ERP 영향', href: '/purchasing#erp-impact' },
 ]
 
-// alerts-heading(우측 알림 패널)은 항상 뷰포트 밖으로 스크롤되지 않는 별도 영역이라 제외.
+// alerts-heading(우측 알림 패널)/quick-actions-heading(빠른 작업 패널)은 항상 뷰포트 밖으로
+// 스크롤되지 않는 별도 영역이라 제외. 2차 데모 재배치(2026-07-29)에 맞춰 갱신 — 원자재
+// 공급사 리스크 현황/ERP 영향/구매 대응 우선순위는 본문에서 제거돼 제외, 뉴스속보 티커/
+// 실시간 뉴스 목록을 신규 추가.
 const SECTION_DOTS_SECTIONS = [
   { id: '상단 KPI 요약', headingId: 'kpi-summary-heading' },
-  { id: '원자재 리스크 요약', headingId: 'material-risk-summary-heading' },
+  { id: '뉴스속보 티커', headingId: 'news-exchange-ticker-heading' },
   { id: '글로벌 리스크 맵', headingId: 'global-risk-board-heading' },
+  { id: '실시간 뉴스 목록', headingId: 'supply-news-feed-heading' },
   { id: '수입 의존도', headingId: 'import-dependency-heading' },
   { id: '원자재 가격 추이', headingId: 'material-price-detail-heading' },
-  { id: '원자재 공급사 리스크 현황', headingId: 'material-risk-heading' },
-  { id: 'ERP 영향', headingId: 'erp-impact-heading' },
-  { id: '구매 대응 우선순위', headingId: 'purchase-priority-heading' },
+  { id: '원자재 리스크 요약', headingId: 'material-risk-summary-heading' },
 ]
 
 /**
- * 1계층 구매팀 대시보드 (Seq 24). Figma '구매팀 대시보드' 프레임 + 데모(화면ID UX-01-DB)
- * 요약 영역(5칸 게이지 그리드 → 지도 → 도넛+가격추이 2단, Phase 9.4 surin 이식)을 결합한 구조 —
- * 좌측 사이드바 + 단일 컬럼(요약 영역 3종 + 기존 4단 패널) + 우측 알림 패널.
+ * 1계층 구매팀 대시보드 (Seq 24). 2차 데모(2026-07-29) 재배치 — 좌측 사이드바(브리핑/문서
+ * 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향, href는 여전히 해시 placeholder) +
+ * 단일 컬럼 본문 + 우측 알림 패널(`AlertsPanel`, "주요 알림"/"빠른 작업" 두 서브섹션 —
+ * 수정 1, `QuickActionsPanel`은 별도 형제가 아니라 이 패널의 자식). 본문 순서: KPI 요약 →
+ * 뉴스속보·환율정보 롤링 티커
+ * (`NewsExchangeTicker`) → 글로벌 리스크 관제 맵(1.5배 확대) → 실시간 뉴스 목록(승격된
+ * `SupplyNewsFeed`, 필터링 없음) → 수입 의존도+가격 추이 → 원자재 리스크 요약(기존 2번
+ * 위치에서 맨 아래로 이동). 원자재 공급사 리스크 현황/ERP 영향/구매 대응 우선순위는 SideNav
+ * 전용으로 이동하며 본문에서 제거했다(각 컴포넌트 파일 자체는 유지 — 실제 라우트 연결은
+ * 다음 단계). 뉴스 티커·실시간 뉴스 목록 모두 `fetchNewsFeed()` 하나를 표현만 다르게(롤링 /
+ * 정적 리스트) 재사용한다(신규 뉴스 함수 없음).
  *
  * 알림 패널(`AlertsPanel`)의 펼침/접힘은 `AlertsPanelContext`(페이지 이동 간 유지)로,
  * 접힌 상태에서 헤더 벨(`AlertsBellButton`) 호버 시 뜨는 미리보기는 이 페이지의 로컬
@@ -70,6 +89,8 @@ export function PurchasingDashboardPage() {
   const importDependency = fetchImportDependency()
   const priceSeries = fetchMaterialPriceTrends()
   const priceSummaries = fetchMaterialPriceSummaries()
+  const newsItems = fetchNewsFeed()
+  const exchangeRates = fetchExchangeRates()
   const alerts = selectAlertEvents(events)
 
   const { expanded: alertsExpanded, toggle: toggleAlertsExpanded } = useAlertsPanelState()
@@ -131,16 +152,15 @@ export function PurchasingDashboardPage() {
         <main id="main-content" className={styles.main}>
           <h1 className={styles.heading}>구매팀 대시보드</h1>
           <KpiSummaryPanel events={events} />
-          <MaterialRiskOverviewSection gauges={gauges} scoreCards={scoreCards} />
-          <GlobalRiskBoard items={riskBoardItems} />
+          <NewsExchangeTicker news={newsItems} exchangeRates={exchangeRates} />
+          <GlobalRiskBoard items={riskBoardItems} mapHeight={GLOBAL_RISK_BOARD_MAP_HEIGHT} />
+          <SupplyNewsFeed items={newsItems} />
           <ImportDependencyRow
             importDependency={importDependency}
             priceSeries={priceSeries}
             priceSummaries={priceSummaries}
           />
-          <MaterialRiskStatusPanel events={events} />
-          <ErpImpactPanel events={events} />
-          <PurchasePriorityPanel events={events} />
+          <MaterialRiskOverviewSection gauges={gauges} scoreCards={scoreCards} />
         </main>
         <PageSectionDots variant="withAside" sections={SECTION_DOTS_SECTIONS} />
         <AlertsPanel

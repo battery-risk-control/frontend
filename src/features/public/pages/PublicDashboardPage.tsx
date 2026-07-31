@@ -13,7 +13,7 @@ import { Header } from '../../../components/layout/Header'
 import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
 import { AiPriorityList } from '../components/AiPriorityList'
 import { MaterialPriceDetail } from '../../../components/widgets/MaterialPriceDetail'
-import { SupplyNewsFeed } from '../components/SupplyNewsFeed'
+import { SupplyNewsFeed } from '../../../components/widgets/SupplyNewsFeed'
 import styles from './PublicDashboardPage.module.css'
 
 const TIER_TABS = [

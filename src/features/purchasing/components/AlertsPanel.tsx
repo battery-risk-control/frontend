@@ -3,6 +3,7 @@ import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { useScrollOverflowHint } from '../../../lib/useScrollOverflowHint'
+import { QuickActionsPanel } from './QuickActionsPanel'
 import type { RiskEvent } from '../../../api/types'
 import styles from './AlertsPanel.module.css'
 
@@ -35,9 +36,18 @@ function AlertItem({ event }: { event: RiskEvent }) {
  * 주요 알림 및 빠른 작업. `AlertsPanelContext`(`expanded`)로 펼침/접힘 상태를 페이지 이동
  * 간에도 유지한다(트리거인 `AlertsBellButton`은 Header 쪽에 있어 상태를 공유해야 함).
  *
- * - 펼침(`expanded`): 기존과 동일하게 `position:sticky; height:100vh` 전체 목록을 자체
+ * 2차 데모 수정 1(2026-07-29): "빠른 작업"(`QuickActionsPanel`)을 별도 최상위 형제
+ * 컴포넌트로 두지 않고 이 패널의 두 번째 서브섹션으로 통합했다 — 패널 제목 자체가 이미
+ * "주요 알림 및 빠른 작업"이라 두 개념을 포괄하고 있었다. 첫 번째 서브섹션("주요 알림")은
+ * 기존 리스트 그대로, 두 번째는 `QuickActionsPanel`을 그대로 렌더링(자체 sticky/폭 없이
+ * 이 패널의 `.panel` 스크롤 영역 안에 자연스럽게 흐름). 접힌 상태 hover 미리보기는 기존과
+ * 동일하게 알림 상위 4개만 보여준다(빠른 작업은 미리보기에 포함하지 않음 — 미리보기는
+ * 빠르게 훑는 용도라 프레임뿐인 placeholder까지 넣으면 정보 가치 없이 공간만 차지한다).
+ *
+ * - 펼침(`expanded`): 기존과 동일하게 `position:sticky; height:100vh` 전체 영역을 자체
  *   스크롤(`useScrollOverflowHint`)로 보여준다 — "앱 뼈대" 성격이라 `ScrollCard`를 쓰지
- *   않는다(design-tokens.md 스크롤 원칙, SideNav와 동급).
+ *   않는다(design-tokens.md 스크롤 원칙, SideNav와 동급). 내부 "빠른 작업" 서브섹션만
+ *   예외적으로 `QuickActionsPanel`이 자체 `ScrollCard`를 쓴다(카드형 UI 원칙 적용 대상).
  * - 접힘(`!expanded`): 이 컴포넌트가 차지하던 우측 자리 자체가 폭 0으로 사라진다
  *   (SideNav 접기와 동일한 width 트랜지션 패턴). 이 상태에서 헤더의 `AlertsBellButton`을
  *   호버하면(`isPreviewing`) 같은 자리에 상위 `PREVIEW_COUNT`개 + `ScrollCard`로 감싼
@@ -67,15 +77,23 @@ export function AlertsPanel({ alerts, expanded, isPreviewing, onPreviewMouseEnte
             <h2 id="alerts-heading" className={styles.title}>
               주요 알림 및 빠른 작업
             </h2>
-            {alerts.length === 0 ? (
-              <p className={styles.empty}>표시할 알림이 없습니다.</p>
-            ) : (
-              <ul className={styles.list}>
-                {alerts.map((event) => (
-                  <AlertItem key={event.risk_event_id} event={event} />
-                ))}
-              </ul>
-            )}
+            <section className={styles.subsection} aria-labelledby="alerts-subsection-heading">
+              <h3 id="alerts-subsection-heading" className={styles.subsectionTitle}>
+                주요 알림
+              </h3>
+              {alerts.length === 0 ? (
+                <p className={styles.empty}>표시할 알림이 없습니다.</p>
+              ) : (
+                <ul className={styles.list}>
+                  {alerts.map((event) => (
+                    <AlertItem key={event.risk_event_id} event={event} />
+                  ))}
+                </ul>
+              )}
+            </section>
+            <div className={styles.quickActionsSection}>
+              <QuickActionsPanel />
+            </div>
           </div>
           {hasOverflowTop && (
             <div className={styles.overflowHintTop} aria-hidden="true">

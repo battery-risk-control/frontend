@@ -1,13 +1,16 @@
 import type {
+  ExchangeRateItem,
   GlobalRiskBoardItem,
   ImportDependencyData,
   MaterialPriceSeries,
   MaterialPriceSummary,
   MaterialRiskGaugeItem,
+  NewsFeedItem,
   RiskEvent,
   RiskEventBriefing,
   ScoreCardItem,
 } from './types'
+import { parseRiskEventDate } from '../lib/riskEventId'
 
 /**
  * 1계층 구매팀 대시보드 mock 데이터.
@@ -368,4 +371,42 @@ export function fetchImportDependency(): ImportDependencyData {
       { label: '기타', value: 12.9, color: '#cbd5e1' },
     ], // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
   }
+}
+
+/**
+ * 실시간 뉴스 속보 mock 함수. 원래 api/public.api.ts에 있었으나, 구매팀 대시보드(2차 데모,
+ * `NewsExchangeTicker`/승격된 `SupplyNewsFeed`)도 같은 데이터를 재사용하게 되면서
+ * fetchGlobalRiskBoard와 동일한 이유로 원천 데이터 허브인 이 파일로 옮겼다. public.api.ts는
+ * 이 함수를 재수출만 한다(로직 변경 없음, 기존 import 경로 그대로 동작).
+ *
+ * 사용 예:
+ *   const feed = fetchNewsFeed()
+ */
+export function fetchNewsFeed(): NewsFeedItem[] {
+  return fetchRiskEvents()
+    .map((event) => ({
+      risk_event_id: event.risk_event_id,
+      date: parseRiskEventDate(event.risk_event_id),
+      material: event.market_context.material,
+      source: event.market_context.source,
+      headline: event.market_context.event_summary,
+      confidence_label: event.confidence_label,
+    }))
+    .sort((a, b) => (a.date < b.date ? 1 : -1))
+}
+
+/**
+ * 환율정보 롤링 티커 mock 함수(2차 데모, `NewsExchangeTicker`). risk_event 계열과 무관한
+ * 완전 신규 개념이라 원천 데이터에서 파생하지 않고 주요 통화 3종을 그대로 하드코딩했다 —
+ * docs/mock-schemas.md 참고, 후속 검증 필요.
+ *
+ * 사용 예:
+ *   const rates = fetchExchangeRates()
+ */
+export function fetchExchangeRates(): ExchangeRateItem[] {
+  return [
+    { currency_code: 'USD', currency_name: '미국 달러', rate: 1391.5, change_label: '▲ 0.3%' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
+    { currency_code: 'CNY', currency_name: '중국 위안', rate: 191.2, change_label: '▼ 0.1%' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
+    { currency_code: 'EUR', currency_name: '유로', rate: 1508.7, change_label: '▲ 0.5%' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
+  ]
 }

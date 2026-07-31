@@ -62,6 +62,26 @@
   color: var(--color-primary);
 }
 
+/* 수정 1(2026-07-29) — "주요 알림 및 빠른 작업" 패널 내부 두 서브섹션("주요 알림"/
+   "빠른 작업") 구분용. */
+.subsection {
+  margin-bottom: var(--space-4);
+}
+
+.subsectionTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.quickActionsSection {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
 .empty {
   margin: 0;
   font-size: var(--font-size-sm);

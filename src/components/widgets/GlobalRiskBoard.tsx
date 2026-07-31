@@ -13,6 +13,10 @@ import styles from './GlobalRiskBoard.module.css'
 
 interface GlobalRiskBoardProps {
   items: GlobalRiskBoardItem[]
+  /** 지도 높이(px). 생략 시 CSS 기본값(220px) 유지 — 공개 대시보드(2x2 그리드)는 이 prop을
+   * 안 주고, 구매팀 대시보드(2차 데모)만 1.5배(330px)로 확대해 쓴다. 두 화면이 이 컴포넌트를
+   * 공유하므로 CSS 기본값을 직접 바꾸지 않고 prop으로 화면별 override한다. */
+  mapHeight?: number
 }
 
 type ViewMode = 'event' | 'country'
@@ -161,7 +165,7 @@ function groupByCountry(items: LocatedItem[]): CountryGroup[] {
  * 사용 예:
  *   <GlobalRiskBoard items={items} />
  */
-export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
+export function GlobalRiskBoard({ items, mapHeight }: GlobalRiskBoardProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('event')
   const [selected, setSelected] = useState<SelectedDetail | null>(null)
   const [panelExpanded, setPanelExpanded] = useState(false)
@@ -216,7 +220,7 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
         </div>
       }
       pinnedTop={
-        <div className={styles.mapWrapper}>
+        <div className={styles.mapWrapper} style={mapHeight !== undefined ? { height: mapHeight } : undefined}>
           <MapContainer
             center={[20, 10]}
             zoom={1.4}

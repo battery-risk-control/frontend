@@ -1,16 +1,15 @@
 import { fetchGlobalRiskBoard, fetchRiskEvents } from './purchasing.api'
 import { fetchJson } from './http'
-import { parseRiskEventDate } from '../lib/riskEventId'
-import type { AiRecommendation, GlobalRiskBoardItem, NewsFeedItem, RiskGrade } from './types'
+import type { AiRecommendation, GlobalRiskBoardItem, RiskGrade } from './types'
 
 /**
- * fetchMaterialPriceTrends/fetchMaterialPriceSummaries는 원래 이 파일에 있었으나, 구매팀
- * 대시보드(Phase 9.4)도 같은 데이터를 쓰게 되면서 원천 데이터 허브인 purchasing.api.ts로
- * 옮기고 여기서는 재수출만 한다 — 로직 변경 없음, 이 파일을 통해 import하던 기존 코드는
- * 수정 없이 그대로 동작한다. fetchGlobalRiskBoard(mock)는 재수출뿐 아니라 아래
- * fetchPublicRiskBoard의 ①단계 폴백으로도 직접 쓰인다.
+ * fetchMaterialPriceTrends/fetchMaterialPriceSummaries/fetchNewsFeed는 원래 이 파일에
+ * 있었으나, 구매팀 대시보드(Phase 9.4, 2차 데모)도 같은 데이터를 쓰게 되면서 원천 데이터
+ * 허브인 purchasing.api.ts로 옮기고 여기서는 재수출만 한다 — 로직 변경 없음, 이 파일을
+ * 통해 import하던 기존 코드는 수정 없이 그대로 동작한다. fetchGlobalRiskBoard(mock)는
+ * 재수출뿐 아니라 아래 fetchPublicRiskBoard의 ①단계 폴백으로도 직접 쓰인다.
  */
-export { fetchMaterialPriceTrends, fetchMaterialPriceSummaries } from './purchasing.api'
+export { fetchMaterialPriceTrends, fetchMaterialPriceSummaries, fetchNewsFeed } from './purchasing.api'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
 
@@ -63,23 +62,4 @@ export function fetchAiRecommendations(): AiRecommendation[] {
     confidence_label: event.confidence_label,
     recommendation: RECOMMENDATION_BY_GRADE[event.grade],
   }))
-}
-
-/**
- * 실시간 뉴스 속보 mock 함수. risk_event_id에 담긴 날짜 기준 최신순으로 정렬한다.
- *
- * 사용 예:
- *   const feed = fetchNewsFeed()
- */
-export function fetchNewsFeed(): NewsFeedItem[] {
-  return fetchRiskEvents()
-    .map((event) => ({
-      risk_event_id: event.risk_event_id,
-      date: parseRiskEventDate(event.risk_event_id),
-      material: event.market_context.material,
-      source: event.market_context.source,
-      headline: event.market_context.event_summary,
-      confidence_label: event.confidence_label,
-    }))
-    .sort((a, b) => (a.date < b.date ? 1 : -1))
 }

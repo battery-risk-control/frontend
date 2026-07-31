@@ -201,6 +201,7 @@ Phase 9.3(원자재 가격 추이 "상세보기", surin `RiskMonitoring.tsx` 시
 | `ScoreCardItem`(전체 필드) | `api/types.ts`, `api/purchasing.api.ts`의 `fetchScoreCards()`(Phase 9.4, surin `summaryScores` 이식) | `features/purchasing/components/MaterialRiskOverviewRow.tsx` 점수 카드 2장 | surin `summaryScores`(외부 리스크 종합 점수 72/ERP 영향 점수 65)를 그대로 가져왔다. `grade`도 surin 원본 문구("높음"/"주의")를 3단계 `RiskGrade`로 매핑(높음→심각)한 값이라 실제 계산 로직은 없다. |
 | `ImportDependencyData`(전체 필드) | `api/types.ts`, `api/purchasing.api.ts`의 `fetchImportDependency()`(Phase 9.4, surin `importDependency` 이식) | `features/purchasing/components/ImportDependencyPanel.tsx` 도넛차트+범례 | `risk_event` 스키마에는 없는 개념(국가별 수입 비중)이라 surin 값을 그대로 가져왔다. 국가별 `color`(hex)도 surin 원본을 그대로 썼다. |
 | `ExchangeRateItem`(전체 필드) | `api/types.ts`, `api/purchasing.api.ts`의 `fetchExchangeRates()`(2차 데모 신규) | `features/purchasing/components/NewsExchangeTicker.tsx` | 실제 환율 API 연동 전 mock — 통화 3종(USD/CNY/EUR)을 하드코딩했다. |
+| `NewsFeedItem.publisher` | `api/types.ts`, `api/purchasing.api.ts`의 `fetchNewsFeed()`(`MOCK_NEWS_PUBLISHER_BY_RISK_EVENT_ID`, 2차 데모 신규) | `components/widgets/SupplyNewsFeed.tsx` 카드 상단 뱃지 | "데이터_활용_및_모델_학습_기획정의서" 1단계의 GDELT 메타데이터 `domain` 필드(기사 게재 언론사 도메인)를 반영한 필드이나, 실제 GDELT 연동 전이라 risk_event_id별로 도메인풍 예시값(`reuters.com`/`bloomberg.com`/`mining.com`/`nikkei.com`/`ft.com`/`spglobal.com`)을 하드코딩했다 — 실제 언론사 소속과 무관. 기존 `NewsFeedItem.source`(데이터 출처 계층, `'data_ingestion_layer'`)를 화면에 언론사명처럼 잘못 노출하던 매핑 오류를 발견해 이 필드를 신설, `source`는 의미 불변으로 유지하되 화면에는 더 이상 쓰지 않는다. |
 
 ## 확장 원칙
 - 새 화면·지표가 추가되면 기존 필드를 변경하지 말고 옆에 새 필드를 추가한다 (breaking change 최소화).

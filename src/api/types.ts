@@ -160,12 +160,23 @@ export interface MaterialPriceSummary {
   grade: RiskGrade
 }
 
-/** 실시간 뉴스 속보. risk_event_id(RISK-YYYY-MMDD-NNN)에서 날짜를 추출해 최신순으로 정렬한다. */
+/**
+ * 실시간 뉴스 속보. risk_event_id(RISK-YYYY-MMDD-NNN)에서 날짜를 추출해 최신순으로 정렬한다.
+ *
+ * `source`(데이터 출처 계층, 예: 'data_ingestion_layer')와 `publisher`(보도 언론사 도메인)는
+ * 서로 다른 개념이다 — `source`는 CLAUDE.md 원 `risk_event.market_context.source` 스키마
+ * 그대로(의미 불변, 화면에는 더 이상 노출하지 않음), `publisher`는 "데이터_활용_및_모델_학습_
+ * 기획정의서" 1단계에 명시된 GDELT 메타데이터의 `domain` 필드(기사 게재 언론사 도메인)를
+ * 반영한 신규 필드다(2026-07-29) — 새로운 개념이 아니라 원래 파이프라인에 있던 값을 그제야
+ * 스키마에 반영한 것.
+ */
 export interface NewsFeedItem {
   risk_event_id: string
   date: string
   material: string
   source: string
+  /** 보도 언론사 도메인(GDELT `domain` 필드 반영). mock 임시값 — 실제 GDELT 연동 전. */
+  publisher: string
   headline: string
   confidence_label: ConfidenceLabel
 }

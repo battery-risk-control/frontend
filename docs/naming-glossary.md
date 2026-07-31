@@ -130,7 +130,8 @@
 | `fetchMaterialRiskGauges` | 원자재 리스크 개요 게이지 카드 조회 함수 | Phase 9.4 신규, surin `materialRiskGauges` 이식. 리튬/니켈/흑연 3종 반환(전 필드 mock 임시값, `grade`는 3단계 `RiskGrade`로 매핑) |
 | `fetchScoreCards` | 원자재 리스크 개요 점수 카드 조회 함수 | Phase 9.4 신규, surin `summaryScores` 이식. 외부 리스크 종합 점수/ERP 영향 점수 2종 반환(전 필드 mock 임시값) |
 | `fetchImportDependency` | 수입 의존도 조회 함수 | Phase 9.4 신규, surin `importDependency` 이식. 국가별 수입 비중 반환(전 필드 mock 임시값) |
-| `fetchNewsFeed` | 실시간 뉴스 속보 조회 함수 | 2026-07-29, `api/public.api.ts`에서 이 파일로 이동(로직 변경 없음) — 구매팀 대시보드(`NewsExchangeTicker`/승격된 `SupplyNewsFeed`)도 같은 데이터를 재사용하게 되면서 원천 데이터 허브인 이 파일로 옮김. `risk_event`를 `risk_event_id` 기준 날짜 최신순으로 정렬 |
+| `fetchNewsFeed` | 실시간 뉴스 속보 조회 함수 | 2026-07-29, `api/public.api.ts`에서 이 파일로 이동(로직 변경 없음) — 구매팀 대시보드(`NewsExchangeTicker`/승격된 `SupplyNewsFeed`)도 같은 데이터를 재사용하게 되면서 원천 데이터 허브인 이 파일로 옮김. `risk_event`를 `risk_event_id` 기준 날짜 최신순으로 정렬. 같은 날 후속 — `NewsFeedItem.publisher`(보도 언론사 도메인) 필드 추가, `MOCK_NEWS_PUBLISHER_BY_RISK_EVENT_ID` mock 매핑에서 채움(`source`를 언론사명처럼 잘못 쓰던 매핑 오류 발견 후 정정) |
+| `MOCK_NEWS_PUBLISHER_BY_RISK_EVENT_ID` | risk_event_id별 보도 언론사 도메인 mock 매핑 상수 | 2026-07-29 신규 — GDELT `domain` 필드를 반영한 `publisher`용, 실제 GDELT 연동 전 도메인풍 예시값(reuters.com 등) |
 | `fetchExchangeRates` | 환율정보 조회 함수 | 2026-07-29 신규(2차 데모, `NewsExchangeTicker`). `risk_event`와 무관한 완전 신규 개념이라 원천 데이터에서 파생하지 않고 주요 통화 3종(USD/CNY/EUR)을 하드코딩(전 필드 mock 임시값) |
 
 ### `api/types.ts`
@@ -158,7 +159,7 @@
 | `AiRecommendation` | AI 권고 조치 항목 타입 | 리스크 이벤트ID(risk_event_id)/자재/등급/신뢰도/권고 문구 |
 | `MaterialPricePoint` | 원자재 가격 포인트 타입 | 날짜/가격지수 |
 | `MaterialPriceSeries` | 원자재 가격 시계열 타입 | 자재/단위/포인트 배열 |
-| `NewsFeedItem` | 뉴스 속보 항목 타입 | 리스크 이벤트ID(risk_event_id)/날짜/자재/출처/헤드라인/신뢰도 |
+| `NewsFeedItem` | 뉴스 속보 항목 타입 | 리스크 이벤트ID(risk_event_id)/날짜/자재/출처(source, 데이터 출처 계층)/보도 언론사 도메인(publisher, 2026-07-29 신규)/헤드라인/신뢰도 |
 | `KpiSummaryItem` | KPI 요약 카드 항목 타입 | 라벨/값/단위 |
 | `RiskExposureByUnit` | 사업부별 리스크 노출도 타입 | 사업부명/노출도 점수 |
 | `VendorRiskHistoryItem` | 협력사 리스크 이력 항목 타입 | 공급사ID/명/90일 이력 건수/최신 등급·신뢰도 |
@@ -277,7 +278,7 @@
 ### `components/widgets/SupplyNewsFeed.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `SupplyNewsFeed` | 실시간 뉴스 속보 컴포넌트 | risk_event 기반 최신순 뉴스 리스트. `ScrollCard` 도입(리스트가 `children`). 2026-07-29(2차 데모) — `features/public/components/`→여기로 승격(구매팀 대시보드도 재사용, 로직 변경 없음). 같은 날 카드 형식 변경(수정 3) — 상단 source뱃지+date / 중간 headline(굵게, `-webkit-line-clamp:2`) / 하단 material 태그+`ConfidenceBadge`. 썸네일 이미지는 넣지 않음(`NewsFeedItem` 스키마에 이미지 URL 필드 없음, 스키마 확장은 범위 밖) |
+| `SupplyNewsFeed` | 실시간 뉴스 속보 컴포넌트 | risk_event 기반 최신순 뉴스 리스트. `ScrollCard` 도입(리스트가 `children`). 2026-07-29(2차 데모) — `features/public/components/`→여기로 승격(구매팀 대시보드도 재사용, 로직 변경 없음). 같은 날 카드 형식 변경(수정 3) — 상단 뱃지(`.publisherBadge`)+date / 중간 headline(굵게, `-webkit-line-clamp:2`) / 하단 material 태그+`ConfidenceBadge`. 썸네일 이미지는 넣지 않음(`NewsFeedItem` 스키마에 이미지 URL 필드 없음, 스키마 확장은 범위 밖). 같은 날 후속 — 상단 뱃지 값을 `item.source`(데이터 출처 계층, 잘못된 매핑)에서 `item.publisher`(보도 언론사 도메인, 신규 필드)로 정정, CSS 클래스명도 `.sourceBadge`→`.publisherBadge`로 함께 변경 |
 
 ### `features/auth/components/AuthTabs.tsx`
 | physical | logical | 역할 |

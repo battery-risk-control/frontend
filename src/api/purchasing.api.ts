@@ -374,10 +374,27 @@ export function fetchImportDependency(): ImportDependencyData {
 }
 
 /**
+ * risk_event_id별 보도 언론사 도메인(GDELT `domain` 필드 반영) mock — 실제 GDELT 연동 전
+ * 도메인풍 예시값이며 실제 언론사 소속과 무관하다. `fetchNewsFeed()` 전용.
+ */
+const MOCK_NEWS_PUBLISHER_BY_RISK_EVENT_ID: Record<string, string> = {
+  'RISK-2026-0721-001': 'reuters.com', // mock 임시값 — 실제 GDELT 연동 전
+  'RISK-2026-0720-004': 'bloomberg.com', // mock 임시값 — 실제 GDELT 연동 전
+  'RISK-2026-0719-002': 'mining.com', // mock 임시값 — 실제 GDELT 연동 전
+  'RISK-2026-0718-011': 'nikkei.com', // mock 임시값 — 실제 GDELT 연동 전
+  'RISK-2026-0717-006': 'ft.com', // mock 임시값 — 실제 GDELT 연동 전
+  'RISK-2026-0716-009': 'spglobal.com', // mock 임시값 — 실제 GDELT 연동 전
+}
+
+/**
  * 실시간 뉴스 속보 mock 함수. 원래 api/public.api.ts에 있었으나, 구매팀 대시보드(2차 데모,
  * `NewsExchangeTicker`/승격된 `SupplyNewsFeed`)도 같은 데이터를 재사용하게 되면서
  * fetchGlobalRiskBoard와 동일한 이유로 원천 데이터 허브인 이 파일로 옮겼다. public.api.ts는
  * 이 함수를 재수출만 한다(로직 변경 없음, 기존 import 경로 그대로 동작).
+ *
+ * `source`(데이터 출처 계층)와 `publisher`(보도 언론사 도메인)는 서로 다른 필드다 — `source`는
+ * `market_context.source`를 그대로(의미 불변), `publisher`는 별도 mock 매핑에서 가져온다
+ * (`docs/mock-schemas.md` "임시 mock 값" 표 참고).
  *
  * 사용 예:
  *   const feed = fetchNewsFeed()
@@ -389,6 +406,7 @@ export function fetchNewsFeed(): NewsFeedItem[] {
       date: parseRiskEventDate(event.risk_event_id),
       material: event.market_context.material,
       source: event.market_context.source,
+      publisher: MOCK_NEWS_PUBLISHER_BY_RISK_EVENT_ID[event.risk_event_id] ?? 'unknown.example.com',
       headline: event.market_context.event_summary,
       confidence_label: event.confidence_label,
     }))

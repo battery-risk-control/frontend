@@ -70,6 +70,31 @@
     구현했고, 이 상태-분리 원칙(무엇을 Context로 올리고 무엇을 로컬로 둘지)은
     `docs/design-tokens.md` "카드 레이아웃·스크롤 규칙" e항에 일반 원칙으로 남겼다.
 
+- [x] Phase 11 — 구매팀 대시보드 2차 데모 재배치 (UX-01-DB, `youngjin/2nd-demo-layout` 브랜치, 2026-07-29)
+  본문 순서 재배치(KPI 요약 → 뉴스속보·환율정보 세로 롤링 티커(`NewsExchangeTicker` 신규)
+  → 글로벌 리스크 관제 맵(1.5배 확대, `GlobalRiskBoard`에 선택적 `mapHeight` prop 추가) →
+  실시간 뉴스 목록(승격된 `SupplyNewsFeed`, 카드 형식 변경) → 수입 의존도+가격 추이 →
+  원자재 리스크 요약(맨 아래로 이동)), 원자재 공급사 리스크 현황/ERP 영향/구매 대응
+  우선순위는 본문에서 제거하고 SideNav 전용으로 이동 예정(라벨 5종 갱신, 실제 라우트
+  연결은 다음 단계, 컴포넌트 파일은 유지)(`eb162bf`).
+  - 수정 1 — `QuickActionsPanel`("빠른 작업": 구매대응순위·마커뉴스·데이터 업데이트 상태
+    프레임만)을 별도 최상위 형제로 두지 않고 `AlertsPanel`의 "빠른 작업" 서브섹션으로
+    통합("주요 알림 및 빠른 작업"이라는 기존 패널 제목이 이미 두 개념을 포괄).
+  - 수정 2 — 뉴스속보/환율정보 롤링을 가로 마퀴에서 세로 캐러셀로 재구현. 구현 중
+    `translateY(-N%)`가 트랙 전체 높이 기준으로 계산돼 인덱스 1 이상에서 콘텐츠가
+    통째로 사라지는 버그를 발견해 px 고정값(`ROW_HEIGHT_PX`) 이동으로 수정.
+  - 수정 3 — 실시간 뉴스 목록을 카드 형식(상단 source뱃지+date / 중간 headline 굵게 2줄
+    클램프 / 하단 material 태그+ConfidenceBadge)으로 변경.
+  - 수정 4 — `ImportDependencyRow`의 940px 반응형 규칙이 "이번 작업 중 깨졌다"는 전제로
+    조사했으나, `git stash`로 base 브랜치(`dev-김영진_merge-test`)와 A/B 비교한 결과
+    회귀가 아니라 이 브랜치 이전부터 있던 기존 버그(1280px 등 940px보다 넓은 뷰포트에서도
+    "원자재 가격 추이" 카드 우측이 잘리는 현상, `.main{min-width:0}`이 문서 레벨 스크롤바로
+    전파되는 걸 막아 기존 판정 방식으로는 검출 불가능했던 사각지대)임을 확인 — 940px
+    규칙 자체는 미변경. 이 사전 발견 버그는 `docs/roadmap-candidates.md` C14로 별도
+    커밋(`8943260`)에 등재(레이아웃 수정 커밋과 분리).
+  - QA: docs/qa-checklist.md E(mock-schemas.md 반영)는 이 Phase 완료 후 별도 확인 후
+    진행, 나머지 A~H 특이사항 없음. tsc/eslint/build 통과.
+
 ## 재사용 규칙 (Phase 3에서 결정되는 인터페이스는 이후 Phase가 그대로 따른다)
 - `ConfidenceBadge`/`RiskGradeBadge`의 props 타입은 이후 모든 화면에서 동일하게 재사용한다 — 화면별로 별도 배지를 새로 만들지 않는다.
 - `Header`/`Footer`/`SideNav`는 `components/layout/`에서 한 번만 구현하고, `features/*`는 이를 import해서 쓰기만 한다.

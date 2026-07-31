@@ -14,8 +14,8 @@
 | `api/auth.api.ts` | 인증(로그인/회원가입) mock API |
 | `api/executive.api.ts` | 3계층 경영진 대시보드 mock API |
 | `api/planning.api.ts` | 2계층 경영기획팀 대시보드 mock API |
-| `api/public.api.ts` | 비로그인 공개 대시보드 API(Phase 9.4에서 fetchMaterialPriceTrends/fetchMaterialPriceSummaries를 purchasing.api.ts로 옮기고 재수출만 함; 2026-07-27 — fetchPublicRiskBoard 신규로 지도만 실 API 연동, 나머지는 여전히 mock) |
-| `api/purchasing.api.ts` | 1계층 구매팀 대시보드 mock API — risk_event 원천 데이터 + Phase 9.4에서 이동된 글로벌 리스크 맵/가격 추이 mock + 신규 원자재 리스크 개요/수입 의존도 mock |
+| `api/public.api.ts` | 비로그인 공개 대시보드 API(Phase 9.4에서 fetchMaterialPriceTrends/fetchMaterialPriceSummaries를 purchasing.api.ts로 옮기고 재수출만 함; 2026-07-27 — fetchPublicRiskBoard 신규로 지도만 실 API 연동, 나머지는 여전히 mock; 2026-07-29 — fetchNewsFeed도 같은 이유로 purchasing.api.ts로 이동, 재수출만) |
+| `api/purchasing.api.ts` | 1계층 구매팀 대시보드 mock API — risk_event 원천 데이터 + Phase 9.4에서 이동된 글로벌 리스크 맵/가격 추이 mock + 신규 원자재 리스크 개요/수입 의존도 mock + 2026-07-29 이동된 뉴스 속보 mock/신규 환율정보 mock |
 | `api/types.ts` | 전 화면 공용 API 응답 타입 정의 |
 | `app/routes.tsx` | 최상위 라우트 정의 및 로그인 가드 |
 | `components/layout/Breadcrumb.tsx` | 브레드크럼(탐색 위치 안내) |
@@ -33,8 +33,9 @@
 | `components/ui/RiskGauge.tsx` | 3단계 리스크 게이지(Phase 9.4 신규, surin RiskStepGauge 이식) |
 | `components/ui/RiskGradeBadge.tsx` | 리스크 등급 배지 |
 | `components/ui/ScrollCard/ScrollCard.tsx` | 카드형 UI 공통 컨테이너(스크롤 캡슐화) |
-| `components/widgets/GlobalRiskBoard.tsx` | 글로벌 리스크 관제 맵(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용) |
+| `components/widgets/GlobalRiskBoard.tsx` | 글로벌 리스크 관제 맵(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용). 2026-07-29 — 선택적 `mapHeight` prop 추가(공개 대시보드는 미전달로 기존 220px 유지, 구매팀 대시보드만 330px로 1.5배 확대) |
 | `components/widgets/MaterialPriceDetail.tsx` | 원자재 가격 추이(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용) |
+| `components/widgets/SupplyNewsFeed.tsx` | 실시간 뉴스 속보(2026-07-29 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용. 같은 날 카드 형식 변경 — 상단 source뱃지+date/중간 headline 굵게 2줄 클램프/하단 material 태그+ConfidenceBadge) |
 | `features/auth/components/AuthTabs.tsx` | 로그인/권한 신청 탭 토글 |
 | `features/auth/components/LoginForm.tsx` | 로그인 폼 |
 | `features/auth/components/PendingApprovalScreen.tsx` | 승인 대기 보안 락 화면 |
@@ -50,21 +51,22 @@
 | `features/planning/components/VendorRiskHistory.tsx` | 협력사 리스크 이력 및 탐색 리스트 |
 | `features/planning/pages/PlanningDashboardPage.tsx` | 2계층 경영기획팀 대시보드 페이지 |
 | `features/public/components/AiPriorityList.tsx` | AI 기반 권고 조치 리스트 |
-| `features/public/components/SupplyNewsFeed.tsx` | 실시간 뉴스 속보 |
 | `features/public/pages/PublicDashboardPage.tsx` | 비로그인 공개 대시보드 페이지 |
-| `features/purchasing/components/AlertsPanel.tsx` | 주요 알림 및 빠른 작업 패널. 2026-07-27 — `AlertsPanelContext`의 `expanded`로 펼침/접힘, 접힘+호버 시 상위 4개 `ScrollCard` 미리보기 추가(오류 및 기능 미흡 발견 #7) |
-| `features/purchasing/components/ErpImpactPanel.tsx` | ERP 영향 자재 재고 계약 분석 패널 |
+| `features/purchasing/components/AlertsPanel.tsx` | 주요 알림 및 빠른 작업 패널. 2026-07-27 — `AlertsPanelContext`의 `expanded`로 펼침/접힘, 접힘+호버 시 상위 4개 `ScrollCard` 미리보기 추가(오류 및 기능 미흡 발견 #7). 2026-07-29(2차 데모 수정 1) — 패널 내부를 "주요 알림"(기존 리스트)/"빠른 작업"(`QuickActionsPanel`) 두 서브섹션으로 재구성 — `QuickActionsPanel`을 최상위 형제로 따로 안 두고 이 컴포넌트의 자식으로 렌더링(제목 자체가 이미 "주요 알림 및 빠른 작업"으로 두 개념을 포괄) |
+| `features/purchasing/components/ErpImpactPanel.tsx` | ERP 영향 자재 재고 계약 분석 패널. 2026-07-29 — `PurchasingDashboardPage` 본문에서 제거(SideNav 전용으로 이동 예정, 실제 라우트 연결은 다음 단계) — 컴포넌트 파일 자체는 유지, 현재 실사용처 없음 |
 | `features/purchasing/components/ImportDependencyPanel.tsx` | 수입 의존도 도넛차트 패널(Phase 9.4 신규) |
-| `features/purchasing/components/ImportDependencyRow.tsx` | 수입 의존도+원자재 가격 추이 2컬럼 행(Phase 9.4 신규). 2026-07-27 — `940px` 이하 1컬럼 전환 미디어 쿼리 추가(신설 이후 처음, 미구현 상태였음) |
+| `features/purchasing/components/ImportDependencyRow.tsx` | 수입 의존도+원자재 가격 추이 2컬럼 행(Phase 9.4 신규). 2026-07-27 — `940px` 이하 1컬럼 전환 미디어 쿼리 추가(신설 이후 처음, 미구현 상태였음). ⚠️ 이 규칙 자체는 2026-07-29(2차 데모) 이후에도 미변경·정상 동작하나, 940px보다 넓은 뷰포트에서도 발생하는 별개의 기존 카드 폭 오버플로가 발견됨(`docs/roadmap-candidates.md` C14 참고, 이 브랜치와 무관한 기존 drift) |
 | `features/purchasing/components/KpiSummaryPanel.tsx` | 상단 KPI 요약 패널 |
 | `features/purchasing/components/MaterialRiskOverviewRow.tsx` | 원자재 리스크 상세 그리드(게이지 카드+placeholder 자재 카드, Phase 9.4 신규 — 더보기 구조 재정의 후 점수 카드는 `ScoreCardPanel`로 분리, 9장으로 늘어나며 세로 줄바꿈 대신 가로 스크롤로 전환) |
-| `features/purchasing/components/MaterialRiskOverviewSection.tsx` | 원자재 리스크 개요 요약 행 — 더보기(Disclosure) 컨테이너, 형제 카드 캐러셀형(가로 스크롤+드래그) |
-| `features/purchasing/components/MaterialRiskStatusPanel.tsx` | 원자재 공급사 리스크 현황 패널 |
+| `features/purchasing/components/MaterialRiskOverviewSection.tsx` | 원자재 리스크 개요 요약 행 — 더보기(Disclosure) 컨테이너, 형제 카드 캐러셀형(가로 스크롤+드래그). 2026-07-29 — `PurchasingDashboardPage` 본문 맨 아래로 위치 이동(기존 KPI 다음 2번 위치에서) |
+| `features/purchasing/components/MaterialRiskStatusPanel.tsx` | 원자재 공급사 리스크 현황 패널. 2026-07-29 — `PurchasingDashboardPage` 본문에서 제거(SideNav 전용으로 이동 예정, 실제 라우트 연결은 다음 단계) — 컴포넌트 파일 자체는 유지, 현재 실사용처 없음 |
 | `features/purchasing/components/MaterialRiskSummaryCard.tsx` | 원자재 리스크 요약 카드(더보기 토글 보유) |
-| `features/purchasing/components/PurchasePriorityPanel.tsx` | 구매 대응 우선순위 패널 |
+| `features/purchasing/components/NewsExchangeTicker.tsx` | 뉴스속보·환율정보 세로 롤링 티커(2026-07-29 신규, 2차 데모) — 관제 맵 바로 위 |
+| `features/purchasing/components/PurchasePriorityPanel.tsx` | 구매 대응 우선순위 패널. 2026-07-29 — `PurchasingDashboardPage` 본문에서 제거 — 컴포넌트 파일 자체는 유지, 현재 실사용처 없음(구매대응순위 개념은 `QuickActionsPanel`의 "빠른 작업" 서브섹션 프레임으로 재등장했으나 콘텐츠 로직은 아직 이 패널과 연결돼 있지 않음) |
+| `features/purchasing/components/QuickActionsPanel.tsx` | "빠른 작업" 서브섹션(2026-07-29 신규, 2차 데모) — 구매대응순위·마커뉴스·데이터 업데이트 상태 3개 프레임만(콘텐츠 로직은 다음 단계). 최상위 형제가 아니라 `AlertsPanel`의 자식으로 렌더링 |
 | `features/purchasing/components/ScoreCardPanel.tsx` | 점수 카드(외부 리스크 종합/ERP 영향) — 더보기 구조 재정의로 신규 분리 |
-| `features/purchasing/pages/BriefingDetailPage.tsx` | 1계층 브리핑 자료 열람 페이지 |
-| `features/purchasing/pages/PurchasingDashboardPage.tsx` | 1계층 구매팀 대시보드 페이지 |
+| `features/purchasing/pages/BriefingDetailPage.tsx` | 1계층 브리핑 자료 열람 페이지. 2026-07-29 — `SIDE_NAV_ITEMS` 라벨 5종(브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향)으로 갱신 |
+| `features/purchasing/pages/PurchasingDashboardPage.tsx` | 1계층 구매팀 대시보드 페이지. 2026-07-29(2차 데모, UX-01-DB) — 본문 순서 재배치 + `SIDE_NAV_ITEMS` 라벨 5종 갱신 |
 | `lib/AuthContext.ts` | 인증 상태 Context 객체 정의 |
 | `lib/AuthProvider.tsx` | 인증 상태 Provider 컴포넌트 |
 | `lib/dashboardPaths.ts` | org_tier별 대시보드 경로 매핑 |
@@ -115,7 +117,7 @@
 | `fetchMaterialPriceTrends` *(재수출)* | 원자재 가격 추이 조회 함수 | Phase 9.4에서 `api/purchasing.api.ts`로 이동, 여기서는 재수출만 |
 | `fetchMaterialPriceSummaries` *(재수출)* | 원자재 가격 요약 카드 조회 함수 | Phase 9.4에서 `api/purchasing.api.ts`로 이동, 여기서는 재수출만 |
 | `fetchAiRecommendations` | AI 권고 조치 조회 함수 | 등급 기반 일반 권고 문구 생성(ERP 내부 상세는 미노출) |
-| `fetchNewsFeed` | 실시간 뉴스 속보 조회 함수 | `risk_event`를 `risk_event_id` 기준 날짜 최신순으로 정렬 |
+| `fetchNewsFeed` *(재수출)* | 실시간 뉴스 속보 조회 함수 | 2026-07-29, `api/purchasing.api.ts`로 이동, 여기서는 재수출만(구매팀 대시보드의 `NewsExchangeTicker`/승격된 `SupplyNewsFeed`도 같은 데이터를 쓰게 됨) |
 
 ### `api/purchasing.api.ts`
 | physical | logical | 역할 |
@@ -128,6 +130,8 @@
 | `fetchMaterialRiskGauges` | 원자재 리스크 개요 게이지 카드 조회 함수 | Phase 9.4 신규, surin `materialRiskGauges` 이식. 리튬/니켈/흑연 3종 반환(전 필드 mock 임시값, `grade`는 3단계 `RiskGrade`로 매핑) |
 | `fetchScoreCards` | 원자재 리스크 개요 점수 카드 조회 함수 | Phase 9.4 신규, surin `summaryScores` 이식. 외부 리스크 종합 점수/ERP 영향 점수 2종 반환(전 필드 mock 임시값) |
 | `fetchImportDependency` | 수입 의존도 조회 함수 | Phase 9.4 신규, surin `importDependency` 이식. 국가별 수입 비중 반환(전 필드 mock 임시값) |
+| `fetchNewsFeed` | 실시간 뉴스 속보 조회 함수 | 2026-07-29, `api/public.api.ts`에서 이 파일로 이동(로직 변경 없음) — 구매팀 대시보드(`NewsExchangeTicker`/승격된 `SupplyNewsFeed`)도 같은 데이터를 재사용하게 되면서 원천 데이터 허브인 이 파일로 옮김. `risk_event`를 `risk_event_id` 기준 날짜 최신순으로 정렬 |
+| `fetchExchangeRates` | 환율정보 조회 함수 | 2026-07-29 신규(2차 데모, `NewsExchangeTicker`). `risk_event`와 무관한 완전 신규 개념이라 원천 데이터에서 파생하지 않고 주요 통화 3종(USD/CNY/EUR)을 하드코딩(전 필드 mock 임시값) |
 
 ### `api/types.ts`
 | physical | logical | 역할 |
@@ -167,6 +171,7 @@
 | `ScoreCardItem` | 점수 카드 타입 | Phase 9.4 신규 — label/score/grade/diffLabel(선택) |
 | `ImportDependencyBreakdownItem` | 수입 의존도 국가별 비중 항목 타입 | Phase 9.4 신규 — label/value/color |
 | `ImportDependencyData` | 수입 의존도 타입 | Phase 9.4 신규 — total/year(선택)/breakdown |
+| `ExchangeRateItem` | 환율정보 타입 | 2026-07-29 신규(2차 데모) — currency_code/currency_name/rate/change_label. `risk_event` 계열과 무관한 완전 신규 개념, 전 필드 mock 임시값 |
 
 ### `app/routes.tsx`
 | physical | logical | 역할 |
@@ -262,12 +267,17 @@
 ### `components/widgets/GlobalRiskBoard.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `GlobalRiskBoard` | 글로벌 리스크 관제 맵 컴포넌트 | Phase 9.1 구현, Phase 9.4에서 `features/public/components/`→여기로 승격(구매팀 대시보드도 재사용, 로직 변경 없음). `react-leaflet`+`world-atlas`+`topojson-client` 기반 인터랙티브 세계지도. "이벤트뷰"(개별 좌표 마커)/"국가뷰"(country_code 기준 집계, 대표 이벤트=최고 심각도) 토글, 마커 클릭 시 컴포넌트 내부 상세 패널에 관련 risk_event 리스트 표시. country_code 없는 이벤트는 마커 제외. `ScrollCard` 도입(지도는 `pinnedTop`으로 항상 고정 노출, 뷰토글은 `actions`, 클릭 시 상세 리스트만 스크롤 영역인 `children`). 2026-07-27 — 마커 hover 시 `confidence_label`을 permanent Tooltip 안에 조건부로 추가 노출(`hoveredKey` state, `CircleMarker`의 `eventHandlers.mouseover`/`mouseout`로 갱신) — Leaflet은 레이어 하나에 Tooltip을 하나만 바인딩할 수 있어 별도 hover 전용 Tooltip을 새로 못 붙이는 제약 때문에 기존 permanent Tooltip을 그대로 확장하는 방식을 씀(`useHoverDisclosure`/커스텀 오버레이는 채택 안 함, 근거는 `docs/roadmap-candidates.md` C9 참고). 국가뷰는 대표(`representative`) 이벤트의 confidence_label을 그대로 사용 |
+| `GlobalRiskBoard` | 글로벌 리스크 관제 맵 컴포넌트 | Phase 9.1 구현, Phase 9.4에서 `features/public/components/`→여기로 승격(구매팀 대시보드도 재사용, 로직 변경 없음). `react-leaflet`+`world-atlas`+`topojson-client` 기반 인터랙티브 세계지도. "이벤트뷰"(개별 좌표 마커)/"국가뷰"(country_code 기준 집계, 대표 이벤트=최고 심각도) 토글, 마커 클릭 시 컴포넌트 내부 상세 패널에 관련 risk_event 리스트 표시. country_code 없는 이벤트는 마커 제외. `ScrollCard` 도입(지도는 `pinnedTop`으로 항상 고정 노출, 뷰토글은 `actions`, 클릭 시 상세 리스트만 스크롤 영역인 `children`). 2026-07-27 — 마커 hover 시 `confidence_label`을 permanent Tooltip 안에 조건부로 추가 노출(`hoveredKey` state, `CircleMarker`의 `eventHandlers.mouseover`/`mouseout`로 갱신) — Leaflet은 레이어 하나에 Tooltip을 하나만 바인딩할 수 있어 별도 hover 전용 Tooltip을 새로 못 붙이는 제약 때문에 기존 permanent Tooltip을 그대로 확장하는 방식을 씀(`useHoverDisclosure`/커스텀 오버레이는 채택 안 함, 근거는 `docs/roadmap-candidates.md` C9 참고). 국가뷰는 대표(`representative`) 이벤트의 confidence_label을 그대로 사용. 2026-07-29(2차 데모) — 선택적 `mapHeight`(px) prop 추가, `pinnedTop`의 `.mapWrapper`에 인라인 `style`로 적용 — 공개 대시보드(2x2 그리드, 미전달)와 구매팀 대시보드(전달, 330px)가 이 컴포넌트를 공유하므로 CSS 기본값(220px)을 직접 바꾸지 않고 화면별로 prop으로만 override |
 
 ### `components/widgets/MaterialPriceDetail.tsx`
 | physical | logical | 역할 |
 |---|---|---|
 | `MaterialPriceDetail` | 원자재 가격 추이 컴포넌트 | Phase 9.3 구현, Phase 9.4에서 `features/public/components/`→여기로 승격(구매팀 대시보드도 재사용, 로직 변경 없음). surin RiskMonitoring.tsx 시각 이식(필터行/요약카드 3장/기간버튼/Recharts 멀티라인 차트). "원자재" 드롭다운만 실제로 차트 계열을 필터링, "국가·지역"과 기간 버튼은 의도적으로 표시 전용(확정된 범위). `ScrollCard` 도입(필터行+요약카드는 `pinnedTop`으로 항상 고정 노출). 차트 영역은 `scrollable={false}`로 스크롤 제외 |
+
+### `components/widgets/SupplyNewsFeed.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `SupplyNewsFeed` | 실시간 뉴스 속보 컴포넌트 | risk_event 기반 최신순 뉴스 리스트. `ScrollCard` 도입(리스트가 `children`). 2026-07-29(2차 데모) — `features/public/components/`→여기로 승격(구매팀 대시보드도 재사용, 로직 변경 없음). 같은 날 카드 형식 변경(수정 3) — 상단 source뱃지+date / 중간 headline(굵게, `-webkit-line-clamp:2`) / 하단 material 태그+`ConfidenceBadge`. 썸네일 이미지는 넣지 않음(`NewsFeedItem` 스키마에 이미지 URL 필드 없음, 스키마 확장은 범위 밖) |
 
 ### `features/auth/components/AuthTabs.tsx`
 | physical | logical | 역할 |
@@ -345,11 +355,6 @@
 |---|---|---|
 | `AiPriorityList` | AI 기반 권고 조치 리스트 컴포넌트 | 등급(심각>주의>정상) 순 정렬. `ScrollCard` 도입(리스트가 `children`) |
 
-### `features/public/components/SupplyNewsFeed.tsx`
-| physical | logical | 역할 |
-|---|---|---|
-| `SupplyNewsFeed` | 실시간 뉴스 속보 컴포넌트 | risk_event 기반 최신순 뉴스 리스트. `ScrollCard` 도입(리스트가 `children`) |
-
 ### `features/public/pages/PublicDashboardPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
@@ -358,14 +363,14 @@
 ### `features/purchasing/components/AlertsPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `AlertsPanel` | 주요 알림 및 빠른 작업 패널 컴포넌트 | 등급 '심각' 또는 신뢰도 '경고' 항목 우선 노출(필터링은 `selectAlertEvents`, 소비처가 미리 걸러 `alerts` prop으로 전달). 2026-07-27 — `expanded`(펼침, `AlertsPanelContext`)/`isPreviewing`(접힘+호버 미리보기, 로컬) 두 상태로 분기: 펼침은 기존과 동일한 자체 sticky 패널+`useScrollOverflowHint`, 접힘은 `.wrapper`가 폭 0(SideNav 접기와 동일한 width 트랜지션), 그 상태에서 `isPreviewing`이면 상위 4개(`PREVIEW_COUNT`)를 `ScrollCard`로 감싼 `position:absolute` 오버레이가 opacity+transform으로 떠오름(항상 DOM에 렌더링해두고 클래스로만 토글 — 조건부 마운트면 등장/퇴장에 transition이 안 먹어서) |
+| `AlertsPanel` | 주요 알림 및 빠른 작업 패널 컴포넌트 | 등급 '심각' 또는 신뢰도 '경고' 항목 우선 노출(필터링은 `selectAlertEvents`, 소비처가 미리 걸러 `alerts` prop으로 전달). 2026-07-27 — `expanded`(펼침, `AlertsPanelContext`)/`isPreviewing`(접힘+호버 미리보기, 로컬) 두 상태로 분기: 펼침은 기존과 동일한 자체 sticky 패널+`useScrollOverflowHint`, 접힘은 `.wrapper`가 폭 0(SideNav 접기와 동일한 width 트랜지션), 그 상태에서 `isPreviewing`이면 상위 4개(`PREVIEW_COUNT`)를 `ScrollCard`로 감싼 `position:absolute` 오버레이가 opacity+transform으로 떠오름(항상 DOM에 렌더링해두고 클래스로만 토글 — 조건부 마운트면 등장/퇴장에 transition이 안 먹어서). 2026-07-29(2차 데모 수정 1) — 펼침 상태의 `.panel` 내부를 `<section>`으로 감싼 "주요 알림"(기존 리스트, `<h3 id="alerts-subsection-heading">`)과 "빠른 작업"(`<QuickActionsPanel />`, 구분선 `.quickActionsSection`) 두 서브섹션으로 재구성. 접힘+미리보기 오버레이는 기존과 동일하게 알림 상위 4개만 표시(빠른 작업은 미리보기에 포함하지 않음 — 프레임뿐인 placeholder라 정보 가치 없이 공간만 차지) |
 | `AlertItem` | 알림 목록 항목(내부 헬퍼) | 등급/신뢰도 배지+요약, 전체 목록과 미리보기 양쪽에서 재사용 |
 | `PREVIEW_COUNT` | 미리보기 표시 개수 상수(4) | design-tokens.md d항목("리스트 항목 4개 초과 시 overflow")과 일관되게 4로 고정 |
 
 ### `features/purchasing/components/ErpImpactPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `ErpImpactPanel` | ERP 영향 자재 재고 계약 분석 패널 컴포넌트 | 재고 소진일수/대체 공급사/품질 검증 결과. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
+| `ErpImpactPanel` | ERP 영향 자재 재고 계약 분석 패널 컴포넌트 | 재고 소진일수/대체 공급사/품질 검증 결과. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환. 2026-07-29(2차 데모) — `PurchasingDashboardPage` 본문에서 제거(SideNav 전용으로 이동 예정), 파일은 유지하되 현재 실사용처 없음 |
 
 ### `features/purchasing/components/ImportDependencyPanel.tsx`
 | physical | logical | 역할 |
@@ -395,17 +400,29 @@
 ### `features/purchasing/components/MaterialRiskStatusPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `MaterialRiskStatusPanel` | 원자재 공급사 리스크 현황 패널 컴포넌트 | risk_event 리스트, 등급/신뢰도 배지 포함. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
+| `MaterialRiskStatusPanel` | 원자재 공급사 리스크 현황 패널 컴포넌트 | risk_event 리스트, 등급/신뢰도 배지 포함. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환. 2026-07-29(2차 데모) — `PurchasingDashboardPage` 본문에서 제거(SideNav 전용으로 이동 예정), 파일은 유지하되 현재 실사용처 없음 |
 
 ### `features/purchasing/components/MaterialRiskSummaryCard.tsx`
 | physical | logical | 역할 |
 |---|---|---|
 | `MaterialRiskSummaryCard` | 원자재 리스크 요약 카드 컴포넌트 | 자재별 grade+changeLabel 미니 리스트 + 더보기/접기 토글 버튼. `expanded`/`onToggle`은 부모(`MaterialRiskOverviewSection`)로부터 props로 받는다(자체 state 없음) |
 
+### `features/purchasing/components/NewsExchangeTicker.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `NewsExchangeTicker` | 뉴스속보·환율정보 세로 롤링 티커 컴포넌트 | 2026-07-29 신규(2차 데모), 관제 맵 바로 위. `fetchNewsFeed()`(승격된 `SupplyNewsFeed`와 동일 데이터, 표현만 다름— 필터링 없음) + 신규 `fetchExchangeRates()`. 내부 비export 헬퍼 `RollingRow<T>`가 일정 주기(`intervalMs`)마다 다음 항목이 아래에서 올라오고 이전 항목은 위로 사라지는 세로 캐러셀을 구현 — 목록 끝에 첫 항목을 하나 더 붙여두고 그 복제본까지 이동한 직후에만 transition 없이 순간적으로 인덱스 0으로 되돌리는 "무한 캐러셀" 기법. `ScrollCard`를 쓰지 않는 예외 레이아웃(자동 롤링이라 스크롤 콘텐츠 성격이 아님, CLAUDE.md "지도·복합 필터" 예외 조항과 동일 취급) |
+| `ROW_HEIGHT_PX` | 한 항목 높이 상수(22px) | CSS `.viewport`/`.trackItem` height와 반드시 같은 값을 참조해야 함. 구현 중 발견한 버그를 고친 결과물 — 처음엔 `translateY(-${index*100}%)`(퍼센트)를 썼는데, `%` 단위 `translateY`는 요소 자기 자신의 전체 높이(항목 개수만큼 누적) 기준으로 계산돼 인덱스가 1 이상이 되면 콘텐츠가 통째로 뷰포트 밖으로 사라지는 문제가 있었음(Playwright 실측으로 발견) — px 고정값 이동으로 교체해 항목 개수와 무관하게 항상 정확히 한 줄만 이동하도록 수정 |
+| `TRANSITION_MS` | 전환 애니메이션 지속 시간 상수(400ms) | `RollingRow`의 순간 리셋 `setTimeout`과 CSS `transition-duration`이 반드시 같은 값을 참조해야 어긋나지 않음 |
+
+### `features/purchasing/components/QuickActionsPanel.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `QuickActionsPanel` | "빠른 작업" 서브섹션 컴포넌트 | 2026-07-29 신규(2차 데모) — 구매대응순위·마커뉴스·데이터 업데이트 상태 3개 서브섹션의 틀(제목+영역 구분)만 우선 구현, 콘텐츠 로직은 다음 단계(CLAUDE.md placeholder 원칙, 각 서브섹션은 "준비 중입니다" 안내만). 최초 구현(수정 3단계 이전)은 `AlertsPanel`과 나란히 놓인 최상위 형제 컴포넌트(자체 `ScrollCard`+sticky wrapper)였으나, 수정 1(2026-07-29)에서 `AlertsPanel`의 "빠른 작업" 서브섹션 자식으로 통합되며 자체 sticky/폭 wrapper(`.wrapper`)를 제거 — `ScrollCard`만 반환 |
+
 ### `features/purchasing/components/PurchasePriorityPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `PurchasePriorityPanel` | 구매 대응 우선순위 패널 컴포넌트 | 등급·재고 소진일 기준 파생 정렬 순위 리스트. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
+| `PurchasePriorityPanel` | 구매 대응 우선순위 패널 컴포넌트 | 등급·재고 소진일 기준 파생 정렬 순위 리스트. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환. 2026-07-29(2차 데모) — `PurchasingDashboardPage` 본문에서 제거, 파일은 유지하되 현재 실사용처 없음("구매대응순위" 개념은 `QuickActionsPanel`의 "빠른 작업" 서브섹션 프레임으로 재등장했으나 콘텐츠 로직은 아직 이 패널과 연결되지 않음) |
 
 ### `features/purchasing/components/ScoreCardPanel.tsx`
 | physical | logical | 역할 |
@@ -415,12 +432,13 @@
 ### `features/purchasing/pages/BriefingDetailPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `BriefingDetailPage` | 1계층 브리핑 자료 열람 페이지 | Seq 24 "내부 브리핑 자료 열람 화면". `/purchasing/briefing/:riskEventId` — 계약 조항 요약/협상 포인트/산출물 메타 표시, RiskGradeBadge/ConfidenceBadge·Breadcrumb 재사용(Breadcrumb 첫 실사용). Phase 9.4부터 `SideNavToggleButton` 추가 |
+| `BriefingDetailPage` | 1계층 브리핑 자료 열람 페이지 | Seq 24 "내부 브리핑 자료 열람 화면". `/purchasing/briefing/:riskEventId` — 계약 조항 요약/협상 포인트/산출물 메타 표시, RiskGradeBadge/ConfidenceBadge·Breadcrumb 재사용(Breadcrumb 첫 실사용). Phase 9.4부터 `SideNavToggleButton` 추가. 2026-07-29 — `SIDE_NAV_ITEMS`를 `PurchasingDashboardPage.tsx`와 동일하게 브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향 5개 라벨로 갱신(href는 여전히 해시 placeholder) |
 
 ### `features/purchasing/pages/PurchasingDashboardPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바(+`SideNavToggleButton`) + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역 3종(`MaterialRiskOverviewSection` → 승격된 `GlobalRiskBoard` → `ImportDependencyRow`)을 기존 4단 패널 위에 추가. 2026-07-27 — `selectAlertEvents`로 알림 필터링 후 `Header`의 `accountExtra`(`AlertsBellButton`)와 `AlertsPanel` 양쪽에 전달, hover 미리보기 디바운스(`PREVIEW_CLOSE_DELAY_MS`=150ms)+ESC 닫기 로컬 상태 관리 |
+| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바(+`SideNavToggleButton`) + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역 3종(`MaterialRiskOverviewSection` → 승격된 `GlobalRiskBoard` → `ImportDependencyRow`)을 기존 4단 패널 위에 추가. 2026-07-27 — `selectAlertEvents`로 알림 필터링 후 `Header`의 `accountExtra`(`AlertsBellButton`)와 `AlertsPanel` 양쪽에 전달, hover 미리보기 디바운스(`PREVIEW_CLOSE_DELAY_MS`=150ms)+ESC 닫기 로컬 상태 관리. **2026-07-29(2차 데모, UX-01-DB 재배치)** — 본문 순서를 KPI 요약 → `NewsExchangeTicker`(신규) → `GlobalRiskBoard`(`mapHeight=330`으로 1.5배 확대) → 승격된 `SupplyNewsFeed`(신규 소비처) → `ImportDependencyRow` → `MaterialRiskOverviewSection`(2번 위치→맨 아래로 이동)으로 재배치, `MaterialRiskStatusPanel`/`ErpImpactPanel`/`PurchasePriorityPanel`은 본문에서 제거(SideNav 전용 이동 예정, 파일은 유지), `SIDE_NAV_ITEMS`를 브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향 5개로 갱신, `SECTION_DOTS_SECTIONS`도 위 재배치에 맞춰 8→7개로 갱신. 최초 구현(수정 1 이전)엔 `QuickActionsPanel`을 `AlertsPanel`과 나란한 별도 최상위 형제로 뒀으나, 수정 1에서 `AlertsPanel`의 "빠른 작업" 서브섹션으로 통합되며 이 페이지에서의 직접 렌더링은 제거됨 |
+| `GLOBAL_RISK_BOARD_MAP_HEIGHT` | 관제 맵 확대 높이 상수(330px) | 2026-07-29 신규 — 기존 220px 기준 1.5배. `GlobalRiskBoard`는 공개 대시보드와 공유하는 컴포넌트라 CSS 기본값을 직접 바꾸지 않고 이 페이지에서만 `mapHeight` prop으로 override |
 | `PREVIEW_CLOSE_DELAY_MS` | 알림 미리보기 닫힘 디바운스(150ms) | 트리거(헤더 벨)·콘텐츠(AlertsPanel)가 화면상 떨어져 있어 둘 다 벗어난 뒤 이 시간만큼 지나야 닫힘 |
 
 ### `lib/AuthContext.ts`

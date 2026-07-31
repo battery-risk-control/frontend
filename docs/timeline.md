@@ -632,3 +632,54 @@ CLAUDE.md/qa-checklist.md/roadmap-candidates.md에 반영했다.
   유지하고 괄호로 사유를 남김.
 
 코드 변경 없음 — 문서 전용 라운드.
+
+## Phase 11 — 구매팀 대시보드 2차 데모 재배치 (UX-01-DB, `youngjin/2nd-demo-layout`, 2026-07-29)
+
+`dev-김영진_merge-test`에서 새 브랜치 `youngjin/2nd-demo-layout`을 파서 진행. 데모(화면ID
+UX-01-DB) 2차 명세에 맞춰 구매팀 대시보드 본문을 재배치하고, 사용자 재검토로 발견된 4건의
+수정사항을 반영했다.
+
+- **1~3단계(조사→설계→구현, `eb162bf`)**: 본문 순서를 KPI 요약 → 뉴스속보·환율정보 세로
+  롤링 티커(`NewsExchangeTicker` 신규, `fetchNewsFeed()` 재사용+신규 `fetchExchangeRates()`
+  mock) → 글로벌 리스크 관제 맵(`GlobalRiskBoard`에 선택적 `mapHeight` prop 추가, 구매팀만
+  330px로 1.5배 확대 — 공개 대시보드와 공유하는 컴포넌트라 CSS 기본값은 안 건드림) →
+  실시간 뉴스 목록(`SupplyNewsFeed`를 `features/public/components/`→`components/widgets/`로
+  승격) → 수입 의존도+가격 추이 → 원자재 리스크 요약(2번 위치→맨 아래)으로 재배치.
+  원자재 공급사 리스크 현황/ERP 영향/구매 대응 우선순위는 본문에서 제거(SideNav 전용 이동
+  예정, 컴포넌트 파일은 유지 — 실제 라우트 연결은 다음 단계). `SIDE_NAV_ITEMS`를
+  브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향 5개로 갱신
+  (`PurchasingDashboardPage.tsx`/`BriefingDetailPage.tsx` 양쪽). `fetchNewsFeed`는
+  `public.api.ts`→`purchasing.api.ts`로 이동(원천 데이터 허브 컨벤션, 재수출만 유지).
+- **4단계(사용자 재검토 후 수정 1~4, `eb162bf`)**:
+  - 수정 1 — `QuickActionsPanel`(구매대응순위·마커뉴스·데이터 업데이트 상태 프레임만)을
+    `AlertsPanel`과 나란한 별도 최상위 형제로 뒀던 최초 구현을 `AlertsPanel`의 "빠른 작업"
+    서브섹션으로 통합(기존 패널 제목 "주요 알림 및 빠른 작업"이 이미 두 개념을 포괄).
+    `QuickActionsPanel`은 자체 sticky/폭 wrapper를 제거하고 `ScrollCard`만 반환.
+  - 수정 2 — 가로 마퀴로 처음 구현했던 뉴스속보/환율정보 롤링을 세로 캐러셀로 재구현하는
+    과정에서 버그 발견: `translateY(-${index*100}%)`는 트랙 "자기 자신의 전체 높이" 기준
+    으로 계산돼, 인덱스가 1 이상이 되면 한 줄이 아니라 트랙 전체 높이만큼 이동해 콘텐츠가
+    통째로 뷰포트 밖으로 사라짐(Playwright로 t0/t1 스크린샷 비교하다 발견). `ROW_HEIGHT_PX`
+    (22px, CSS와 동일 값) 기준 px 고정값 이동으로 교체해 해결, 재검증 스크린샷으로 확인.
+  - 수정 3 — `SupplyNewsFeed` 카드를 상단 source뱃지+date / 중간 headline(굵게, 2줄
+    클램프) / 하단 material 태그+`ConfidenceBadge` 형식으로 변경. 썸네일은 스키마에
+    필드가 없어 범위 밖으로 제외.
+  - 수정 4 — `ImportDependencyRow`의 940px 반응형 규칙이 "이번 작업 중 깨졌다"는 사용자
+    전제로 조사를 시작했으나, 실측(1280px에서 가격 추이 카드가 `.row` 우측 경계를
+    46.86px 초과해 렌더링) 후 `git stash`로 base 브랜치(`dev-김영진_merge-test`)와
+    동일 지점을 A/B 비교한 결과 완전히 동일한 수치가 나와 **이 브랜치와 무관한 기존
+    버그**임을 확인했다. `.main{min-width:0}`이 이 내부 오버플로가 문서 레벨
+    스크롤바(`docScrollWidth`)로 전파되는 것을 막아, 기존 940px 임계값 판정("페이지
+    전체 가로 스크롤바 발생 여부"만으로 이분 탐색)으로는 애초에 검출 불가능했던
+    사각지대였다는 점도 함께 확인. 940px 규칙 자체는 미변경(정상 동작 재확인). 이번
+    브랜치의 첫 라운드(`QuickActionsPanel`을 별도 276px 컬럼으로 뒀을 때, `<main>`이
+    388px까지 좁아져 이 기존 버그가 악화됐던 부분)는 수정 1이 이미 원상 복구했다.
+  - 범위 밖 확인 — 모바일(375px) `<main>` 붕괴(C13/Phase 10 트랙)는 이번에 손대지
+    않되, `QuickActionsPanel` 통합으로 더 나빠지지 않았는지만 실측: `docScrollHeight`가
+    오히려 개선(약 7017px → 4751px), `mainWidth`(48px)는 그대로 — 악화 없음 확인.
+- **문서(별도 커밋, `8943260`)**: 사전 발견된 무관 기존 버그를
+  `docs/roadmap-candidates.md` C14로 등재(레이아웃 수정 커밋과 분리) — "이 브랜치와
+  무관한 기존 drift는 발견 즉시 보고 후 별도 확인·별도 커밋" CLAUDE.md 원칙 적용.
+- **QA 체크리스트(A~H)**: B(공용 컴포넌트 `GlobalRiskBoard`/`SupplyNewsFeed` 변경 시
+  전체 소비처 grep 확인 — 공개 대시보드는 `mapHeight` 미전달로 기존 동작 유지) 확인.
+  E(mock-schemas.md 반영)는 5단계로 분리해 별도 확인 후 진행. 나머지 특이사항 없음.
+  tsc/eslint/build 전부 통과.

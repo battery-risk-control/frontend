@@ -193,6 +193,32 @@ export interface ExchangeRateItem {
   change_label: string
 }
 
+/**
+ * 1계층 구매팀 대시보드 상단 KPI — 멀티에이전트(Chain B) 구매 리스크 평가 결과 집계.
+ * 백엔드 `GET /api/v1/dashboard/procurement-risk-summary` 확정 계약(docs/backend-api-contracts.md
+ * 참고) — 자재 대분류(8종)별 최신 평가 1건 기준.
+ */
+export interface ProcurementRiskKpi {
+  assessed_category_count: number
+  critical_count: number
+  warning_count: number
+  normal_count: number
+  erp_exposure_score_avg: number | null
+  external_signal_score_avg: number | null
+  verified_briefing_count: number
+  /**
+   * 최근 24시간 raw 활동량 — 위 필드들(카테고리별 시간제한 없는 최신 1건 스냅샷)과는 별개
+   * 모집단이다. 미해소 리스크는 24시간이 지나도 위 스냅샷 필드에서 사라지지 않아야 하므로,
+   * "오늘 무슨 일이 있었나"는 이 4개 필드로만 보조 표시한다(기존 값을 대체하지 않음).
+   */
+  critical_count_24h: number
+  warning_count_24h: number
+  erp_exposure_score_avg_24h: number | null
+  external_signal_score_avg_24h: number | null
+  latest_assessed_at: string | null
+  mock: boolean
+}
+
 /** 2계층 경영기획팀 대시보드 — mock-schemas.md "2. 2계층" 참고. */
 export interface KpiSummaryItem {
   label: string

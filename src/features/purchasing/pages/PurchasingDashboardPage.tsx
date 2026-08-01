@@ -7,9 +7,12 @@ import {
   fetchMaterialPriceTrends,
   fetchMaterialRiskGauges,
   fetchNewsFeed,
+  fetchProcurementRiskKpi,
   fetchRiskEvents,
   fetchScoreCards,
+  getMockProcurementRiskKpi,
 } from '../../../api/purchasing.api'
+import { useAuthState } from '../../../lib/useAuthState'
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
@@ -83,6 +86,7 @@ const SECTION_DOTS_SECTIONS = [
  * `PREVIEW_CLOSE_DELAY_MS`만큼 지나야 닫히는 디바운스 방식을 쓴다. `Escape`로도 닫힌다.
  */
 export function PurchasingDashboardPage() {
+  const { accessToken } = useAuthState()
   const events = fetchRiskEvents()
   const gauges = fetchMaterialRiskGauges()
   const scoreCards = fetchScoreCards()
@@ -93,6 +97,23 @@ export function PurchasingDashboardPage() {
   const newsItems = fetchNewsFeed()
   const exchangeRates = fetchExchangeRates()
   const alerts = selectAlertEvents(events)
+
+  // 페이지 최초의 비동기 데이터소스 — mock 초기값을 즉시 보여주고, 라이브 응답이 오면 덮어쓴다
+  // (public.api.ts의 fetchPublicRiskBoard 소비 전례와 동일한 최소 구현, useQuery 미도입).
+  const [procurementRiskKpi, setProcurementRiskKpi] = useState(getMockProcurementRiskKpi)
+  useEffect(() => {
+    let cancelled = false
+    fetchProcurementRiskKpi(accessToken)
+      .then((kpi) => {
+        if (!cancelled) setProcurementRiskKpi(kpi)
+      })
+      .catch(() => {
+        // 라이브 페치 실패 시 mock 초기값을 그대로 유지한다.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken])
 
   const { expanded: alertsExpanded, toggle: toggleAlertsExpanded, expand: expandAlerts } = useAlertsPanelState()
   const [isPreviewing, setIsPreviewing] = useState(false)
@@ -162,7 +183,7 @@ export function PurchasingDashboardPage() {
         <SideNav items={SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <h1 className={styles.heading}>구매팀 대시보드</h1>
-          <KpiSummaryPanel events={events} />
+          <KpiSummaryPanel kpi={procurementRiskKpi} />
           <NewsExchangeTicker news={newsItems} exchangeRates={exchangeRates} />
           <GlobalRiskBoard
             items={riskBoardItems}

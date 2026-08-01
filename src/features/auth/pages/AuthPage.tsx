@@ -41,7 +41,7 @@ export function AuthPage() {
         setPendingMessage(result.message)
         return
       }
-      signIn(result.org_tier, values.email)
+      signIn(result.org_tier, values.email, result.access_token)
     } catch (err) {
       // 백엔드 연동(②단계) 시 mock에는 없던 실패(예: 비밀번호 오류)가 여기로 들어온다.
       setAuthError(err instanceof Error ? err.message : '로그인에 실패했습니다.')

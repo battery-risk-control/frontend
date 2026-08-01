@@ -108,10 +108,107 @@
   를 그대로 반환한다. 구매팀 대시보드가 쓰는 `fetchGlobalRiskBoard()`는 이 계약과 무관하게
   mock 그대로 유지된다(의도된 분리).
 
+## 3. 1계층 구매팀 대시보드 — 구매 리스크 KPI 요약 (멀티에이전트)
+
+`backend` 레포 `spring-backend/.../controller/DashboardController.java`,
+`dto/DashboardDto.java`(`ProcurementRiskSummary`),
+`repository/DashboardRepository.java`(`loadProcurementRiskSummary`) 코드 직접 작성 +
+`C:\backend-review` Docker(`docker compose up -d --build spring`)로 실제 curl 검증됨
+(2026-08-01).
+
+`GET /api/v1/dashboard/procurement-risk-summary` (인증 필요 — `/api/v1/**`가 `SecurityConfig`
+기본 규칙상 `authenticated()`, `Authorization: Bearer {access_token}` 필요)
+```json
+{
+  "assessed_category_count": 8,
+  "critical_count": 3,
+  "warning_count": 5,
+  "normal_count": 0,
+  "erp_exposure_score_avg": 75.0,
+  "external_signal_score_avg": 60.0,
+  "verified_briefing_count": 8,
+  "critical_count_24h": 1,
+  "warning_count_24h": 2,
+  "erp_exposure_score_avg_24h": 68.0,
+  "external_signal_score_avg_24h": 72.0,
+  "latest_assessed_at": "2026-08-01T06:42:50.634310Z",
+  "mock": true
+}
+```
+
+- **`*_24h` 4개 필드(2026-08-01 신규)**는 위 스냅샷 필드(`critical_count`/`warning_count`/
+  `erp_exposure_score_avg`/`external_signal_score_avg`)와 **완전히 다른 모집단**이다 —
+  카테고리로 접지 않은 `procurement_risk_assessments` 원본 행 중 `created_at`이 최근
+  24시간 이내인 것만 집계한다("오늘 무슨 일이 있었나"). 미해소 리스크가 24시간이 지나도
+  스냅샷 필드에서 사라지면 안 된다는 요구사항 때문에 두 모집단을 절대 섞지 않는다 — FE도
+  이 둘을 같은 숫자로 취급하거나 대체 관계로 표시하면 안 되고, 보조 텍스트로만 병기한다
+  (`KpiSummaryPanel` 참고).
+- `*_24h` 필드는 `C:\backend-review` Docker 실측 완료(2026-08-01) — 실측 중 실제 버그
+  1건 발견·수정: Spring 전역 SNAKE_CASE 전략이 문자→숫자 경계(`...Count|24h`)엔 언더스코어를
+  안 넣어 `critical_count24h`로 잘못 직렬화되고 있었다(`critical_count_24h`가 아님) — 4개
+  필드 전부 `@JsonProperty`로 명시 강제해 수정, 재빌드 후 정정된 키로 응답 확인.
+
+- 멀티에이전트(Chain B, LangGraph)가 `procurement_risk_assessments`에 append-only로 쌓아온
+  구매 리스크 평가를, 자재 대분류(8종: LITHIUM/COBALT/NICKEL/GRAPHITE/MANGANESE/COPPER/
+  ALUMINUM/RARE_EARTH) 단위로 최신 1건만 남겨(`material_category`, `created_at DESC` 기준)
+  집계한 응답이다. `Summary`(`GET /api/v1/dashboard/summary`)가 `severity_assessments`
+  기반인 것과 별개 데이터 소스 — 두 응답을 섞어 쓰지 않는다.
+- `critical_count`/`warning_count`/`normal_count`는 `procurement_risk_level` 기준(UNKNOWN
+  없음, `Summary`의 4단계와 다름). `erp_exposure_score_avg`/`external_signal_score_avg`는
+  해당 필드가 NULL인 행을 자동으로 제외한 평균이라(Postgres `AVG` 기본 동작), 분모가
+  `assessed_category_count`보다 작을 수 있다.
+- `verified_briefing_count`는 최신 1건 기준 `review_passed = TRUE`인 카테고리 수 — 과거
+  이력 전체가 아니라 "현재 상태" 스냅샷이다.
+- `mock` 필드는 `Summary`와 동일한 기존 관례를 그대로 승계한 상수 `true`(실제 데이터
+  진위 여부를 구분하는 필드가 아님 — `DashboardRepository.loadSummary()`도 동일).
+- 실측 시점(2026-08-01) 실제 DB에는 테스트로 채운 COBALT/LITHIUM 2개 카테고리만 있어
+  `assessed_category_count`가 2였다 — 위 예시 JSON은 프론트 mock(`getMockProcurementRiskKpi`,
+  캡처 데모 수치와 동일)과 나란히 보기 좋도록 8개 카테고리 응답 형태로 제시한 것이다.
+- FE 연동: `src/api/purchasing.api.ts`의 `fetchProcurementRiskKpi(accessToken)` —
+  `VITE_API_BASE_URL`과 `accessToken`이 모두 있을 때만 이 엔드포인트를, 아니면
+  `getMockProcurementRiskKpi()`를 반환한다. `PurchasingDashboardPage`가 로그인 후
+  `useAuthState().accessToken`을 넘겨 호출한다.
+
+## 4. 구매 리스크 평가 완료 처리 (acknowledge)
+
+`backend` 레포 `MultiAgentController.acknowledge`/`MultiAgentOrchestrationService.
+acknowledgeAssessment`/`ProcurementRiskRepository.acknowledge`/`V20__create_procurement_risk_
+acknowledgements.sql` 코드 직접 작성 + `C:\backend-review` Docker(`docker compose up -d
+--build spring`)로 실제 curl 검증됨(2026-08-01) — 신규 호출/멱등 재호출/404 3개 시나리오와,
+한 카테고리의 이력 전체를 완료 처리하면 `GET /api/v1/dashboard/procurement-risk-summary`에서
+실제로 그 카테고리가 빠지는 것(`assessed_category_count`/`warning_count`/
+`erp_exposure_score_avg` 변화)까지 확인. **아직 이 엔드포인트를 호출하는 프론트 코드는
+없다**(버튼/리스트 UI는 다음 단계로 의도적으로 미룸 — 개별 카테고리 항목을 보여주는 화면
+자체가 현재 없어서, 백엔드 API부터 먼저 만든 상태).
+
+`POST /api/v1/multi-agent/assessments/{assessmentId}/acknowledge` (인증 필요)
+```json
+{
+  "assessment_id": "3f9a1c2e-...",
+  "acknowledged_by": 1,
+  "acknowledged_at": "2026-08-01T12:00:00Z",
+  "already_acknowledged": false
+}
+```
+
+- 대상이 존재하지 않는 `assessmentId`면 404(`PROCUREMENT_RISK_ASSESSMENT_NOT_FOUND`).
+- `procurement_risk_assessments`(append-only) 원본 행은 건드리지 않는다 — 별도
+  `procurement_risk_acknowledgements` 로그 테이블에만 INSERT한다(`notification_log`와 동일
+  구조 원칙). 같은 평가를 두 번 호출해도 안전(멱등) — 두 번째 호출은 `already_acknowledged:
+  true`와 함께 최초 처리자 정보를 그대로 돌려준다.
+- "완료 처리"된 평가가 그 자재 대분류의 최신 평가였다면, `GET
+  /api/v1/dashboard/procurement-risk-summary`의 스냅샷 집계(심각/주의 건수 등)에서 해당
+  카테고리가 빠진다. 이후 같은 카테고리에 새 뉴스로 인한 새 평가가 들어오면(새
+  `assessment_id`라 이 로그에 없음) 자동으로 다시 집계된다 — 별도 API 호출 없이 이 구조만으로
+  보장된다.
+- `*_24h` 필드에는 영향을 주지 않는다("오늘 무슨 일이 있었나"는 완료 처리 여부와 무관).
+
 ## 아직 이동하지 않은 것들 (참고)
 
-백엔드에는 이 문서에 없는 컨트롤러도 이미 존재한다(`DashboardController`/
+백엔드에는 이 문서에 없는 컨트롤러도 이미 존재한다(`DashboardController`의 나머지 엔드포인트
+(`/dashboard/summary`/`/dashboard/materials`/`/dashboard/import-dependency`/`/contracts`)/
 `BriefingController`/`ErpController`/`RagController`/`SeverityController`/
-`RealtimeAlertController`/`DocumentController` 등) — 다만 이번 세션에서 실제로 코드 대조나
-실측 검증을 거치지 않았으므로 옮기지 않았다. `docs/mock-schemas.md`의 2계층/3계층/브리핑/
-구매팀 확장 섹션은 여전히 "제안 단계"로 남아있다 — 실측 검증되는 대로 이 문서로 옮긴다.
+`RealtimeAlertController`/`DocumentController`/`MultiAgentController` 등) — 다만 이번
+세션에서 실제로 코드 대조나 실측 검증을 거치지 않았으므로 옮기지 않았다.
+`docs/mock-schemas.md`의 2계층/3계층/브리핑/구매팀 확장 섹션은 여전히 "제안 단계"로
+남아있다 — 실측 검증되는 대로 이 문서로 옮긴다.

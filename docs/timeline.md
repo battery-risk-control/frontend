@@ -745,3 +745,82 @@ UX-01-DB) 2차 명세에 맞춰 구매팀 대시보드 본문을 재배치하고
   QA A~H: B(GlobalRiskBoard 소비처 전수 grep, 공개 대시보드 회귀 스크린샷으로 확인)/
   D(마커뉴스 닫기 버튼에 `text-decoration:underline`)/G(`.scratch/` 임시 스크립트,
   git status 정상) 확인. E(mock-schemas.md)는 5단계로 분리.
+
+## Phase 11 후속 — 멀티에이전트 구매 리스크 KPI 연동 (`youngjin/2nd-demo-layout`, 2026-08-01)
+사용자가 첨부한 최종 대시보드 데모 캡처(심각3/주의5/ERP영향도75점/외부위험60점/검증브리핑8건
+5칸 KPI)를 근거로, 그동안 `risk_event` mock을 등급별로 세기만 하던 `KpiSummaryPanel`을
+백엔드 멀티에이전트(Chain B) 결과 기반으로 교체.
+- **백엔드 신규 API**(`빅프로젝트/backend`, main): `GET /api/v1/dashboard/procurement-risk-summary`
+  (`DashboardController`) 신설 — `procurement_risk_assessments`를 `material_category`(자재
+  대분류 8종) 기준 최신 1건만 남기는 CTE로 집계(`DashboardRepository`의 기존
+  `LATEST_ASSESSMENT_CTE` 패턴과 동일 접근, `idx_pra_category_created` 인덱스가 이미 존재해
+  신규 마이그레이션 불필요). `DashboardServiceTest`에 pass-through 테스트 추가,
+  `C:\backend-review` Docker로 실제 curl 검증 완료(기존 실데이터 COBALT/LITHIUM 2개 카테고리
+  기준 응답 정상 확인).
+- **선행 블로커 발견·해소**: `DashboardController`가 `/api/v1/**` 인증 규칙 하에 있는데
+  프론트 `AuthContext`가 로그인 응답의 `access_token`을 그동안 버리고 있었음(`AuthPage.tsx`
+  `signIn()` 호출에 토큰 인자 없음) — `AuthContextValue`/`AuthProvider`/`signIn` 시그니처에
+  `accessToken` 추가해 배선.
+- **프론트 연동**: `api/types.ts`에 `ProcurementRiskKpi` 타입, `api/purchasing.api.ts`에
+  `fetchProcurementRiskKpi`(`fetchPublicRiskBoard`와 동일한 live/mock 분기, 이 파일 첫
+  비동기·인증 API) + `getMockProcurementRiskKpi` 신규. `PurchasingDashboardPage`는 이 페이지
+  최초의 비동기 데이터소스라 `useState`(mock 초기값)+`useEffect`(라이브 페치 후 덮어쓰기)로
+  최소 구현(`QueryClientProvider` 미도입, 범위 확대 방지). `KpiSummaryPanel`은
+  `events: RiskEvent[]` prop을 `kpi: ProcurementRiskKpi` prop으로 교체, 전체/심각/주의/정상
+  4칸 → 심각/주의/ERP영향도/외부위험/검증브리핑 5칸으로 재구성(CSS는 `flex-wrap` 그대로라
+  구조 변경 불필요).
+- **검증**: `npx tsc -b`/`eslint`/`vite build` 통과. `npm run dev`(mock)로 캡처와 동일한
+  KPI 수치(3/5/75점/60점/8건) 브라우저 확인.
+- QA A~H: A(로그인 상태 표시는 이번 변경과 무관, 재검토 불필요)/B(`KpiSummaryPanel` 유일
+  소비처가 `PurchasingDashboardPage` 하나뿐임을 grep 확인 후 prop 시그니처 변경)/E(신규 확정
+  계약을 `docs/mock-schemas.md`가 아니라 `docs/backend-api-contracts.md`에 바로 등재 — Docker
+  실측으로 이미 검증됐으므로 "제안 단계"를 거치지 않음)/G(임시 스크립트 없음, `git status`
+  의도한 파일만 표시) 확인. C/D/F/H는 해당 없음(접근 제어·클릭 요소·공용 레이아웃 변경 없음).
+
+## Phase 11 후속 2차 — 24시간 보조 수치 + 구매 리스크 평가 완료 처리(acknowledge) 백엔드
+(`youngjin/2nd-demo-layout`, 2026-08-01)
+사용자가 위 KPI 연동 결과를 검토하며 두 가지를 이어서 요청: ① 심각/주의 건수는 "미해소면
+계속 남아있는" 누적 지표로 유지하되 최근 24시간 활동량도 같이 보고 싶음, ② 직원이 리스크를
+"완료 처리"하면 그 카테고리가 KPI 집계에서 빠지는 기능. 대화로 설계를 좁혔다 — 24시간 수치는
+기존 5칸을 대체하지 않고 보조 텍스트로 병기(기존 5칸이 "카테고리별 시간제한 없는 최신 스냅샷"
+이라 미해소 리스크가 안 사라진다는 특성을 지켜야 함), 완료 처리는 `procurement_risk_assessments`
+(append-only, V18)를 UPDATE하지 않고 `notification_log`(V12)와 같은 구조 — 별도 append-only
+로그 테이블에만 기록.
+- **백엔드**: `V20__create_procurement_risk_acknowledgements.sql` 신설(assessment_id
+  UNIQUE FK, acknowledged_by → users(id) BIGINT). `ProcurementRiskDto.AcknowledgeResponse`,
+  `ProcurementRiskRepository.acknowledge()`(INSERT ON CONFLICT DO NOTHING, 멱등),
+  `MultiAgentOrchestrationService.acknowledgeAssessment()`(대상 미존재 시 404),
+  `MultiAgentController`에 `POST /assessments/{assessmentId}/acknowledge` 추가 —
+  `@AuthenticationPrincipal CustomUserDetails`로 로그인 사용자 id를 얻는 기존 `AuthController.
+  me()` 패턴을 그대로 재사용. `DashboardDto.ProcurementRiskSummary`에 `criticalCount24h`/
+  `warningCount24h`/`erpExposureScoreAvg24h`/`externalSignalScoreAvg24h` 4개 필드 추가,
+  `DashboardRepository`의 `LATEST_PROCUREMENT_ASSESSMENT_CTE`에 `NOT EXISTS(...
+  procurement_risk_acknowledgements ...)` 조건 추가(완료 처리된 게 그 카테고리의 최신
+  평가였다면 자연스럽게 집계에서 빠지고, 새 평가가 들어오면 새 assessment_id라 로그에 없어
+  자동으로 다시 잡힘) + `recent_24h` CTE 신설(카테고리로 안 접은 원본 행, `created_at >= NOW()
+  - INTERVAL '24 hours'`, 완료 처리 여부와 무관 — "오늘 무슨 일이 있었나"라 걸러지면 안 됨).
+  `DashboardServiceTest` 갱신, `./gradlew test` 통과.
+- **Docker 실측(2026-08-01, 세션 중 Docker Desktop이 한 번 죽었다가 사용자가 재기동한 뒤
+  진행)**: `C:\backend-review`로 재빌드 후 curl로 검증하는 과정에서 **실제 버그 1건 발견·수정**
+  — Spring 전역 SNAKE_CASE 전략이 문자→숫자 경계(`...Count|24h`)엔 언더스코어를 안 넣어
+  `critical_count_24h`가 아니라 `critical_count24h`로 잘못 직렬화되고 있었다. `DashboardDto.
+  ProcurementRiskSummary`의 24h 필드 4개에 `@JsonProperty`를 명시로 붙여 수정, 재빌드 후
+  정정된 키로 응답 확인. 이어서 acknowledge 엔드포인트를 신규 호출/멱등 재호출(같은
+  assessment_id 재요청 시 `already_acknowledged: true`)/존재하지 않는 id(404) 3개 시나리오로
+  확인하고, COBALT 카테고리의 평가 3건 전부를 완료 처리해 `assessed_category_count`(2→1)/
+  `warning_count`(1→0)/`erp_exposure_score_avg`(42.4→null)가 실제로 빠지는 것과, `*_24h`
+  필드는 완료 처리와 무관하게 그대로 유지되는 것(설계대로)까지 end-to-end로 확인.
+- **프론트**: `ProcurementRiskKpi`에 24h 필드 4개 추가, mock 기본값도 본값과 다르게 지정
+  (`critical_count_24h: 1` 등, 시각적으로 구분되는지 확인 목적). `KpiSummaryPanel`의 심각/
+  주의/ERP영향도/외부위험 4칸에 `.subLabel`(작은 회색 보조 텍스트) 한 줄씩 추가(검증 브리핑
+  칸은 24h 변형 없음, 사용자가 요청 안 함). `tsc -b`/`eslint`/`vite build` 통과, `npm run
+  dev`(mock)로 "심각 3건 · 24시간 내 1건" 등 4칸 전부 보조 텍스트가 기대대로 붙어 나오는 것
+  브라우저로 확인.
+- **"완료" 버튼/리스트 UI는 의도적으로 이번 라운드에서 안 만듦** — 조사 결과 개별
+  `material_category`(8종) 항목을 보여주는 화면이 현재 하나도 없어서(`MaterialRiskOverviewRow`
+  등은 다른 자재 목록·다른 키 체계), 백엔드 API/로직부터 먼저 완성하고 UI는 사용자가 명시적으로
+  다음 단계로 미루기로 확정.
+- QA A~H: B(`ProcurementRiskKpi` 소비처가 `KpiSummaryPanel` 하나뿐임을 grep 확인 후 필드
+  추가)/E(`docs/backend-api-contracts.md` "1. 구매 리스크 KPI 요약"/"4. 완료 처리" 모두 실측
+  완료 후 확정 계약으로 갱신)/G(임시 스크립트 없음, 검증용 acknowledge 테스트 데이터는
+  append-only 로그라 원본 훼손 아니라 되돌리지 않음) 확인. A/C/D/F/H는 해당 없음.

@@ -4,7 +4,8 @@ import type { OrgTier } from '../api/types'
 export interface AuthContextValue {
   orgTier: OrgTier | null
   email: string | null
-  signIn: (orgTier: OrgTier, email: string) => void
+  accessToken: string | null
+  signIn: (orgTier: OrgTier, email: string, accessToken: string) => void
   signOut: () => void
 }
 

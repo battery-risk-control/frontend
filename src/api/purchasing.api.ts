@@ -6,11 +6,15 @@ import type {
   MaterialPriceSummary,
   MaterialRiskGaugeItem,
   NewsFeedItem,
+  ProcurementRiskKpi,
   RiskEvent,
   RiskEventBriefing,
   ScoreCardItem,
 } from './types'
 import { parseRiskEventDate } from '../lib/riskEventId'
+import { fetchWithAuth } from './http'
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
 
 /**
  * 1계층 구매팀 대시보드 mock 데이터.
@@ -348,6 +352,57 @@ export function fetchScoreCards(): ScoreCardItem[] {
     { label: '외부 리스크 종합 점수', score: 72, grade: '심각', diffLabel: '전일 대비 ▲ +8p' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요. surin 원본 level="높음"을 3단계 RiskGrade로 매핑
     { label: 'ERP 영향 점수', score: 65, grade: '주의', diffLabel: '전일 대비 ▲ +6p' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
   ]
+}
+
+/**
+ * 상단 KPI 요약 mock 기본값 — 백엔드 `GET /api/v1/dashboard/procurement-risk-summary` 확정
+ * 계약(docs/backend-api-contracts.md 참고)과 동일한 모양. 수치는 데모 캡처(심각3/주의5/
+ * ERP영향도75점/외부위험60점/검증브리핑8건)와 맞춘 mock 임시값이다.
+ */
+const MOCK_PROCUREMENT_RISK_KPI: ProcurementRiskKpi = {
+  assessed_category_count: 8,
+  critical_count: 3,
+  warning_count: 5,
+  normal_count: 0,
+  erp_exposure_score_avg: 75,
+  external_signal_score_avg: 60,
+  verified_briefing_count: 8,
+  // 24시간 raw 활동량 mock — 위 스냅샷 값과 일부러 다르게 둬서 보조 텍스트가 시각적으로
+  // 구분되는지 확인할 수 있게 한다. 실제 계산 로직 없는 mock 임시값.
+  critical_count_24h: 1,
+  warning_count_24h: 2,
+  erp_exposure_score_avg_24h: 68,
+  external_signal_score_avg_24h: 72,
+  latest_assessed_at: new Date().toISOString(),
+  mock: true,
+}
+
+export function getMockProcurementRiskKpi(): ProcurementRiskKpi {
+  return MOCK_PROCUREMENT_RISK_KPI
+}
+
+/**
+ * 상단 KPI 요약(멀티에이전트 구매 리스크 집계) 조회. `VITE_API_BASE_URL`이 설정되고 로그인
+ * 토큰이 있으면 실 API를(`fetchPublicRiskBoard`와 동일한 live/mock 분기 패턴, `public.api.ts`
+ * 참고), 아니면(①단계, 또는 토큰 미보유) mock을 반환한다. 이 엔드포인트는 인증이 필요하다
+ * (`DashboardController`가 `/api/v1/**` 인증 규칙 하에 있음) — `accessToken`이 없으면
+ * 호출 자체를 시도하지 않는다.
+ *
+ * 사용 예:
+ *   const kpi = await fetchProcurementRiskKpi(accessToken)
+ */
+export async function fetchProcurementRiskKpi(accessToken: string | null): Promise<ProcurementRiskKpi> {
+  if (!API_BASE_URL || !accessToken) {
+    return MOCK_PROCUREMENT_RISK_KPI
+  }
+  const result = await fetchWithAuth<ProcurementRiskKpi>(
+    '/api/v1/dashboard/procurement-risk-summary',
+    accessToken,
+  )
+  if ('error' in result) {
+    throw new Error(result.message)
+  }
+  return result
 }
 
 /**

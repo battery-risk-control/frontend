@@ -15,7 +15,7 @@
 | `api/executive.api.ts` | 3계층 경영진 대시보드 mock API |
 | `api/planning.api.ts` | 2계층 경영기획팀 대시보드 mock API |
 | `api/public.api.ts` | 비로그인 공개 대시보드 API(Phase 9.4에서 fetchMaterialPriceTrends/fetchMaterialPriceSummaries를 purchasing.api.ts로 옮기고 재수출만 함; 2026-07-27 — fetchPublicRiskBoard 신규로 지도만 실 API 연동, 나머지는 여전히 mock; 2026-07-29 — fetchNewsFeed도 같은 이유로 purchasing.api.ts로 이동, 재수출만) |
-| `api/purchasing.api.ts` | 1계층 구매팀 대시보드 mock API — risk_event 원천 데이터 + Phase 9.4에서 이동된 글로벌 리스크 맵/가격 추이 mock + 신규 원자재 리스크 개요/수입 의존도 mock + 2026-07-29 이동된 뉴스 속보 mock/신규 환율정보 mock |
+| `api/purchasing.api.ts` | 1계층 구매팀 대시보드 API — risk_event 원천 데이터 + Phase 9.4에서 이동된 글로벌 리스크 맵/가격 추이 mock + 신규 원자재 리스크 개요/수입 의존도 mock + 2026-07-29 이동된 뉴스 속보 mock/신규 환율정보 mock + 멀티에이전트 구매 리스크 KPI 연동 신규(`fetchProcurementRiskKpi` — 이 파일 첫 live/mock 분기 함수, 나머지는 여전히 순수 mock) |
 | `api/types.ts` | 전 화면 공용 API 응답 타입 정의 |
 | `app/routes.tsx` | 최상위 라우트 정의 및 로그인 가드 |
 | `components/layout/Breadcrumb.tsx` | 브레드크럼(탐색 위치 안내) |
@@ -133,6 +133,8 @@
 | `fetchNewsFeed` | 실시간 뉴스 속보 조회 함수 | 2026-07-29, `api/public.api.ts`에서 이 파일로 이동(로직 변경 없음) — 구매팀 대시보드(`NewsExchangeTicker`/승격된 `SupplyNewsFeed`)도 같은 데이터를 재사용하게 되면서 원천 데이터 허브인 이 파일로 옮김. `risk_event`를 `risk_event_id` 기준 날짜 최신순으로 정렬. 같은 날 후속 — `NewsFeedItem.publisher`(보도 언론사 도메인) 필드 추가, `MOCK_NEWS_PUBLISHER_BY_RISK_EVENT_ID` mock 매핑에서 채움(`source`를 언론사명처럼 잘못 쓰던 매핑 오류 발견 후 정정) |
 | `MOCK_NEWS_PUBLISHER_BY_RISK_EVENT_ID` | risk_event_id별 보도 언론사 도메인 mock 매핑 상수 | 2026-07-29 신규 — GDELT `domain` 필드를 반영한 `publisher`용, 실제 GDELT 연동 전 도메인풍 예시값(reuters.com 등) |
 | `fetchExchangeRates` | 환율정보 조회 함수 | 2026-07-29 신규(2차 데모, `NewsExchangeTicker`). `risk_event`와 무관한 완전 신규 개념이라 원천 데이터에서 파생하지 않고 주요 통화 3종(USD/CNY/EUR)을 하드코딩(전 필드 mock 임시값) |
+| `getMockProcurementRiskKpi` | 상단 KPI 요약 mock 기본값 조회 함수 | 멀티에이전트 구매 리스크 KPI 연동 신규. 캡처 데모 수치(심각3/주의5/ERP영향도75점/외부위험60점/검증브리핑8건)와 동일한 mock 반환 |
+| `fetchProcurementRiskKpi` | 상단 KPI 요약(멀티에이전트) 조회 함수 | 멀티에이전트 구매 리스크 KPI 연동 신규. `fetchPublicRiskBoard`(`public.api.ts`)와 동일한 live/mock 분기 — `VITE_API_BASE_URL`과 `accessToken`이 모두 있을 때만 백엔드 `GET /api/v1/dashboard/procurement-risk-summary`(인증 필요) 호출, 아니면 mock 반환 |
 
 ### `api/types.ts`
 | physical | logical | 역할 |
@@ -161,6 +163,7 @@
 | `MaterialPriceSeries` | 원자재 가격 시계열 타입 | 자재/단위/포인트 배열 |
 | `NewsFeedItem` | 뉴스 속보 항목 타입 | 리스크 이벤트ID(risk_event_id)/날짜/자재/출처(source, 데이터 출처 계층)/보도 언론사 도메인(publisher, 2026-07-29 신규)/헤드라인/신뢰도 |
 | `KpiSummaryItem` | KPI 요약 카드 항목 타입 | 라벨/값/단위 |
+| `ProcurementRiskKpi` | 구매팀 대시보드 상단 KPI 타입 | 멀티에이전트 구매 리스크 KPI 연동 신규. 심각/주의/정상 건수 + ERP노출도·외부신호 평균 점수 + 검증 통과 브리핑 건수(백엔드 `GET /api/v1/dashboard/procurement-risk-summary` 확정 계약, `docs/backend-api-contracts.md` 참고) + 2026-08-01 후속 — `critical_count_24h`/`warning_count_24h`/`erp_exposure_score_avg_24h`/`external_signal_score_avg_24h` 추가(카테고리별 시간제한 없는 최신 스냅샷과는 다른 모집단, 원본 행 중 최근 24시간치만 별도 집계 — 미해소 리스크가 24시간 뒤 스냅샷 필드에서 사라지지 않게 하기 위해 절대 안 섞음, Docker 실측 완료 — 검증 중 언더스코어 누락 직렬화 버그 발견·수정) |
 | `RiskExposureByUnit` | 사업부별 리스크 노출도 타입 | 사업부명/노출도 점수 |
 | `VendorRiskHistoryItem` | 협력사 리스크 이력 항목 타입 | 공급사ID/명/90일 이력 건수/최신 등급·신뢰도 |
 | `PlanningDashboardResponse` | 2계층 대시보드 응답 타입 | business_unit + period + kpi_summary + risk_exposure_by_unit + vendor_risk_history |
@@ -386,7 +389,7 @@
 ### `features/purchasing/components/KpiSummaryPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `KpiSummaryPanel` | 상단 KPI 요약 패널 컴포넌트 | 전체/심각/주의/정상 건수 집계. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
+| `KpiSummaryPanel` | 상단 KPI 요약 패널 컴포넌트 | Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환. 멀티에이전트 구매 리스크 KPI 연동 이후(`ProcurementRiskKpi` prop 기반) 심각/주의 건수 + ERP 영향도·외부 위험 평균 점수 + 검증 브리핑 건수 5칸으로 교체 — 기존 `events: RiskEvent[]` prop 기반 전체/심각/주의/정상 집계는 폐기. 2026-08-01 후속 — 심각/주의/ERP영향도/외부위험 4칸에 "24시간" 보조 텍스트(`.subLabel`) 한 줄씩 병기(검증 브리핑 칸은 24h 변형 없음), 기존 값을 대체하지 않음 |
 
 ### `features/purchasing/components/MaterialRiskOverviewRow.tsx`
 | physical | logical | 역할 |
@@ -445,13 +448,13 @@
 ### `lib/AuthContext.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `AuthContextValue` | 인증 Context 값 타입 | orgTier/이메일/signIn/signOut — 이메일(email)은 Phase 8에서 Header 계정 정보 표시용으로 추가 |
+| `AuthContextValue` | 인증 Context 값 타입 | orgTier/이메일/accessToken/signIn/signOut — 이메일(email)은 Phase 8에서 Header 계정 정보 표시용으로 추가, accessToken은 멀티에이전트 구매 리스크 KPI 연동 시 인증 필요 API(`DashboardController`) 호출용으로 신규(`signIn` 시그니처에 토큰 인자 추가) |
 | `AuthContext` | 인증 Context 객체 | `AuthProvider`/`useAuthState`가 공유하는 React Context |
 
 ### `lib/AuthProvider.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `AuthProvider` | 인증 상태 Provider 컴포넌트 | 로그인 성공 시 orgTier와 이메일을 메모리에만 저장(localStorage 미사용, 새로고침 시 소실) |
+| `AuthProvider` | 인증 상태 Provider 컴포넌트 | 로그인 성공 시 orgTier·이메일·accessToken을 메모리에만 저장(localStorage 미사용, 새로고침 시 소실) — accessToken도 동일 원칙으로 메모리 전용 |
 
 ### `lib/dashboardPaths.ts`
 | physical | logical | 역할 |
@@ -504,7 +507,7 @@
 ### `lib/useAuthState.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `useAuthState` | 인증 상태 접근 훅 | `AuthProvider` 내부에서 orgTier/이메일/signIn/signOut 제공, 범위 밖 사용 시 예외 발생 |
+| `useAuthState` | 인증 상태 접근 훅 | `AuthProvider` 내부에서 orgTier/이메일/accessToken/signIn/signOut 제공, 범위 밖 사용 시 예외 발생 |
 
 ### `lib/useScrollOverflowHint.ts`
 | physical | logical | 역할 |

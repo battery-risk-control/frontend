@@ -104,6 +104,22 @@
     콘텐츠를 보여줌). 상세 이력은 `docs/timeline.md` 참고(2026-07-29 두 라운드에 걸쳐 진행).
   - QA: docs/qa-checklist.md E(mock-schemas.md 반영)는 이 Phase 완료 후 별도 확인 후
     진행, 나머지 A~H 특이사항 없음. tsc/eslint/build 통과.
+  - 후속(2026-08-01) — 상단 KPI 요약을 `risk_event` mock 집계에서 백엔드 멀티에이전트
+    (Chain B) 결과 기반으로 교체. 신규 백엔드 API(`GET /api/v1/dashboard/procurement-risk-summary`)
+    + 로그인 토큰 배선(`AuthContext`에 `accessToken` 추가, 기존 블로커) + `KpiSummaryPanel`
+    5칸(심각/주의/ERP영향도/외부위험/검증브리핑) 재구성. 상세는 `docs/timeline.md` "Phase 11
+    후속 — 멀티에이전트 구매 리스크 KPI 연동" 참고.
+  - 후속 2차(2026-08-01) — 심각/주의/ERP영향도/외부위험 4칸에 "최근 24시간" 보조 수치
+    병기(기존 값 대체 아님) + 구매 리스크 평가 "완료 처리"(acknowledge) 백엔드 신설
+    (`POST /api/v1/multi-agent/assessments/{id}/acknowledge`, append-only 로그 테이블 방식,
+    완료 처리된 게 최신 평가였던 카테고리는 KPI 집계에서 자동 제외). Docker 실측 완료 —
+    검증 중 24h 필드 직렬화 버그(`critical_count24h`, 언더스코어 누락) 발견·수정, COBALT
+    전체 완료 처리로 카테고리가 실제로 KPI에서 빠지는 것까지 확인. 완료 처리 **버튼/리스트
+    UI는 의도적으로 미착수** — 개별 자재 대분류 항목을 보여주는 화면이 현재 없어 백엔드부터
+    먼저 완성. 상세는 `docs/timeline.md` "Phase 11 후속 2차" 참고.
+  - [ ] Phase 12(후보) — 구매 리스크 평가 완료 처리 UI: **미착수**. 위 백엔드 API는 있지만
+    소비할 화면이 없다 — 새 패널(자재 대분류 최대 8개 리스트 + 완료 버튼)을 어디에 배치할지
+    (KPI 요약 바로 아래 신설 vs SideNav 미구현 링크 실제 연결 등) 결정 필요.
 
 ## 재사용 규칙 (Phase 3에서 결정되는 인터페이스는 이후 Phase가 그대로 따른다)
 - `ConfidenceBadge`/`RiskGradeBadge`의 props 타입은 이후 모든 화면에서 동일하게 재사용한다 — 화면별로 별도 배지를 새로 만들지 않는다.

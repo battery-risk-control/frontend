@@ -66,7 +66,7 @@
 | `features/purchasing/components/QuickActionsPanel.tsx` | "빠른 작업" 서브섹션(2026-07-29 신규, 2차 데모) — 구매대응순위·마커뉴스·데이터 업데이트 상태 3개 프레임으로 시작(콘텐츠 로직은 다음 단계). 최상위 형제가 아니라 `AlertsPanel`의 자식으로 렌더링. 2026-07-29 후속 — "마커뉴스"만 실제로 연동됨: `markerNews`(`SelectedDetail \| null`)/`onCloseMarkerNews` props 추가, `GlobalRiskBoard`의 `onSelect`에서 올라온 선택 결과를 surin 패턴("주요 뉴스/이벤트 · {label}" 부제+닫기 버튼+리스트)으로 표시(구매대응순위/데이터 업데이트 상태는 여전히 "준비 중입니다" placeholder). `AlertsPanel`의 접힘+호버 미리보기에서도 이 컴포넌트를 그대로 재사용 |
 | `features/purchasing/components/ScoreCardPanel.tsx` | 점수 카드(외부 리스크 종합/ERP 영향) — 더보기 구조 재정의로 신규 분리 |
 | `features/purchasing/pages/BriefingDetailPage.tsx` | 1계층 브리핑 자료 열람 페이지. 2026-07-29 — `SIDE_NAV_ITEMS` 라벨 5종(브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향)으로 갱신 |
-| `features/purchasing/pages/PurchasingDashboardPage.tsx` | 1계층 구매팀 대시보드 페이지. 2026-07-29(2차 데모, UX-01-DB) — 본문 순서 재배치 + `SIDE_NAV_ITEMS` 라벨 5종 갱신 |
+| `features/purchasing/pages/PurchasingDashboardPage.tsx` | 1계층 구매팀 대시보드 페이지. 2026-07-29(2차 데모, UX-01-DB) — 본문 순서 재배치 + `SIDE_NAV_ITEMS` 라벨 5종 갱신. 2026-08-02 — `MaterialRiskStatusPanel`을 본문 맨 아래에 복귀(Phase 11에서 SideNav 전용으로 옮기며 빠졌던 "브리핑 보기" 링크가 죽어있던 것을 CI e2e 실패로 발견해 되살림, `docs/timeline.md` 참고) |
 | `lib/AuthContext.ts` | 인증 상태 Context 객체 정의 |
 | `lib/AuthProvider.tsx` | 인증 상태 Provider 컴포넌트 |
 | `lib/dashboardPaths.ts` | org_tier별 대시보드 경로 매핑 |

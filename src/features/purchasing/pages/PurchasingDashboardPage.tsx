@@ -27,6 +27,7 @@ import { selectAlertEvents } from '../../../lib/selectAlertEvents'
 import { KpiSummaryPanel } from '../components/KpiSummaryPanel'
 import { NewsExchangeTicker } from '../components/NewsExchangeTicker'
 import { MaterialRiskOverviewSection } from '../components/MaterialRiskOverviewSection'
+import { MaterialRiskStatusPanel } from '../components/MaterialRiskStatusPanel'
 import { ImportDependencyRow } from '../components/ImportDependencyRow'
 import { AlertsPanel } from '../components/AlertsPanel'
 import styles from './PurchasingDashboardPage.module.css'
@@ -43,6 +44,10 @@ const PREVIEW_CLOSE_DELAY_MS = 150
 // 2차 데모(2026-07-29) — 원자재 공급사 리스크 현황/ERP 영향은 SideNav 전용으로 이동하며
 // 라벨을 5개로 갱신(href는 기존과 동일한 해시 placeholder 패턴 유지, 실제 라우트 연결은
 // 다음 단계). BriefingDetailPage.tsx에도 동일 배열이 별도로 존재해 함께 갱신했다.
+// 후속(2026-08-02) — "원자재 공급사 리스크 현황"(MaterialRiskStatusPanel)만 본문에 복귀
+// (아래 참고) — SideNav 항목은 그대로 두되(href 해시가 material-risk-heading과 안 맞아
+// 실제 스크롤 이동은 안 됨, Phase 10.9 미해결과 동일한 갭), 라벨이 가리키는 콘텐츠 자체는
+// 다시 존재한다.
 const SIDE_NAV_ITEMS = [
   { label: '브리핑', href: '/purchasing#briefing' },
   { label: '문서 관리', href: '/purchasing#documents' },
@@ -63,6 +68,7 @@ const SECTION_DOTS_SECTIONS = [
   { id: '수입 의존도', headingId: 'import-dependency-heading' },
   { id: '원자재 가격 추이', headingId: 'material-price-detail-heading' },
   { id: '원자재 리스크 요약', headingId: 'material-risk-summary-heading' },
+  { id: '원자재 공급사 리스크 현황', headingId: 'material-risk-heading' },
 ]
 
 /**
@@ -73,10 +79,12 @@ const SECTION_DOTS_SECTIONS = [
  * 뉴스속보·환율정보 롤링 티커
  * (`NewsExchangeTicker`) → 글로벌 리스크 관제 맵(1.5배 확대) → 실시간 뉴스 목록(승격된
  * `SupplyNewsFeed`, 필터링 없음) → 수입 의존도+가격 추이 → 원자재 리스크 요약(기존 2번
- * 위치에서 맨 아래로 이동). 원자재 공급사 리스크 현황/ERP 영향/구매 대응 우선순위는 SideNav
- * 전용으로 이동하며 본문에서 제거했다(각 컴포넌트 파일 자체는 유지 — 실제 라우트 연결은
- * 다음 단계). 뉴스 티커·실시간 뉴스 목록 모두 `fetchNewsFeed()` 하나를 표현만 다르게(롤링 /
- * 정적 리스트) 재사용한다(신규 뉴스 함수 없음).
+ * 위치에서 맨 아래로 이동) → 원자재 공급사 리스크 현황(`MaterialRiskStatusPanel`, 각 리스크
+ * 항목의 "브리핑 보기" 링크로 `/purchasing/briefing/{risk_event_id}` 진입 — 2026-08-02,
+ * Phase 11에서 SideNav 전용으로 옮기며 본문에서 빠졌다가 라우트 연결이 끝내 안 돼 이
+ * 링크 자체가 죽어있던 것을 되살림). ERP 영향/구매 대응 우선순위는 여전히 SideNav
+ * 전용(컴포넌트 파일은 유지, 실제 라우트 연결은 다음 단계). 뉴스 티커·실시간 뉴스 목록 모두
+ * `fetchNewsFeed()` 하나를 표현만 다르게(롤링 / 정적 리스트) 재사용한다(신규 뉴스 함수 없음).
  *
  * 알림 패널(`AlertsPanel`)의 펼침/접힘은 `AlertsPanelContext`(페이지 이동 간 유지)로,
  * 접힌 상태에서 헤더 벨(`AlertsBellButton`) 호버 시 뜨는 미리보기는 이 페이지의 로컬
@@ -197,6 +205,7 @@ export function PurchasingDashboardPage() {
             priceSummaries={priceSummaries}
           />
           <MaterialRiskOverviewSection gauges={gauges} scoreCards={scoreCards} />
+          <MaterialRiskStatusPanel events={events} />
         </main>
         <PageSectionDots variant="withAside" sections={SECTION_DOTS_SECTIONS} />
         <AlertsPanel

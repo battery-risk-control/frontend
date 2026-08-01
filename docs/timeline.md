@@ -824,3 +824,28 @@ UX-01-DB) 2차 명세에 맞춰 구매팀 대시보드 본문을 재배치하고
   추가)/E(`docs/backend-api-contracts.md` "1. 구매 리스크 KPI 요약"/"4. 완료 처리" 모두 실측
   완료 후 확정 계약으로 갱신)/G(임시 스크립트 없음, 검증용 acknowledge 테스트 데이터는
   append-only 로그라 원본 훼손 아니라 되돌리지 않음) 확인. A/C/D/F/H는 해당 없음.
+
+## Phase 11 후속 3차 — 브리핑 보기 링크 복구 (`feat/procurement-risk-kpi`, 2026-08-02)
+`feat/procurement-risk-kpi` 브랜치를 push한 뒤 GitHub Actions CI가 실패(`e2e/briefing-detail.spec.ts`
+타임아웃)했다는 걸 사용자가 이메일로 확인해 전달. 조사 결과 우리가 만든 문제가 아니라
+**base 브랜치(`youngjin/2nd-demo-layout`) 자체가 이미 깨져있던 pre-existing 이슈** —
+`MaterialRiskStatusPanel`(유일하게 "브리핑 보기" 링크를 렌더링하는 컴포넌트)이 Phase 11
+(2026-07-29)에서 SideNav 전용으로 옮기려다 실제 라우트 연결이 끝내 안 된 채 본문에서만
+제거돼, `/purchasing`에 이 링크 자체가 존재하지 않게 된 상태였다(`git log -p` 확인 — 우리
+브랜치가 갈라지기 전 커밋에서 이미 제거됨). 23개 중 1개만 실패하고 나머지는 정상 통과한
+이유도 이걸로 설명됨.
+- 사용자 확정: "브리핑 보기 링크를 살리자" — `ErpImpactPanel`/`PurchasePriorityPanel`(같이
+  제거됐던 나머지 두 패널)은 이번 요청 범위 밖이라 손대지 않고, `MaterialRiskStatusPanel`
+  (events prop 그대로 재사용)만 `PurchasingDashboardPage` 본문 맨 아래(원자재 리스크 요약
+  다음)에 복귀. `SECTION_DOTS_SECTIONS`에 항목 추가, 관련 주석·JSDoc 갱신(SideNav 항목
+  라벨은 그대로 두되 href 해시가 안 맞아 실제 스크롤 이동은 여전히 안 된다는 기존 갭은
+  Phase 10.9로 남겨둠 — 이번 범위 아님).
+- **검증**: `tsc -b`/`eslint` 통과. `playwright.config.ts`가 `dist/`(프로덕션 빌드) 기준으로
+  테스트한다는 걸 놓쳐 처음엔 재현 실패(구버전 `dist/`로 테스트) — `npm run build` 재실행 후
+  `npx playwright test`로 전체 24개 e2e **전부 통과** 확인(기존 1개 실패 포함). 브라우저로도
+  실제 클릭 → `/purchasing/briefing/RISK-2026-0721-001` 진입 → 계약 조항 요약/협상 포인트
+  렌더링까지 end-to-end 확인, 콘솔 에러 없음.
+- QA A~H: B(`MaterialRiskStatusPanel` 재사용 소비처 확인 후 추가, 신규 컴포넌트 아님)/
+  E(요구사항 Seq 24 "내부 브리핑 자료 열람 화면"에 대응하는 기존 기능 복구)/G(재현용 stale
+  `dist/` 문제를 재빌드로 해소, 임시 스크립트 없음)/H(CI 실패 → 원인 규명 → 수정 → 재현
+  테스트로 검증까지 번호 없이도 순서대로 보고) 확인. A/C/D/F는 해당 없음.

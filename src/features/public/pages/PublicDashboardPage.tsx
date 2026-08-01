@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   fetchPublicAiRecommendations,
+  fetchPublicExchangeRates,
+  fetchPublicImportDependency,
   fetchPublicNewsFeed,
   fetchPublicPriceSummaries,
   fetchPublicPriceTrends,
@@ -9,18 +11,34 @@ import {
 } from '../../../api/public.api'
 import type {
   AiRecommendation,
+  ExchangeRateBoard,
   GlobalRiskBoardItem,
+  ImportDependencyData,
   MaterialPriceSeries,
   MaterialPriceSummary,
   NewsFeedItem,
 } from '../../../api/types'
 import { useAuthState } from '../../../lib/useAuthState'
 import { Header } from '../../../components/layout/Header'
+import { Footer } from '../../../components/layout/Footer'
 import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
 import { AiPriorityList } from '../components/AiPriorityList'
+import { ExchangeRateBand } from '../components/ExchangeRateBand'
+import { MaterialPriceTrendCard } from '../components/MaterialPriceTrendCard'
+import { ImportDependencyPanel } from '../../purchasing/components/ImportDependencyPanel'
 import { MaterialPriceDetail } from '../../../components/widgets/MaterialPriceDetail'
+import { DEFAULT_PERIOD, PERIOD_DAYS } from '../../../lib/materialPricePeriods'
 import { SupplyNewsFeed } from '../components/SupplyNewsFeed'
 import styles from './PublicDashboardPage.module.css'
+
+/** 컴팩트 카드가 보여줄 구간(일). 목업의 x축(07/25~07/31)에 맞춘 한 주다. */
+const TREND_CARD_DAYS = 7
+
+/**
+ * 컴팩트 카드가 대표로 보여줄 자재. 목업 기준이며, 데이터에 없으면 첫 자재로 넘어간다 —
+ * 백엔드 자재 구성이 바뀌어도 카드가 빈 채로 남지 않게 한다.
+ */
+const TREND_CARD_MATERIAL = '코발트'
 
 const TIER_TABS = [
   { label: '구매팀', path: '/purchasing' },
@@ -55,6 +73,23 @@ export function PublicDashboardPage() {
   const [newsItems, setNewsItems] = useState<NewsFeedItem[]>([])
   const [priceSeries, setPriceSeries] = useState<MaterialPriceSeries[]>([])
   const [priceSummaries, setPriceSummaries] = useState<MaterialPriceSummary[]>([])
+  // 컴팩트 카드는 최근 7일만 본다. 30일 응답을 잘라 쓰지 않고 따로 조회하는 이유는 지수 기준일이
+  // 구간에 종속되기 때문이다 — 30일 응답을 7일로 자르면 첫 점이 100이 아니라 105쯤에서 시작해
+  // "기준일=100" 표기와 화면이 어긋난다.
+  const [trendCardSeries, setTrendCardSeries] = useState<MaterialPriceSeries[]>([])
+  // 기간 탭 상태는 페이지가 소유한다 — 탭이 바뀌면 차트와 요약 카드를 같은 days로 함께 다시
+  // 불러야 하고, 그 조회는 이 페이지의 책임이기 때문이다.
+  const [period, setPeriod] = useState(DEFAULT_PERIOD)
+  const [importDependency, setImportDependency] = useState<ImportDependencyData>({
+    total: 0,
+    breakdown: [],
+  })
+  // 초기값을 빈 밴드로 둬서, 조회 전·실패 시 모두 ExchangeRateBand의 빈 상태 분기로 수렴한다.
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRateBoard>({
+    rate_date: null,
+    base_currency: 'KRW',
+    rates: [],
+  })
 
   // useQuery(TanStack Query) 대신 useState/useEffect로 최소 구현 — 이 화면이 최초의 실제
   // 비동기 API 연동이라 QueryClientProvider 도입 여부를 별도로 확정하기 전까지는 이렇게
@@ -87,16 +122,50 @@ export function PublicDashboardPage() {
       .catch((err) => {
         console.error('공개 뉴스 속보 조회 실패', err)
       })
-    // 차트와 요약 카드는 백엔드에서 같은 구간·같은 데이터로 파생하지만, 한쪽이 실패해도 다른
-    // 쪽은 그려야 하므로 조회는 분리한다.
-    fetchPublicPriceTrends()
+    fetchPublicPriceTrends(TREND_CARD_DAYS)
+      .then((series) => {
+        if (!cancelled) setTrendCardSeries(series)
+      })
+      .catch((err) => {
+        console.error('공개 원자재 가격 추이(단기) 조회 실패', err)
+      })
+    fetchPublicImportDependency()
+      .then((data) => {
+        if (!cancelled) setImportDependency(data)
+      })
+      .catch((err) => {
+        console.error('공개 수입 의존도 조회 실패', err)
+      })
+    // 환율은 다른 패널과 원천이 완전히 다르다(한국수출입은행 고시환율). 실패해도 나머지 패널은
+    // 그대로 그려야 하므로 다른 조회와 마찬가지로 분리한다.
+    fetchPublicExchangeRates()
+      .then((board) => {
+        if (!cancelled) setExchangeRates(board)
+      })
+      .catch((err) => {
+        console.error('공개 환율 조회 실패', err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // 가격 차트·요약 카드만 기간 탭에 반응한다. 위 마운트 훅과 분리한 이유는 지도·뉴스·환율까지
+  // 탭을 누를 때마다 다시 부를 이유가 없어서다.
+  //
+  // 둘을 반드시 **같은 days로** 부른다 — 백엔드가 "같은 구간에서 파생"을 전제로 만들어져 있어,
+  // 한쪽만 기간이 바뀌면 차트는 6개월인데 요약 카드는 1개월 등락을 말하는 상태가 된다.
+  useEffect(() => {
+    let cancelled = false
+    const days = PERIOD_DAYS[period]
+    fetchPublicPriceTrends(days)
       .then((series) => {
         if (!cancelled) setPriceSeries(series)
       })
       .catch((err) => {
         console.error('공개 원자재 가격 추이 조회 실패', err)
       })
-    fetchPublicPriceSummaries()
+    fetchPublicPriceSummaries(days)
       .then((summaries) => {
         if (!cancelled) setPriceSummaries(summaries)
       })
@@ -106,7 +175,7 @@ export function PublicDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [period])
 
   function handleTierTabClick(path: string) {
     navigate(orgTier ? path : '/auth')
@@ -128,6 +197,11 @@ export function PublicDashboardPage() {
           ))}
         </div>
       </Header>
+      {/* 기획서 ②번 줄. 지도(③) 위에 놓이는 가로 띠라 4패널 그리드 바깥에 둔다 —
+          뉴스속보 마퀴가 붙으면 이 줄을 좌우로 나눠 쓰게 된다(마퀴 미구현). */}
+      <div className={styles.band}>
+        <ExchangeRateBand rateDate={exchangeRates.rate_date} rates={exchangeRates.rates} />
+      </div>
       <main id="main-content" className={styles.grid}>
         {riskBoardLoading ? (
           <div className={styles.riskBoardLoading}>지도 데이터를 불러오는 중입니다…</div>
@@ -135,9 +209,28 @@ export function PublicDashboardPage() {
           <GlobalRiskBoard items={riskBoardItems} />
         )}
         <AiPriorityList recommendations={recommendations} />
-        <MaterialPriceDetail series={priceSeries} summaries={priceSummaries} />
+        <MaterialPriceDetail
+          series={priceSeries}
+          summaries={priceSummaries}
+          period={period}
+          onPeriodChange={setPeriod}
+        />
         <SupplyNewsFeed items={newsItems} />
+        {/* 기획서 ④번 행(수입 의존도 | 가격추이).
+            비로그인 블러는 검증 편의를 위해 꺼둔 상태다. 되살리려면 blurred={!orgTier}로 바꾼다
+            (ImportDependencyPanel의 blurred 처리는 그대로 살아 있다). 단, 블러는 시각적 구분일 뿐
+            값은 응답에 그대로 담겨 있으므로 실제로 가리려면 백엔드에서 막아야 한다. */}
+        <ImportDependencyPanel data={importDependency} />
+        <MaterialPriceTrendCard
+          series={
+            trendCardSeries.find((s) => s.material === TREND_CARD_MATERIAL) ?? trendCardSeries[0]
+          }
+        />
       </main>
+      {/* 기획서 ⑨번. 그리드 아래에 붙지만 컷오프 기법(.page의 height:100vh + .grid의 auto 행)을
+          깨지 않는다 — 첫 화면에는 그리드 2행이 잘린 채로 보이고 footer는 스크롤 끝에 있다.
+          외부 데이터 출처 표기 의무(ExchangeRate-API)가 여기서 충족된다. */}
+      <Footer />
     </div>
   )
 }

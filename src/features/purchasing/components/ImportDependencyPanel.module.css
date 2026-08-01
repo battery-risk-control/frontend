@@ -38,3 +38,17 @@
   font-weight: var(--font-weight-medium);
   color: var(--color-text);
 }
+
+/* 비로그인 화면용 흐림. 시각적 구분일 뿐 보안 장치가 아니다 — 값은 응답에 그대로 들어 있다.
+   드래그로 텍스트를 긁어 읽는 것만은 막아 "가려져 있다"는 의도가 분명해지게 한다. */
+.blurred {
+  filter: blur(5px);
+  user-select: none;
+  pointer-events: none;
+}
+
+.footnote {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}

@@ -2,10 +2,30 @@
   border-top: 1px solid var(--color-border);
   padding: var(--space-4) var(--space-6);
   background: var(--color-surface);
+  /* 페이지들이 height:100vh 플렉스 컬럼이라, 본문이 넘칠 때 기본 flex-shrink로 footer가
+     눌려 글자가 잘린다. 높이는 내용대로 유지하고 넘치는 만큼은 페이지가 스크롤하게 둔다. */
+  flex-shrink: 0;
 }
 
 .text {
   margin: 0;
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+}
+
+/* 외부 데이터 출처. 표기 의무는 지키되 운영기관 정보보다 뒤로 물러나야 하므로 한 단계 더 흐리게 둔다. */
+.credits {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  opacity: 0.8;
+}
+
+.creditLink {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.creditLink:hover {
+  color: var(--color-primary);
 }

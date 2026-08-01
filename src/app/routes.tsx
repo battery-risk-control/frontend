@@ -4,6 +4,10 @@ import { PublicDashboardPage } from '../features/public/pages/PublicDashboardPag
 import { AuthPage } from '../features/auth/pages/AuthPage'
 import { PurchasingDashboardPage } from '../features/purchasing/pages/PurchasingDashboardPage'
 import { BriefingDetailPage } from '../features/purchasing/pages/BriefingDetailPage'
+import { RiskMonitoringPage } from '../features/purchasing/pages/RiskMonitoringPage'
+import { MaterialRiskPage } from '../features/purchasing/pages/MaterialRiskPage'
+import { ContractRagPage } from '../features/purchasing/pages/ContractRagPage'
+import { AiBriefingPage } from '../features/purchasing/pages/AiBriefingPage'
 import { PlanningDashboardPage } from '../features/planning/pages/PlanningDashboardPage'
 import { ExecutiveDashboardPage } from '../features/executive/pages/ExecutiveDashboardPage'
 import { useAuthState } from '../lib/useAuthState'
@@ -53,6 +57,42 @@ export function AppRoutes() {
         element={
           <RequireAuth tier="purchasing">
             <PurchasingDashboardPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/purchasing/risk-monitoring"
+        element={
+          <RequireAuth tier="purchasing">
+            <RiskMonitoringPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/purchasing/materials"
+        element={
+          <RequireAuth tier="purchasing">
+            <MaterialRiskPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/purchasing/contract-rag"
+        element={
+          <RequireAuth tier="purchasing">
+            <ContractRagPage />
+          </RequireAuth>
+        }
+      />
+      {/*
+        AI 브리핑은 앞의 세 화면에서 `?source=NEWS&ref=252` 형태로 대상을 넘겨 받는다.
+        쿼리스트링 없이 들어오면 "최근 브리핑" 열람 전용 화면이 된다.
+      */}
+      <Route
+        path="/purchasing/ai-briefing"
+        element={
+          <RequireAuth tier="purchasing">
+            <AiBriefingPage />
           </RequireAuth>
         }
       />

@@ -63,3 +63,30 @@ export async function fetchWithAuth<T>(
     headers: { Authorization: `Bearer ${token}`, ...options.headers },
   })
 }
+
+/**
+ * 파일 업로드(multipart/form-data) 전용. `fetchJson`을 쓰지 못하는 이유는 그쪽이 항상
+ * `Content-Type: application/json`을 붙이기 때문이다 — multipart는 브라우저가 직접
+ * `boundary`까지 포함해 헤더를 만들어야 해서, 우리가 Content-Type을 지정하는 순간 서버가
+ * 본문 경계를 찾지 못하고 요청이 깨진다. 그래서 Authorization만 붙이고 나머지는 맡긴다.
+ *
+ * 사용 예:
+ *   const result = await uploadWithAuth<UploadResult>('/api/v1/...', accessToken, formData)
+ */
+export async function uploadWithAuth<T>(
+  path: string,
+  token: string,
+  body: FormData,
+): Promise<T | FetchJsonError> {
+  const res = await fetch(`${API_BASE_URL ?? ''}${path}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body,
+  })
+  const payload: ApiSuccessEnvelope<T> | ApiErrorEnvelope = await res.json()
+  if (!res.ok || !payload.success) {
+    const errorBody = payload as ApiErrorEnvelope
+    return { error: errorBody.error.code, message: errorBody.error.message }
+  }
+  return payload.data
+}

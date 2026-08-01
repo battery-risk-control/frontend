@@ -1,0 +1,415 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.subheading {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.refreshButton {
+  padding: var(--space-1) var(--space-4);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.refreshButton:hover {
+  background: var(--color-bg);
+}
+
+/* 상단 KPI 4장. 좁아지면 2열로 접힌다. */
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+@media (max-width: 900px) {
+  .summaryRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.summaryLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.summaryValue {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+/* KPI가 전체를 대표하지 않을 때의 각주. 카드 아래 한 줄을 통째로 차지한다. */
+.summaryFootnote {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.toneCritical {
+  color: var(--color-risk-critical);
+}
+
+.toneWarning {
+  color: var(--color-risk-warning);
+}
+
+.toneNormal {
+  color: var(--color-risk-normal);
+}
+
+.toneInfo {
+  color: var(--color-primary);
+}
+
+.toneNeutral {
+  color: var(--color-text);
+}
+
+/* 목록:상세 = 3:2. 상세는 sticky라 목록을 길게 스크롤해도 따라온다(리스크 모니터링과 동일). */
+.split {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.listPanel,
+.detailPanel {
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.detailPanel {
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-4));
+}
+
+.panelHeading {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.table th {
+  padding: var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table td {
+  padding: var(--space-2);
+  color: var(--color-text);
+  vertical-align: middle;
+}
+
+.numeric {
+  text-align: right;
+}
+
+.row {
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-fast);
+}
+
+.row:hover {
+  background: var(--color-bg);
+}
+
+/* 선택 행은 배경만으로 구분하면 등급 배지 색과 섞이므로 좌측 막대를 함께 쓴다. */
+.rowSelected {
+  background: var(--color-bg);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.rowButton {
+  padding: 0;
+  font: inherit;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.rowButton:hover {
+  text-decoration: underline;
+}
+
+/* 점수를 낼 수 없었던 자재. 등급 배지 자리를 비우면 표가 흔들려 자리를 유지한다. */
+.unavailable {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.unavailableList {
+  margin: var(--space-3) 0 0;
+  padding-left: var(--space-4);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.detailBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.detailLevel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.levelTag {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+}
+
+.forcedNote {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.detailSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.detailSectionTitle {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+
+.detailText {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+  color: var(--color-text);
+}
+
+/* 라벨:값 2열. 목업의 "현재 재고 6.5일" 같은 정렬을 만든다. */
+.factList {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+}
+
+.fact {
+  display: contents;
+}
+
+.factLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.factValue {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.footnote {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.primaryAction,
+.secondaryAction {
+  display: block;
+  padding: var(--space-3);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.secondaryAction {
+  color: var(--color-risk-normal);
+  background: var(--color-bg);
+  border: 1px solid var(--color-risk-normal);
+}
+
+.primaryAction {
+  color: var(--color-surface);
+  background: var(--color-risk-normal);
+}
+
+.primaryAction:disabled,
+.secondaryAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.primaryAction:not(:disabled):hover,
+.secondaryAction:not(:disabled):hover {
+  opacity: 0.88;
+}
+
+.blockedReason {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+/* 버튼 결과(계약 근거·브리핑)는 패널 안에 이어 붙인다 — 모달로 띄우면 자재 상세와 대조할 수 없다. */
+.resultSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.questionList,
+.reasonList {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.clauseList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clause {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.clauseMeta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.clauseText {
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  color: var(--color-text);
+  white-space: pre-wrap;
+}
+
+.notice {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-risk-critical);
+}

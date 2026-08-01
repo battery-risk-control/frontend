@@ -1,5 +1,6 @@
 import {
   fetchGlobalRiskBoard,
+  fetchImportDependency,
   fetchMaterialPriceSummaries,
   fetchMaterialPriceTrends,
   fetchRiskEvents,
@@ -8,7 +9,9 @@ import { fetchJson } from './http'
 import { parseRiskEventDate } from '../lib/riskEventId'
 import type {
   AiRecommendation,
+  ExchangeRateBoard,
   GlobalRiskBoardItem,
+  ImportDependencyData,
   MaterialPriceSeries,
   MaterialPriceSummary,
   NewsFeedItem,
@@ -131,14 +134,21 @@ export async function fetchPublicNewsFeed(): Promise<NewsFeedItem[]> {
  * mock이 3종(니켈/리튬/코발트)인 것과 달리 실 API는 7종을 내려주며, 화면의 "원자재" 드롭다운은
  * 데이터에서 자동 생성되므로 프론트 수정 없이 항목이 늘어난다.
  *
+ * `days`로 조회 구간을 정한다(1~180, 범위를 벗어나면 백엔드가 잘라서 처리). 구간을 바꾸면
+ * **기준일(`base_date`)도 함께 옮겨가** 지수가 100에서 다시 시작한다 — 저장값이 자재의 톤당
+ * 가격이 아니라 프록시 종목의 주가라, "구간 시작 대비 몇 %"만 뜻이 있기 때문이다.
+ * `fetchPublicPriceSummaries`에 **같은 days**를 넘겨야 차트와 요약 카드가 어긋나지 않는다.
+ *
  * 사용 예:
- *   const series = await fetchPublicPriceTrends()
+ *   const series = await fetchPublicPriceTrends(7)
  */
-export async function fetchPublicPriceTrends(): Promise<MaterialPriceSeries[]> {
+export async function fetchPublicPriceTrends(days?: number): Promise<MaterialPriceSeries[]> {
   if (!API_BASE_URL) {
     return fetchMaterialPriceTrends()
   }
-  const result = await fetchJson<MaterialPriceSeries[]>('/api/v1/public/price-trends')
+  const result = await fetchJson<MaterialPriceSeries[]>(
+    days === undefined ? '/api/v1/public/price-trends' : `/api/v1/public/price-trends?days=${days}`,
+  )
   if ('error' in result) {
     throw new Error(result.message)
   }
@@ -152,18 +162,93 @@ export async function fetchPublicPriceTrends(): Promise<MaterialPriceSeries[]> {
  * mock의 risk_score는 시각 구성을 위한 임시값이었으나, 실 API는 연율화 변동성(일간 변동성 × √252)을
  * 백분율로 환산한 값이다 — 임의 수치가 아니라 표준 지표다.
  *
+ * `days`는 `fetchPublicPriceTrends`와 **같은 값**을 넘겨야 한다 — 한쪽만 구간을 바꾸면
+ * 차트와 요약 카드가 서로 다른 기간을 가리키게 된다.
+ *
  * 사용 예:
- *   const summaries = await fetchPublicPriceSummaries()
+ *   const summaries = await fetchPublicPriceSummaries(7)
  */
-export async function fetchPublicPriceSummaries(): Promise<MaterialPriceSummary[]> {
+export async function fetchPublicPriceSummaries(days?: number): Promise<MaterialPriceSummary[]> {
   if (!API_BASE_URL) {
     return fetchMaterialPriceSummaries()
   }
-  const result = await fetchJson<MaterialPriceSummary[]>('/api/v1/public/price-summaries')
+  const result = await fetchJson<MaterialPriceSummary[]>(
+    days === undefined
+      ? '/api/v1/public/price-summaries'
+      : `/api/v1/public/price-summaries?days=${days}`,
+  )
   if ('error' in result) {
     throw new Error(result.message)
   }
   return result
+}
+
+/**
+ * 비로그인 공개 대시보드 수입 의존도 조회. `fetchPublicRiskBoard`와 동일한 mode 분기 컨벤션 —
+ * `VITE_API_BASE_URL`이 있으면 실 API(`GET /api/v1/public/import-dependency`), 없으면 mock.
+ *
+ * 백엔드가 ERP 발주 데이터(purchase_orders · purchase_order_items · suppliers)를 공급사 국적별로
+ * 묶어 구성비를 만든다. 주문마다 결제통화(USD/EUR/KRW)가 달라 **고시환율로 원화 환산한 뒤**
+ * 합산하므로, `base_date`가 환산에 쓴 고시일이다.
+ *
+ * 조각 색(`color`)은 내려오지 않는다 — 배색은 화면의 몫이라 `ImportDependencyPanel`이 채운다.
+ *
+ * 사용 예:
+ *   const data = await fetchPublicImportDependency()
+ */
+export async function fetchPublicImportDependency(): Promise<ImportDependencyData> {
+  if (!API_BASE_URL) {
+    return fetchImportDependency()
+  }
+  const result = await fetchJson<ImportDependencyData>('/api/v1/public/import-dependency')
+  if ('error' in result) {
+    throw new Error(result.message)
+  }
+  return result
+}
+
+/**
+ * 비로그인 공개 대시보드 환율 밴드 조회. `fetchPublicRiskBoard`와 동일한 mode 분기 컨벤션 —
+ * `VITE_API_BASE_URL`이 있으면 실 API(`GET /api/v1/public/exchange-rates`), 없으면 mock.
+ *
+ * 백엔드는 한국수출입은행 고시환율을 하루 2회 수집해 DB에 쌓아두고, 이 API는 DB의 **가장 최근
+ * 고시일**을 읽는다 — 화면이 외부 API 응답 시간이나 일일 호출 한도에 묶이지 않는다. 원천이
+ * 영업일 11시 전후 1회 갱신인 일환율이라 `rate_date`는 요청일이 아닌 실제 고시일이고, 주말에는
+ * 직전 영업일 날짜가 내려온다.
+ *
+ * 사용 예:
+ *   const board = await fetchPublicExchangeRates()
+ */
+export async function fetchPublicExchangeRates(): Promise<ExchangeRateBoard> {
+  if (!API_BASE_URL) {
+    return fetchExchangeRates()
+  }
+  const result = await fetchJson<ExchangeRateBoard>('/api/v1/public/exchange-rates')
+  if ('error' in result) {
+    throw new Error(result.message)
+  }
+  return result
+}
+
+/**
+ * 환율 밴드 mock 함수. ①단계(mock)와 `fetchPublicExchangeRates`의 폴백 경로에서 쓰인다.
+ *
+ * 실 API의 응답 모양을 그대로 따른다 — 직접 고시(`KOREAEXIM`)와 재정환율(`CROSS_USD`)을 둘 다
+ * 넣고, 재정환율은 등락이 비어 있는 상태(`—`)로 둔다. 무료 소스가 과거 조회를 주지 않아 실제로도
+ * 수집 첫날에는 이 모양이라, mock만 보고 만든 화면이 실 데이터에서 깨지지 않게 하려는 것이다.
+ */
+export function fetchExchangeRates(): ExchangeRateBoard {
+  return {
+    rate_date: '2026-07-31',
+    base_currency: 'KRW',
+    rates: [
+      { currency_code: 'USD', currency_name: '미국 달러', unit_multiplier: 1, label: 'USD/KRW', rate: 1441.1, change_amount: -9.0, change_rate: -0.62, change_label: '▼ 0.62%', rate_source: 'KOREAEXIM', cross_rate: false },
+      { currency_code: 'EUR', currency_name: '유로', unit_multiplier: 1, label: 'EUR/KRW', rate: 1661.16, change_amount: -2.54, change_rate: -0.15, change_label: '▼ 0.15%', rate_source: 'KOREAEXIM', cross_rate: false },
+      { currency_code: 'CNH', currency_name: '위안화', unit_multiplier: 1, label: 'CNH/KRW', rate: 213.56, change_amount: -0.85, change_rate: -0.4, change_label: '▼ 0.40%', rate_source: 'KOREAEXIM', cross_rate: false },
+      { currency_code: 'CLP', currency_name: '칠레 페소', unit_multiplier: 100, label: 'CLP(100)/KRW', rate: 154.3906, change_amount: null, change_rate: null, change_label: '—', rate_source: 'CROSS_USD', cross_rate: true },
+      { currency_code: 'JPY', currency_name: '일본 옌', unit_multiplier: 100, label: 'JPY(100)/KRW', rate: 902.13, change_amount: 14.21, change_rate: 1.6, change_label: '▲ 1.60%', rate_source: 'KOREAEXIM', cross_rate: false },
+    ],
+  }
 }
 
 /**
@@ -178,13 +263,22 @@ export function fetchNewsFeed(): NewsFeedItem[] {
     .map((event) => ({
       risk_event_id: event.risk_event_id,
       date: parseRiskEventDate(event.risk_event_id),
+      // mock에는 실제 수집 시각이 없어 그 날짜의 자정으로 둔다. 상대 시각이 "N일 전"으로 나오지만
+      // 없는 정밀도를 지어내는 것보다 낫다.
+      collected_at: `${parseRiskEventDate(event.risk_event_id)}T00:00:00Z`,
       material: event.market_context.material,
-      // mock은 risk_event(분석 결과)에서 파생하므로 등급이 항상 있다. 실 API에서는 분석이
-      // 붙지 않은 수집 뉴스가 있어 생략될 수 있다.
+      // mock은 risk_event(분석 결과)에서 파생하므로 등급이 항상 있다. 실 API에서는 멀티에이전트를
+      // 통과하지 않은 뉴스가 있어 생략될 수 있다.
       grade: event.grade,
       source: event.market_context.source,
       headline: event.market_context.event_summary,
+      // mock 문구는 처음부터 한국어라 원문·표시용이 같고 번역 대상이 아니다.
+      headline_original: event.market_context.event_summary,
+      translated: false,
       confidence_label: event.confidence_label,
+      country_code: event.market_context.country_code ?? null,
+      // mock은 실제 기사가 아니라 원문 링크가 없다. 화면이 헤드라인을 링크 대신 텍스트로 렌더한다.
+      url: null,
     }))
     .sort((a, b) => (a.date < b.date ? 1 : -1))
 }

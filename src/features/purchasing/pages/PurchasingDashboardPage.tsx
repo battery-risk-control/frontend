@@ -17,6 +17,7 @@ import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
 import { PageSectionDots } from '../../../components/ui/PageSectionDots/PageSectionDots'
 import { useAlertsPanelState } from '../../../lib/useAlertsPanelState'
 import { selectAlertEvents } from '../../../lib/selectAlertEvents'
+import { PURCHASING_SIDE_NAV_ITEMS } from '../../../lib/purchasingNav'
 import { KpiSummaryPanel } from '../components/KpiSummaryPanel'
 import { MaterialRiskOverviewSection } from '../components/MaterialRiskOverviewSection'
 import { ImportDependencyRow } from '../components/ImportDependencyRow'
@@ -30,13 +31,6 @@ import styles from './PurchasingDashboardPage.module.css'
  * 떨어져 있어(도트 인디케이터처럼 인접하지 않음) DOM 포함 관계 트릭 대신, 둘 중 하나라도
  * 호버 중이면 유지하고 둘 다 벗어난 뒤 이 시간만큼 지나야 닫는 디바운스 방식을 쓴다. */
 const PREVIEW_CLOSE_DELAY_MS = 150
-
-const SIDE_NAV_ITEMS = [
-  { label: '리스크 현황판', href: '/purchasing#risk-board' },
-  // 별도 목록 화면이 없어 대시보드 내 각 리스크 항목의 "브리핑 보기" 링크로 진입한다.
-  // href는 SideNav의 React key 중복을 피하기 위해 /purchasing 뒤에 서로 다른 해시를 붙였다.
-  { label: '브리핑 자료', href: '/purchasing#briefing' },
-]
 
 // alerts-heading(우측 알림 패널)은 항상 뷰포트 밖으로 스크롤되지 않는 별도 영역이라 제외.
 const SECTION_DOTS_SECTIONS = [
@@ -127,7 +121,7 @@ export function PurchasingDashboardPage() {
       />
       <div className={styles.body}>
         <SideNavToggleButton />
-        <SideNav items={SIDE_NAV_ITEMS} />
+        <SideNav items={PURCHASING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <h1 className={styles.heading}>구매팀 대시보드</h1>
           <KpiSummaryPanel events={events} />

@@ -27,7 +27,19 @@ export function DonutChart({ data, centerLabel, centerValue }: DonutChartProps) 
     <div className={styles.wrapper}>
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
-          <Pie data={data} dataKey="value" nameKey="label" innerRadius={55} outerRadius={80} paddingAngle={1} stroke="none">
+          {/* isAnimationActive={false} — recharts 3 + React 19 조합에서 진입 애니메이션이
+              시작되지 않아 조각이 빈 <g>로만 남고 path가 그려지지 않는다(실측: 도넛이 통째로
+              공백). 애니메이션을 끄면 첫 프레임부터 최종 형태로 그린다. */}
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="label"
+            innerRadius={55}
+            outerRadius={80}
+            paddingAngle={1}
+            stroke="none"
+            isAnimationActive={false}
+          >
             {data.map((d) => (
               <Cell key={d.label} fill={d.color} />
             ))}

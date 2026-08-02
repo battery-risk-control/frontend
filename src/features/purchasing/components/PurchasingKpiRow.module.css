@@ -46,11 +46,38 @@
   color: var(--color-text-muted);
 }
 
-.value {
+/* 큰 숫자와 24h 보조 줄을 감싸는 <dd>. 마진 초기화는 여기서 하고, 색은 큰 숫자에만 준다 —
+   보조 줄까지 등급 색이 번지면 두 값이 같은 무게로 읽힌다. */
+.valueBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   margin: 0;
+}
+
+.value {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   line-height: 1.2;
+}
+
+/* 24시간 보조 줄. 모집단이 달라 큰 숫자와 뺄셈하면 안 되는 값이라(컴포넌트 주석 참고),
+   증감처럼 보이지 않게 회색 + 작은 글씨로만 둔다. */
+.subValue {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.subLabel {
+  padding: 0 4px;
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
 }
 
 .unit {

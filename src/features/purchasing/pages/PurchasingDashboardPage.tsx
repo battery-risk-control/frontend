@@ -8,7 +8,10 @@ import {
   fetchPublicRiskBoard,
 } from '../../../api/public.api'
 import {
+  acknowledgeAssessment,
+  fetchMaterialRiskSummary,
   fetchPurchasingKpiSummary,
+  fetchSupplierOverview,
   toMaterialRiskGauges,
   toScoreCards,
 } from '../../../api/purchasingDashboard.api'
@@ -23,10 +26,12 @@ import type {
   MaterialPriceSeries,
   MaterialPriceSummary,
   MaterialRiskItem,
+  MaterialRiskSummaryItem,
   NewsFeedItem,
   PurchasingKpiSummary,
   RiskMonitoringEvent,
   SelectedArticle,
+  SupplierOverview,
 } from '../../../api/types'
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
@@ -46,6 +51,8 @@ import { PurchasingKpiRow } from '../components/PurchasingKpiRow'
 import { LiveNewsMarquee } from '../components/LiveNewsMarquee'
 import { LatestNewsPanel } from '../components/LatestNewsPanel'
 import { MaterialRiskOverviewSection } from '../components/MaterialRiskOverviewSection'
+import { MaterialRiskSummaryTable } from '../components/MaterialRiskSummaryTable'
+import { SupplierOverviewPanel } from '../components/SupplierOverviewPanel'
 import { ImportDependencyRow } from '../components/ImportDependencyRow'
 import { MaterialRiskStatusPanel } from '../components/MaterialRiskStatusPanel'
 import { ErpImpactPanel } from '../components/ErpImpactPanel'
@@ -80,10 +87,14 @@ const SECTION_DOTS_SECTIONS = [
   { id: '최신 뉴스', headingId: 'latest-news-heading' },
   { id: '수입 의존도', headingId: 'import-dependency-heading' },
   { id: '원자재 가격 추이', headingId: 'material-price-detail-heading' },
-  { id: '원자재 리스크 요약', headingId: 'material-risk-summary-heading' },
+  // 이름이 비슷한 두 섹션이 나란히 있다. 위쪽은 최종 합성 점수(7종 표), 아래쪽은 ERP 노출도
+  // 게이지다 — 점수의 뜻이 달라 도트에서도 구분되게 라벨을 나눴다.
+  { id: '원자재별 리스크 요약', headingId: 'material-risk-composite-heading' },
+  { id: '원자재 리스크 개요', headingId: 'material-risk-summary-heading' },
   { id: '원자재 공급사 리스크 현황', headingId: 'material-risk-heading' },
   { id: 'ERP 영향', headingId: 'erp-impact-heading' },
   { id: '구매 대응 우선순위', headingId: 'purchase-priority-heading' },
+  { id: '공급사 현황', headingId: 'supplier-overview-heading' },
 ]
 
 /**
@@ -139,6 +150,12 @@ export function PurchasingDashboardPage() {
 
   // --- 인증 API 4종 ---
   const [kpi, setKpi] = useState<PurchasingKpiSummary | null>(null)
+  const [materialRiskSummary, setMaterialRiskSummary] = useState<MaterialRiskSummaryItem[]>([])
+  /** 완료 처리 중인 평가 id. 버튼 단위로 잠가 같은 평가를 두 번 보내지 않는다. */
+  const [pendingAssessmentId, setPendingAssessmentId] = useState<string | null>(null)
+  /** 완료 처리 후 KPI·원자재 요약을 다시 부르기 위한 트리거. */
+  const [reloadKey, setReloadKey] = useState(0)
+  const [supplierOverview, setSupplierOverview] = useState<SupplierOverview | null>(null)
   const [materials, setMaterials] = useState<MaterialRiskItem[]>([])
   const [monitoringEvents, setMonitoringEvents] = useState<RiskMonitoringEvent[]>([])
   const [briefings, setBriefings] = useState<AiBriefingListItem[]>([])
@@ -230,6 +247,10 @@ export function PurchasingDashboardPage() {
 
   // 인증 API — 토큰이 준비된 뒤에만 부른다. RequireAuth가 이 화면을 지키므로 실제로는 항상
   // 값이 있지만, 없을 때 401을 만들지 않도록 가드를 둔다.
+  //
+  // `reloadKey`는 "대응 완료" 후 KPI와 원자재 요약을 다시 부르기 위한 것이다. 두 조회가 같은
+  // 테이블(procurement_risk_assessments)을 서로 다른 기준으로 집계하므로, 한쪽만 갱신하면
+  // 화면 안에서 건수와 표가 어긋난 채로 남는다.
   useEffect(() => {
     if (!accessToken) return
     let cancelled = false
@@ -239,6 +260,20 @@ export function PurchasingDashboardPage() {
       })
       .catch((err) => {
         console.error('KPI 요약 조회 실패', err)
+      })
+    fetchMaterialRiskSummary(accessToken)
+      .then((summary) => {
+        if (!cancelled) setMaterialRiskSummary(summary)
+      })
+      .catch((err) => {
+        console.error('원자재 리스크 요약 조회 실패', err)
+      })
+    fetchSupplierOverview(accessToken)
+      .then((overview) => {
+        if (!cancelled) setSupplierOverview(overview)
+      })
+      .catch((err) => {
+        console.error('공급사 현황 조회 실패', err)
       })
     fetchMaterialRiskOverview(accessToken)
       .then((overview) => {
@@ -264,7 +299,27 @@ export function PurchasingDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [accessToken])
+  }, [accessToken, reloadKey])
+
+  /**
+   * 평가 1건을 완료 처리하고 두 집계를 다시 부른다.
+   *
+   * 낙관적 갱신을 하지 않는다 — 완료 처리하면 그 자재의 **다음 평가**가 최신으로 올라와
+   * 점수·등급·주요 이슈가 통째로 바뀔 수 있어서, 화면에서 그 결과를 미리 계산할 수 없다.
+   * 서버 값을 다시 받는 편이 정확하다.
+   */
+  async function handleAcknowledge(item: MaterialRiskSummaryItem) {
+    if (!accessToken || !item.latest_assessment_id) return
+    setPendingAssessmentId(item.latest_assessment_id)
+    try {
+      await acknowledgeAssessment(accessToken, item.latest_assessment_id)
+      setReloadKey((key) => key + 1)
+    } catch (err) {
+      console.error('완료 처리 실패', err)
+    } finally {
+      setPendingAssessmentId(null)
+    }
+  }
 
   function handlePreviewMouseEnter() {
     if (closeTimeoutRef.current) {
@@ -348,12 +403,21 @@ export function PurchasingDashboardPage() {
             onPeriodChange={setPeriod}
           />
 
+          {/* 원자재 7종 · 최종 합성 점수(외부신호+ERP노출+계약공백). 아래 게이지 행과 자리가
+              붙어 있지만 **점수의 뜻이 다르다** — 게이지는 ERP 노출도 단독 점수다. */}
+          <MaterialRiskSummaryTable
+            items={materialRiskSummary}
+            pendingAssessmentId={pendingAssessmentId}
+            onAcknowledge={handleAcknowledge}
+          />
+
           {/* ── 목업에 없는 기존 구성 (아래) ───────────────────────
               목업이 화면 전체를 반영한 것이 아니라, 지우지 않고 아래로 내렸다. */}
           <MaterialRiskOverviewSection gauges={gauges} scoreCards={scoreCards} />
           <MaterialRiskStatusPanel materials={materials} />
           <ErpImpactPanel materials={materials} />
           <PurchasePriorityPanel materials={materials} />
+          <SupplierOverviewPanel overview={supplierOverview} />
         </main>
         <PageSectionDots variant="withAside" sections={SECTION_DOTS_SECTIONS} />
         <DashboardSidePanel

@@ -4,6 +4,7 @@ import type {
   MaterialPriceSummary,
   RiskMonitoringEvent,
 } from '../api/types'
+import { formatCollectedAt } from './formatCollectedAt'
 
 /**
  * 구매팀 대시보드 우측 "주요 알림" 목록을 만든다.
@@ -86,20 +87,7 @@ function toPriceAlerts(
 /**
  * 수집 시각을 `08-03 00:51`(현지, 24시간)로 만든다.
  *
- * **날짜를 항상 붙인다.** 목업은 시각만 보여주지만 우리 수집은 며칠 전 기사도 목록에 남아,
- * 날짜를 빼면 어제 11:07과 오늘 11:07이 구분되지 않는다.
- *
- * `toLocale*`을 쓰지 않는 이유는 표기가 환경에 따라 흔들려서다 — ko-KR은 `07. 30.`처럼 점과
- * 공백을 붙이고 `hour12`도 로케일 기본값을 타서, 24시간 고정 표기를 보장하려면 직접 만드는 편이 확실하다.
- * (자리 계산은 브라우저 현지 시간대 기준이다. 백엔드가 UTC ISO-8601로 주므로 `Date`가 변환한다.)
+ * 구현은 `lib/formatCollectedAt`에 있다 — 뉴스 상세 패널도 같은 표기를 써야 하는데 거기에
+ * 따로 만든 `toLocaleString` 버전이 12시간제로 나오고 있었다(2026-08-03).
  */
-function toTimeLabel(collectedAt: string): string {
-  const date = new Date(collectedAt)
-  // 파싱이 안 되면 원문 앞부분을 그대로 보여준다 — 지어낸 시각보다 낫다.
-  if (Number.isNaN(date.getTime())) return collectedAt.slice(0, 16).replace('T', ' ')
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return (
-    `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
-    `${pad(date.getHours())}:${pad(date.getMinutes())}`
-  )
-}
+const toTimeLabel = formatCollectedAt

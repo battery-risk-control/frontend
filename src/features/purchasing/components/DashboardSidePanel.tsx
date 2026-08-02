@@ -5,6 +5,7 @@ import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { useScrollOverflowHint } from '../../../lib/useScrollOverflowHint'
 import { toNewsEventRef } from '../../../lib/newsEventRef'
+import { formatCollectedAt } from '../../../lib/formatCollectedAt'
 import type { AiBriefingListItem, DashboardAlert, SelectedArticle } from '../../../api/types'
 import styles from './DashboardSidePanel.module.css'
 
@@ -39,18 +40,6 @@ interface DashboardSidePanelProps {
   isPreviewing: boolean
   onPreviewMouseEnter: () => void
   onPreviewMouseLeave: () => void
-}
-
-/** `2026-08-01T08:40:38Z` → `08-01 17:40`(현지). 목록에 초까지 보일 이유가 없다. */
-function formatCollectedAt(iso: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return date.toLocaleString('ko-KR', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 function AlertIcon() {
@@ -126,8 +115,9 @@ function NewsDetail({ news }: { news: SelectedArticle | null }) {
       </span>
       <p className={styles.detailHeadline}>{news.headline}</p>
       <p className={styles.detailMeta}>
-        {/* 지도에서 온 항목에는 수집 시각이 없다(공개 지도 응답에 없는 필드) — 지어내지 않고 뺀다.
-            대신 국가 한글명이 있어 코드보다 그쪽을 먼저 쓴다. */}
+        {/* 지도에서 온 항목도 2026-08-03부터 수집 시각이 온다(RiskBoardItem.collected_at).
+            실데이터 0건 폴백인 placeholder에는 여전히 없어서 있을 때만 붙인다.
+            국가는 한글명이 있으면 코드보다 그쪽을 먼저 쓴다. */}
         {[
           news.country_name ?? news.country_code,
           news.material,

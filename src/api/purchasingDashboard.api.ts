@@ -2,9 +2,11 @@ import { fetchWithAuth } from './http'
 import type {
   MaterialRiskGaugeItem,
   MaterialRiskItem,
+  MaterialRiskSummaryItem,
   PurchasingKpiSummary,
   RiskGrade,
   ScoreCardItem,
+  SupplierOverview,
 } from './types'
 
 /**
@@ -54,6 +56,70 @@ export async function fetchPurchasingKpiSummary(accessToken: string): Promise<Pu
     throw new Error(result.message)
   }
   return result
+}
+
+/**
+ * 원자재별 리스크 요약 7종(최종 합성 점수 기준).
+ *
+ * 평가가 없는 자재도 행이 오므로 화면이 7줄을 항상 같은 자리에 그린다 — 목록을 프론트에서
+ * 만들지 않는 이유는, 자재를 추가할 때 백엔드와 화면 두 곳을 고쳐야 하는 상태를 만들지
+ * 않기 위해서다.
+ *
+ * 사용 예:
+ *   const summary = await fetchMaterialRiskSummary(accessToken)
+ */
+export async function fetchMaterialRiskSummary(
+  accessToken: string,
+): Promise<MaterialRiskSummaryItem[]> {
+  const result = await fetchWithAuth<MaterialRiskSummaryItem[]>(
+    '/api/v1/purchasing-dashboard/material-risk-summary',
+    accessToken,
+  )
+  if ('error' in result) {
+    throw new Error(result.message)
+  }
+  return result
+}
+
+/**
+ * 공급사 현황 + 대체 공급사 추천.
+ *
+ * 사용 예:
+ *   const overview = await fetchSupplierOverview(accessToken)
+ */
+export async function fetchSupplierOverview(accessToken: string): Promise<SupplierOverview> {
+  const result = await fetchWithAuth<SupplierOverview>(
+    '/api/v1/purchasing-dashboard/supplier-overview',
+    accessToken,
+  )
+  if ('error' in result) {
+    throw new Error(result.message)
+  }
+  return result
+}
+
+/**
+ * 평가 1건을 완료 처리한다. 성공하면 그 평가가 KPI 심각/주의 집계에서 빠지고, 같은 자재에
+ * 새 평가가 들어오면 자동으로 다시 잡힌다.
+ *
+ * **원본 행을 지우지 않는다.** 백엔드가 별도 로그 테이블에만 남기므로
+ * (`procurement_risk_acknowledgements`, append-only), 되돌리려면 그 로그를 지우면 된다.
+ *
+ * 사용 예:
+ *   await acknowledgeAssessment(accessToken, item.latest_assessment_id)
+ */
+export async function acknowledgeAssessment(
+  accessToken: string,
+  assessmentId: string,
+): Promise<void> {
+  const result = await fetchWithAuth<unknown>(
+    `/api/v1/multi-agent/assessments/${assessmentId}/acknowledge`,
+    accessToken,
+    { method: 'POST' },
+  )
+  if (result !== null && typeof result === 'object' && 'error' in result) {
+    throw new Error(String((result as { message?: string }).message ?? '완료 처리에 실패했습니다.'))
+  }
 }
 
 /** 심각 → 주의 → 정상 순으로 세울 때 쓰는 순위. 값이 클수록 위험하다. */

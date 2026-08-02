@@ -29,8 +29,12 @@ export function fromNewsFeedItem(item: NewsFeedItem): SelectedArticle {
  * 보여줄 뉴스 제목"이고, 번역본이 있으면 이미 한국어로 내려온다(`RiskEventService`가
  * `raw_events.title_ko`를 조인해 채운다).
  *
- * `collected_at`·`url`·`headline_original`은 **채우지 않는다.** 공개 지도 응답에 없는 값이라
- * 지어내면 화면이 "3분 전"이나 원문 링크를 가짜로 그리게 된다. 화면은 있는 필드만 렌더한다.
+ * `collected_at`·`url`은 2026-08-03에 지도 응답에 추가돼서 이제 그대로 넘긴다 — 그전에는
+ * 지도에서 고른 항목만 "기사 원문 열기" 버튼과 시각이 빠져 있었다. 값이 없으면(placeholder
+ * 폴백) `undefined`가 되고 화면이 알아서 뺀다.
+ *
+ * `headline_original`은 여전히 채우지 않는다. 공개 지도 응답에 번역 전 원문이 없어서, 지어내면
+ * 같은 문장을 원문이라며 두 번 그리게 된다.
  *
  * 사용 예:
  *   setSelected(fromRiskBoardItem(item))
@@ -45,5 +49,7 @@ export function fromRiskBoardItem(item: GlobalRiskBoardItem): SelectedArticle {
     confidence_label: item.confidence_label,
     country_code: item.country_code ?? null,
     country_name: item.country_name,
+    collected_at: item.collected_at ?? undefined,
+    url: item.source_url ?? null,
   }
 }

@@ -850,3 +850,34 @@ Phase 12.1 직후 사용자가 "사이드 메뉴 전 항목이 흰색이라 현�
   Purchasing 대시보드(해시 placeholder 5개)는 URL에 해시가 없는 기본 상태에서 아무 항목도
   거짓 활성화되지 않음을 확인 — 새 로직이 기존 C3(SideNav 미기능) 상태를 악화시키지
   않았다.
+
+## CI 실패 조사 → C3 부분 해결: 구매팀 SideNav 3항목 실제 라우트 연결 (2026-08-02)
+
+`feat/planning-tier-dashboard` push 후 GitHub Actions CI에서
+`e2e/briefing-detail.spec.ts`가 "브리핑 보기" 링크를 30초 동안 못 찾고 타임아웃 실패.
+조사 결과 **이번 세션 변경과 무관한, Phase 11(2026-07-29)부터 잠재해 있던 버그**로 확인—
+`git show origin/youngjin/2nd-demo-layout:...PurchasingDashboardPage.tsx | grep
+MaterialRiskStatusPanel`이 base 브랜치에서도 이미 0건이었다. Phase 11이 "원자재 공급사
+리스크 현황/ERP 영향/구매 대응 우선순위는 SideNav 전용으로 이동 예정(컴포넌트 파일은
+유지)"이라고 기록했으나 실제로는 본문 제거만 되고 SideNav 연결이 끝나지 않아, 세 컴포넌트
+(`MaterialRiskStatusPanel`/`ErpImpactPanel`/`PurchasePriorityPanel`)가 파일만 존재하고
+앱 어디에도 렌더링되지 않는 상태로 방치돼 있었다(CLAUDE.md "무관한 발견 drift는 보고 후
+확인받아 별도 커밋으로 반영" 원칙에 따라 사용자에게 보고 후 처리 범위 확인).
+
+- 사용자가 3개 패널 전부 연결을 선택(C3 완전 해결이 아니라 부분 해결 — "브리핑"/"문서
+  관리"/"계약 검색" 3항목은 대응 컴포넌트 자체가 없어 범위 밖으로 유지).
+- **신규**: `lib/purchasingNav.ts`(`PURCHASING_SIDE_NAV_ITEMS`, 2계층 `planningNav.ts`와
+  동일 패턴 — 그동안 `PurchasingDashboardPage.tsx`/`BriefingDetailPage.tsx` 2곳에 중복
+  정의돼 있던 배열을 통합), `MaterialRiskStatusPage`/`ErpImpactPage`/`PurchasePriorityPage`
+  (각각 `/purchasing/material-risk`·`/purchasing/erp-impact`·`/purchasing/priority`,
+  `RequireAuth tier="purchasing"`), 공용 셸 CSS `PurchasingSubPage.module.css`
+  (`BriefingDetailPage.module.css`의 page/body/main/heading 패턴 재사용). "구매 대응
+  우선순위"는 Phase 11 당시 SideNav 항목 자체에서도 빠져 있었던 것을 이번에 신규 추가.
+- `e2e/briefing-detail.spec.ts` 수정 — 로그인 직후 `/purchasing`에서 바로 링크를 찾던
+  기존 흐름을, SideNav "원자재 공급사 리스크 현황" 클릭 → `/purchasing/material-risk`
+  진입 → "브리핑 보기" 링크 클릭 순서로 갱신.
+- **검증**: `tsc`/`eslint`/`vite build` 통과, Playwright e2e 전체 24/24 통과(로컬 재현 →
+  수정 → 재실행). `purchasing@test.local` 로그인 후 SideNav 6항목(신규 3개는 실제 라우트,
+  기존 3개는 해시 placeholder 그대로) 확인, ERP 영향 페이지 실제 데이터 렌더링 확인.
+- `docs/roadmap-candidates.md` C3를 "부분 해결(2026-08-02)"로 갱신(완전 해결 아님 — 표제에
+  명시).

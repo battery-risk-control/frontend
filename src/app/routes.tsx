@@ -4,6 +4,9 @@ import { PublicDashboardPage } from '../features/public/pages/PublicDashboardPag
 import { AuthPage } from '../features/auth/pages/AuthPage'
 import { PurchasingDashboardPage } from '../features/purchasing/pages/PurchasingDashboardPage'
 import { BriefingDetailPage } from '../features/purchasing/pages/BriefingDetailPage'
+import { MaterialRiskStatusPage } from '../features/purchasing/pages/MaterialRiskStatusPage'
+import { ErpImpactPage } from '../features/purchasing/pages/ErpImpactPage'
+import { PurchasePriorityPage } from '../features/purchasing/pages/PurchasePriorityPage'
 import { PlanningDashboardPage } from '../features/planning/pages/PlanningDashboardPage'
 import { MaterialRiskPage } from '../features/planning/pages/MaterialRiskPage'
 import { ImportDependencyPage } from '../features/planning/pages/ImportDependencyPage'
@@ -67,6 +70,30 @@ export function AppRoutes() {
         element={
           <RequireAuth tier="purchasing">
             <BriefingDetailPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/purchasing/material-risk"
+        element={
+          <RequireAuth tier="purchasing">
+            <MaterialRiskStatusPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/purchasing/erp-impact"
+        element={
+          <RequireAuth tier="purchasing">
+            <ErpImpactPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/purchasing/priority"
+        element={
+          <RequireAuth tier="purchasing">
+            <PurchasePriorityPage />
           </RequireAuth>
         }
       />

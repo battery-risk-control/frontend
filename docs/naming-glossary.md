@@ -73,12 +73,16 @@
 | `features/purchasing/components/PurchasePriorityPanel.tsx` | 구매 대응 우선순위 패널. 2026-07-29 — `PurchasingDashboardPage` 본문에서 제거 — 컴포넌트 파일 자체는 유지, 현재 실사용처 없음(구매대응순위 개념은 `QuickActionsPanel`의 "빠른 작업" 서브섹션 프레임으로 재등장했으나 콘텐츠 로직은 아직 이 패널과 연결돼 있지 않음) |
 | `features/purchasing/components/QuickActionsPanel.tsx` | "빠른 작업" 서브섹션(2026-07-29 신규, 2차 데모) — 구매대응순위·마커뉴스·데이터 업데이트 상태 3개 프레임으로 시작(콘텐츠 로직은 다음 단계). 최상위 형제가 아니라 `AlertsPanel`의 자식으로 렌더링. 2026-07-29 후속 — "마커뉴스"만 실제로 연동됨: `markerNews`(`SelectedDetail \| null`)/`onCloseMarkerNews` props 추가, `GlobalRiskBoard`의 `onSelect`에서 올라온 선택 결과를 surin 패턴("주요 뉴스/이벤트 · {label}" 부제+닫기 버튼+리스트)으로 표시(구매대응순위/데이터 업데이트 상태는 여전히 "준비 중입니다" placeholder). `AlertsPanel`의 접힘+호버 미리보기에서도 이 컴포넌트를 그대로 재사용 |
 | `features/purchasing/components/ScoreCardPanel.tsx` | 점수 카드(외부 리스크 종합/ERP 영향) — 더보기 구조 재정의로 신규 분리 |
-| `features/purchasing/pages/BriefingDetailPage.tsx` | 1계층 브리핑 자료 열람 페이지. 2026-07-29 — `SIDE_NAV_ITEMS` 라벨 5종(브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향)으로 갱신 |
-| `features/purchasing/pages/PurchasingDashboardPage.tsx` | 1계층 구매팀 대시보드 페이지. 2026-07-29(2차 데모, UX-01-DB) — 본문 순서 재배치 + `SIDE_NAV_ITEMS` 라벨 5종 갱신 |
+| `features/purchasing/pages/BriefingDetailPage.tsx` | 1계층 브리핑 자료 열람 페이지. 2026-07-29 — `SIDE_NAV_ITEMS` 라벨 5종(브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향)으로 갱신. 2026-08-02 — 로컬 `SIDE_NAV_ITEMS` 삭제, `lib/purchasingNav.ts`의 `PURCHASING_SIDE_NAV_ITEMS`로 통합(중복 정의 해소) |
+| `features/purchasing/pages/PurchasingDashboardPage.tsx` | 1계층 구매팀 대시보드 페이지. 2026-07-29(2차 데모, UX-01-DB) — 본문 순서 재배치 + `SIDE_NAV_ITEMS` 라벨 5종 갱신. 2026-08-02 — 로컬 `SIDE_NAV_ITEMS` 삭제, `lib/purchasingNav.ts`로 통합(C3 부분 해결) |
+| `features/purchasing/pages/MaterialRiskStatusPage.tsx` | 원자재 공급사 리스크 현황 페이지(2026-08-02 신규) — Phase 11에서 본문 제거 후 방치됐던 `MaterialRiskStatusPanel`을 실제 라우트(`/purchasing/material-risk`)로 연결(C3 부분 해결) |
+| `features/purchasing/pages/ErpImpactPage.tsx` | ERP 영향 자재 재고 계약 분석 페이지(2026-08-02 신규) — `ErpImpactPanel`을 `/purchasing/erp-impact`로 연결 |
+| `features/purchasing/pages/PurchasePriorityPage.tsx` | 구매 대응 우선순위 페이지(2026-08-02 신규) — `PurchasePriorityPanel`을 `/purchasing/priority`로 연결. 이 항목은 Phase 11 당시 SideNav 메뉴 자체에서도 빠져 있어 이번에 `PURCHASING_SIDE_NAV_ITEMS`에 신규 추가함 |
 | `lib/AuthContext.ts` | 인증 상태 Context 객체 정의 |
 | `lib/AuthProvider.tsx` | 인증 상태 Provider 컴포넌트 |
 | `lib/dashboardPaths.ts` | org_tier별 대시보드 경로 매핑 |
 | `lib/planningNav.ts` | 2계층 사이드 메뉴 7항목 매핑(2026-08-02 신규) — 여러 페이지가 공유 |
+| `lib/purchasingNav.ts` | 1계층 사이드 메뉴 6항목 매핑(2026-08-02 신규) — `planningNav.ts`와 동일 패턴, 그동안 `PurchasingDashboardPage.tsx`/`BriefingDetailPage.tsx` 2곳에 중복 정의돼 있던 배열을 통합 |
 | `lib/AlertsPanelContext.ts` | AlertsPanel 펼침/접힘 상태 Context 객체 정의(2026-07-27 신규, SideNavContext와 동일 패턴). 2026-07-29 — `expand`(강제 펼침, `toggle`과 별도) 액션 추가 — 마커 클릭 시 이미 펼쳐진 상태에서도 접히지 않고 항상 펼쳐지게 하는 용도. 2026-08-02 — `isNarrowViewport` 필드 추가(C13 해결) |
 | `lib/AlertsPanelProvider.tsx` | AlertsPanel 펼침/접힘 상태 Provider 컴포넌트(2026-07-27 신규) — `DEFAULT_ALERTS_EXPANDED` 기본값 상수도 이 파일에 있음. 2026-07-29 — `expand: () => setExpanded(true)` 구현 추가. 2026-08-02 — `NARROW_SHELL_BREAKPOINT_PX` 이하에서 `expanded`를 강제로 `false`로 덮어씀(C13 해결) |
 | `lib/riskEventId.ts` | risk_event_id 날짜 파싱 유틸 |
@@ -499,12 +503,27 @@
 ### `features/purchasing/pages/BriefingDetailPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `BriefingDetailPage` | 1계층 브리핑 자료 열람 페이지 | Seq 24 "내부 브리핑 자료 열람 화면". `/purchasing/briefing/:riskEventId` — 계약 조항 요약/협상 포인트/산출물 메타 표시, RiskGradeBadge/ConfidenceBadge·Breadcrumb 재사용(Breadcrumb 첫 실사용). Phase 9.4부터 `SideNavToggleButton` 추가. 2026-07-29 — `SIDE_NAV_ITEMS`를 `PurchasingDashboardPage.tsx`와 동일하게 브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향 5개 라벨로 갱신(href는 여전히 해시 placeholder) |
+| `BriefingDetailPage` | 1계층 브리핑 자료 열람 페이지 | Seq 24 "내부 브리핑 자료 열람 화면". `/purchasing/briefing/:riskEventId` — 계약 조항 요약/협상 포인트/산출물 메타 표시, RiskGradeBadge/ConfidenceBadge·Breadcrumb 재사용(Breadcrumb 첫 실사용). Phase 9.4부터 `SideNavToggleButton` 추가. 2026-07-29 — `SIDE_NAV_ITEMS`를 `PurchasingDashboardPage.tsx`와 동일하게 브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향 5개 라벨로 갱신(href는 여전히 해시 placeholder). 2026-08-02 — 로컬 `SIDE_NAV_ITEMS` 삭제, `lib/purchasingNav.ts`의 `PURCHASING_SIDE_NAV_ITEMS`로 통합 |
 
 ### `features/purchasing/pages/PurchasingDashboardPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바(+`SideNavToggleButton`) + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역 3종(`MaterialRiskOverviewSection` → 승격된 `GlobalRiskBoard` → `ImportDependencyRow`)을 기존 4단 패널 위에 추가. 2026-07-27 — `selectAlertEvents`로 알림 필터링 후 `Header`의 `accountExtra`(`AlertsBellButton`)와 `AlertsPanel` 양쪽에 전달, hover 미리보기 디바운스(`PREVIEW_CLOSE_DELAY_MS`=150ms)+ESC 닫기 로컬 상태 관리. **2026-07-29(2차 데모, UX-01-DB 재배치)** — 본문 순서를 KPI 요약 → `NewsExchangeTicker`(신규) → `GlobalRiskBoard`(`mapHeight=330`으로 1.5배 확대) → 승격된 `SupplyNewsFeed`(신규 소비처) → `ImportDependencyRow` → `MaterialRiskOverviewSection`(2번 위치→맨 아래로 이동)으로 재배치, `MaterialRiskStatusPanel`/`ErpImpactPanel`/`PurchasePriorityPanel`은 본문에서 제거(SideNav 전용 이동 예정, 파일은 유지), `SIDE_NAV_ITEMS`를 브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향 5개로 갱신, `SECTION_DOTS_SECTIONS`도 위 재배치에 맞춰 8→7개로 갱신. 최초 구현(수정 1 이전)엔 `QuickActionsPanel`을 `AlertsPanel`과 나란한 별도 최상위 형제로 뒀으나, 수정 1에서 `AlertsPanel`의 "빠른 작업" 서브섹션으로 통합되며 이 페이지에서의 직접 렌더링은 제거됨. **2026-07-29 후속** — `markerNews`(`SelectedDetail \| null`) 로컬 상태 신규, `handleMarkerSelect(detail)`이 `GlobalRiskBoard`의 `onSelect`로 연결돼 `setMarkerNews` + (선택 시) `useAlertsPanelState()`의 `expand()`(강제 펼침, 토글 아님)를 호출해 접혀있어도 마커 클릭 시 자동으로 펼쳐짐. `<AlertsPanel>`에는 더 이상 `alerts` prop을 전달하지 않고(수정 2-1로 그쪽 표시 자체가 제거됨) 대신 `markerNews`/`onCloseMarkerNews={() => setMarkerNews(null)}`를 전달 |
+| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바(+`SideNavToggleButton`) + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역 3종(`MaterialRiskOverviewSection` → 승격된 `GlobalRiskBoard` → `ImportDependencyRow`)을 기존 4단 패널 위에 추가. 2026-07-27 — `selectAlertEvents`로 알림 필터링 후 `Header`의 `accountExtra`(`AlertsBellButton`)와 `AlertsPanel` 양쪽에 전달, hover 미리보기 디바운스(`PREVIEW_CLOSE_DELAY_MS`=150ms)+ESC 닫기 로컬 상태 관리. **2026-07-29(2차 데모, UX-01-DB 재배치)** — 본문 순서를 KPI 요약 → `NewsExchangeTicker`(신규) → `GlobalRiskBoard`(`mapHeight=330`으로 1.5배 확대) → 승격된 `SupplyNewsFeed`(신규 소비처) → `ImportDependencyRow` → `MaterialRiskOverviewSection`(2번 위치→맨 아래로 이동)으로 재배치, `MaterialRiskStatusPanel`/`ErpImpactPanel`/`PurchasePriorityPanel`은 본문에서 제거(SideNav 전용 이동 예정, 파일은 유지), `SIDE_NAV_ITEMS`를 브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향 5개로 갱신, `SECTION_DOTS_SECTIONS`도 위 재배치에 맞춰 8→7개로 갱신. 최초 구현(수정 1 이전)엔 `QuickActionsPanel`을 `AlertsPanel`과 나란한 별도 최상위 형제로 뒀으나, 수정 1에서 `AlertsPanel`의 "빠른 작업" 서브섹션으로 통합되며 이 페이지에서의 직접 렌더링은 제거됨. **2026-07-29 후속** — `markerNews`(`SelectedDetail \| null`) 로컬 상태 신규, `handleMarkerSelect(detail)`이 `GlobalRiskBoard`의 `onSelect`로 연결돼 `setMarkerNews` + (선택 시) `useAlertsPanelState()`의 `expand()`(강제 펼침, 토글 아님)를 호출해 접혀있어도 마커 클릭 시 자동으로 펼쳐짐. `<AlertsPanel>`에는 더 이상 `alerts` prop을 전달하지 않고(수정 2-1로 그쪽 표시 자체가 제거됨) 대신 `markerNews`/`onCloseMarkerNews={() => setMarkerNews(null)}`를 전달. **2026-08-02** — 로컬 `SIDE_NAV_ITEMS` 삭제, `lib/purchasingNav.ts`로 통합(C3 부분 해결, "원자재 공급사 리스크 현황"/"ERP 영향" href가 해시에서 실제 라우트로 교체) |
+
+### `features/purchasing/pages/MaterialRiskStatusPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `MaterialRiskStatusPage` | 원자재 공급사 리스크 현황 페이지(2026-08-02 신규) | `/purchasing/material-risk` — Phase 11에서 본문 제거 후 SideNav 연결이 안 끝나 앱 어디에도 렌더링되지 않던 `MaterialRiskStatusPanel`을 실제 라우트로 연결(C3 부분 해결). `BriefingDetailPage`와 동일한 셸 패턴(Header/SideNavToggleButton/SideNav/Breadcrumb) |
+
+### `features/purchasing/pages/ErpImpactPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ErpImpactPage` | ERP 영향 자재 재고 계약 분석 페이지(2026-08-02 신규) | `/purchasing/erp-impact` — `ErpImpactPanel`을 실제 라우트로 연결 |
+
+### `features/purchasing/pages/PurchasePriorityPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `PurchasePriorityPage` | 구매 대응 우선순위 페이지(2026-08-02 신규) | `/purchasing/priority` — `PurchasePriorityPanel`을 실제 라우트로 연결. 이 항목은 Phase 11 당시 SideNav 메뉴 자체에서도 빠져 있어 `PURCHASING_SIDE_NAV_ITEMS`에 신규 추가함 |
 | `GLOBAL_RISK_BOARD_MAP_HEIGHT` | 관제 맵 확대 높이 상수(330px) | 2026-07-29 신규 — 기존 220px 기준 1.5배. `GlobalRiskBoard`는 공개 대시보드와 공유하는 컴포넌트라 CSS 기본값을 직접 바꾸지 않고 이 페이지에서만 `mapHeight` prop으로 override |
 | `PREVIEW_CLOSE_DELAY_MS` | 알림 미리보기 닫힘 디바운스(150ms) | 트리거(헤더 벨)·콘텐츠(AlertsPanel)가 화면상 떨어져 있어 둘 다 벗어난 뒤 이 시간만큼 지나야 닫힘 |
 
@@ -528,6 +547,11 @@
 | physical | logical | 역할 |
 |---|---|---|
 | `PLANNING_SIDE_NAV_ITEMS` | 2계층 사이드 메뉴 7항목 매핑 상수 | 2026-08-02 신규. `PlanningDashboardPage`/`MaterialRiskPage`/`ImportDependencyPage`/`SupplierAnalysisPage`/`ContractStatusPage`/`AiBriefingSummaryPage`/`DataQualityPage` 7개 페이지가 공유(1계층 `SIDE_NAV_ITEMS` 추출 전례와 동일 목적). "설정"만 상세 미정 placeholder라 해시(`/planning#settings`)로 남김 |
+
+### `lib/purchasingNav.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `PURCHASING_SIDE_NAV_ITEMS` | 1계층 사이드 메뉴 6항목 매핑 상수 | 2026-08-02 신규. `PurchasingDashboardPage`/`BriefingDetailPage`/`MaterialRiskStatusPage`/`ErpImpactPage`/`PurchasePriorityPage` 5개 페이지가 공유(그동안 앞의 두 파일에 동일 배열이 중복 정의돼 있던 것을 통합, `planningNav.ts`와 동일 목적). "브리핑"/"문서 관리"/"계약 검색" 3항목은 대응 화면 설계가 아직 없어 해시 placeholder로 남김(C3) |
 
 ### `lib/riskEventId.ts`
 | physical | logical | 역할 |

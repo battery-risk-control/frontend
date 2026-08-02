@@ -42,7 +42,20 @@ surin에는 `pages/ErpImpact.tsx`(`/erp-impact` 라우트, 네비 라벨 "ERP �
   따라서 C1 해결책(리스크 유형별 분포 차트 구현)으로 이 화면의 부재를 대신 해소할 수 없다.
 - 착수 여부·우선순위는 미결정 상태로 남긴다.
 
-## C3 — SideNav 내비게이션 항목 미기능(placeholder) 및 개념 불일치 (미결정 — 상태 어휘 5종에 미해당, 착수 방향 3안 중 택일 필요, 2026-07-24)
+## C3 — SideNav 내비게이션 항목 미기능(placeholder) 및 개념 불일치 (부분 해결 — 2026-08-02, 나머지 3항목은 여전히 착수 방향 3안 중 택일 필요, 2026-07-24 최초 기록)
+
+**부분 해결(2026-08-02)**: `e2e/briefing-detail.spec.ts` CI 실패("브리핑 보기" 링크를 30초
+동안 못 찾음)를 조사하던 중, Phase 11(2026-07-29)에서 본문에서 제거된
+`MaterialRiskStatusPanel`/`ErpImpactPanel`/`PurchasePriorityPanel` 3개 컴포넌트가 SideNav
+연결도 끝나지 않아 앱 어디에도 렌더링되지 않는 상태(파일만 존재, 소비처 0건)로 방치돼
+있었음을 발견. 이 3개만 실제 라우트(`/purchasing/material-risk`·`/purchasing/erp-impact`·
+`/purchasing/priority`, 각각 독립된 `<h1>`)로 연결해 해결 — 위 실측 4번 항목("리스크
+현황판"과 "브리핑 자료" 클릭 결과가 구분 안 됨)과 같은 클래스의 문제가 이 3개 항목에서는
+더 이상 재현되지 않는다. 중복 정의돼 있던 `SIDE_NAV_ITEMS`(PurchasingDashboardPage.tsx/
+BriefingDetailPage.tsx 2곳)도 `lib/purchasingNav.ts`(2계층 `planningNav.ts`와 동일 패턴)로
+통합. **"브리핑"/"문서 관리"/"계약 검색" 3항목은 여전히 해시 placeholder로 남아있고, 아래
+"착수 방향 미결정" 3안 중 택일 문제도 그대로 유효**(대응 컴포넌트 자체가 없어 이번 라운드
+범위 밖).
 
 `SideNav`/`AlertsPanel`은 `/purchasing`·`/planning`·`/executive` 3개 계층의 레이아웃 셸
 레벨에서 적용 여부·내용이 결정된다. `BriefingDetailPage`(`/purchasing/briefing/:riskEventId`)는

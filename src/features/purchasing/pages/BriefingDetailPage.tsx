@@ -7,17 +7,8 @@ import { SideNavToggleButton } from '../../../components/layout/SideNavToggleBut
 import { Breadcrumb } from '../../../components/layout/Breadcrumb'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
+import { PURCHASING_SIDE_NAV_ITEMS } from '../../../lib/purchasingNav'
 import styles from './BriefingDetailPage.module.css'
-
-// 2차 데모(2026-07-29) — PurchasingDashboardPage.tsx의 SIDE_NAV_ITEMS와 동일하게 갱신
-// (href는 여전히 해시 placeholder, 실제 라우트 연결은 다음 단계).
-const SIDE_NAV_ITEMS = [
-  { label: '브리핑', href: '/purchasing#briefing' },
-  { label: '문서 관리', href: '/purchasing#documents' },
-  { label: '계약 검색', href: '/purchasing#contracts' },
-  { label: '원자재 공급사 리스크 현황', href: '/purchasing#material-risk' },
-  { label: 'ERP 영향', href: '/purchasing#erp-impact' },
-]
 
 /**
  * 1계층 브리핑 자료 열람 (Seq 24 "내부 브리핑 자료 열람 화면").
@@ -32,7 +23,7 @@ export function BriefingDetailPage() {
       <Header />
       <div className={styles.body}>
         <SideNavToggleButton />
-        <SideNav items={SIDE_NAV_ITEMS} />
+        <SideNav items={PURCHASING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <Breadcrumb items={[{ label: '구매팀 대시보드', href: '/purchasing' }, { label: '브리핑 자료' }]} />
           {briefing ? (

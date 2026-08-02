@@ -43,6 +43,17 @@
   color: var(--color-risk-critical);
 }
 
+/* STALE·INCOMPLETE — 값을 쓸 수는 있지만 그대로 믿으면 안 되는 상태 */
+.stale {
+  color: var(--color-risk-warning);
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
 .reason {
   margin: var(--space-2) 0 0;
   font-size: var(--font-size-sm);

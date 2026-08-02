@@ -19,9 +19,18 @@
   margin-right: 40px; /* 도트 인디케이터(PageSectionDots) 레일 공간 — main-aside 사이에만 적용, SideNav 쪽 간격은 그대로 유지 */
 }
 
-.heading {
-  margin: 0;
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text);
+/* 지도는 마운트 비용이 큰 컴포넌트(leaflet + world-atlas GeoJSON)라 조회가 끝난 뒤에 그린다.
+   그 사이 자리를 비워두면 아래 카드들이 위로 올라왔다가 다시 내려가므로 같은 자리를 잡아둔다.
+   정식 스켈레톤 UI는 Phase 10.2(미착수)라 공개 대시보드와 같은 최소 텍스트로 둔다. */
+.riskBoardLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
 }

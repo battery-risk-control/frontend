@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   fetchContractDetail,
@@ -12,7 +12,6 @@ import type {
   ContractClauseHit,
   ContractClauseSearchResult,
   ContractDetail,
-  ContractEvidenceRef,
   ContractSummary,
 } from '../../../api/types'
 import { Header } from '../../../components/layout/Header'
@@ -26,15 +25,19 @@ import styles from './ContractRagPage.module.css'
 const DEFAULT_QUERY = '납기 지연과 공급 중단 시 적용되는 계약 조항'
 const TOP_K = 5
 
+/** 백엔드 DocumentService가 받는 형식·크기와 같은 값. 어긋나면 화면이 통과시킨 파일이 서버에서 막힌다. */
+const ALLOWED_EXTENSIONS = ['.pdf', '.txt']
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024
+
 /**
  * 1계층 구매팀 "계약 · RAG 검색". 좌측 조항 검색 결과 + 우측 계약 문서 2단 구성.
  *
  * 검색은 기본적으로 **전체 계약**을 훑는다(백엔드 scope="all") — 화면이 검색창에 문장만 넣고
  * 조항을 찾는 흐름이기 때문이다. 계약을 고르면 그 계약으로 좁힌다.
  *
- * 우측 패널은 조항을 고르면 그 조항이 속한 계약으로 바뀐다. 여기서 계약서를 추가로 올리거나
- * (드롭 → "문서 재처리") 이미 적재된 문서를 다시 임베딩할 수 있고, 담아 둔 근거로 AI 브리핑을
- * 돌릴 수 있다.
+ * 우측 패널은 조항을 고르면 그 조항이 속한 계약으로 바뀐다. **계약 선택 드롭다운으로도 열린다** —
+ * 문서가 하나도 없는 신규 계약은 검색에 걸릴 수가 없어서, 드롭다운이 유일한 진입로다.
+ * 여기서 계약서를 올리거나(드롭 → "문서 재처리") 이미 적재된 문서를 다시 임베딩할 수 있다.
  *
  * **유사도 점수는 임베딩이 실제 모델일 때만 뜻이 있다.** 백엔드가 `mock: true`를 내려주면
  * 점수가 무의미하므로 화면이 경고를 띄운다 — 조용히 숫자만 보여주면 "0.61"을 실제 유사도로
@@ -49,7 +52,6 @@ export function ContractRagPage() {
   const [search, setSearch] = useState<ContractClauseSearchResult | null>(null)
   const [selectedClause, setSelectedClause] = useState<ContractClauseHit | null>(null)
   const [detail, setDetail] = useState<ContractDetail | null>(null)
-  const [evidence, setEvidence] = useState<ContractEvidenceRef[]>([])
   const [stagedFile, setStagedFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
@@ -61,23 +63,30 @@ export function ContractRagPage() {
 
   const apiConfigured = isContractRagApiConfigured()
 
-  useEffect(() => {
-    if (!accessToken || !apiConfigured) return
-    let cancelled = false
-    async function load(token: string) {
-      try {
-        const result = await fetchContracts(token)
-        if (!cancelled) setContracts(result)
-      } catch {
-        // 계약 목록은 검색 범위를 좁히는 보조 수단이라, 실패해도 전체 검색은 그대로 된다.
-        if (!cancelled) setContracts([])
-      }
+  /**
+   * 계약 목록을 불러온다. **적재되지 않은 계약도 포함한다**(`includeUnindexed`) —
+   * 문서가 0건인 신규 계약은 검색 결과에 나올 수가 없어서, 이 목록에서 빠지면 첫 문서를
+   * 올릴 방법이 아예 사라진다. 대신 항목에 "미적재"를 붙여 검색이 빌 것임을 미리 알린다.
+   */
+  const fetchContractList = useCallback(async (): Promise<ContractSummary[]> => {
+    if (!accessToken || !apiConfigured) return []
+    try {
+      return await fetchContracts(accessToken, true)
+    } catch {
+      // 계약 목록은 보조 수단이라, 실패해도 전체 계약 검색은 그대로 된다.
+      return []
     }
-    void load(accessToken)
+  }, [accessToken, apiConfigured])
+
+  useEffect(() => {
+    let cancelled = false
+    void fetchContractList().then((rows) => {
+      if (!cancelled) setContracts(rows)
+    })
     return () => {
       cancelled = true
     }
-  }, [accessToken, apiConfigured])
+  }, [fetchContractList])
 
   async function handleSearch() {
     if (!accessToken || !query.trim()) return
@@ -126,23 +135,19 @@ export function ContractRagPage() {
     if (hit.contract) void loadContract(hit.contract.contract_id)
   }
 
-  /** "근거로 사용하기" 토글. 같은 조항을 다시 누르면 담았던 것을 뺀다. */
-  function toggleEvidence(hit: ContractClauseHit) {
-    setEvidence((previous) => {
-      const exists = previous.some(
-        (item) => item.document_id === hit.document_id && item.chunk_index === hit.chunk_index,
-      )
-      if (exists) {
-        return previous.filter(
-          (item) => !(item.document_id === hit.document_id && item.chunk_index === hit.chunk_index),
-        )
-      }
-      return [...previous, {
-        document_id: hit.document_id,
-        chunk_index: hit.chunk_index,
-        clause_title: hit.clause_title,
-      }]
-    })
+  /**
+   * 계약 선택. 검색 범위를 좁히는 것과 **우측 패널을 여는 것**을 한 번에 한다 —
+   * 검색 결과가 없어도(=문서 미적재 계약이어도) 계약 상세로 들어가 첫 문서를 올릴 수 있어야 한다.
+   */
+  function handleSelectContract(contractId: number | null) {
+    setScopeContractId(contractId)
+    setPanelNotice(null)
+    setSelectedClause(null)
+    if (contractId === null) {
+      setDetail(null)
+      return
+    }
+    void loadContract(contractId)
   }
 
   /**
@@ -161,7 +166,8 @@ export function ContractRagPage() {
           accessToken, detail.contract.contract_id, stagedFile)
         setPanelNotice(result.duplicate
           ? `이미 적재된 문서입니다 (${result.original_file_name}). 다시 임베딩하지 않았습니다.`
-          : `업로드 완료 — ${result.original_file_name} · ${result.chunk_count}개 청크 적재`)
+          : `업로드 완료 — ${result.original_file_name} · ${result.chunk_count}개 청크 적재.`
+            + ' 새 조항을 찾으려면 "계약서 검색"을 다시 누르세요.')
         setStagedFile(null)
         if (fileInputRef.current) fileInputRef.current.value = ''
       } else {
@@ -170,7 +176,14 @@ export function ContractRagPage() {
         setPanelNotice(
           `재처리 완료 — 성공 ${result.success_count}건 · 실패 ${result.failed_count}건`)
       }
-      await loadContract(detail.contract.contract_id)
+      // 상세뿐 아니라 목록도 다시 읽는다 — 목록에 청크 수·"미적재" 표시가 붙어 있어서
+      // 여기서 갱신하지 않으면 방금 올린 계약이 계속 "미적재"로 남는다.
+      // 검색 결과는 일부러 다시 돌리지 않는다(검색 1회 = 임베딩 1콜). 대신 안내로 알린다.
+      const [, rows] = await Promise.all([
+        loadContract(detail.contract.contract_id),
+        fetchContractList(),
+      ])
+      setContracts(rows)
     } catch (err) {
       setPanelError(err instanceof Error ? err.message : '문서 처리에 실패했습니다.')
     } finally {
@@ -179,11 +192,38 @@ export function ContractRagPage() {
   }
 
   /**
+   * 드롭·파일선택 공통 검증. 백엔드도 같은 규칙으로 막지만, 그쪽은 **버튼을 누른 뒤에야**
+   * 알려준다 — 파일을 놓는 순간 틀렸다고 말해주는 편이 낫다.
+   */
+  function stageFile(file: File | null) {
+    if (!file) {
+      setStagedFile(null)
+      return
+    }
+    const name = file.name.toLowerCase()
+    if (!ALLOWED_EXTENSIONS.some((extension) => name.endsWith(extension))) {
+      setStagedFile(null)
+      setPanelError(`PDF 또는 TXT 파일만 올릴 수 있습니다 — ${file.name}`)
+      return
+    }
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setStagedFile(null)
+      setPanelError(
+        `파일이 너무 큽니다(${formatFileSize(file.size)}). 50MB 이하만 올릴 수 있습니다.`)
+      return
+    }
+    setPanelError(null)
+    setStagedFile(file)
+  }
+
+  /**
    * 이 계약을 AI 브리핑 화면으로 넘긴다. 실행은 그 화면의 "LLM 브리핑 생성"이 맡는다.
    *
-   * 담아 둔 근거(evidence)는 함께 넘기지 않는다 — 예전에도 응답에 그대로 실려 돌아올 뿐
-   * 판정에는 반영되지 않았고(그래프에 외부 근거 주입 입구가 없다), AI 브리핑 화면은 계약 RAG
-   * Agent가 직접 조항을 검색해 근거로 쓴다.
+   * **넘기는 것은 계약 하나뿐이다.** 예전에는 화면에서 조항을 골라 담는 "근거로 사용하기"가
+   * 있었지만, 그 조항은 멀티에이전트 판정에 전혀 반영되지 않았다(그래프에 외부 근거를 주입할
+   * 입구가 없다). 효과 없는 선택지를 남겨두면 사용자가 "내가 고른 근거로 분석됐다"고 믿게 되므로
+   * UI째로 걷어냈다. 브리핑의 계약 근거는 AI 브리핑 화면의 계약 RAG Agent가 직접 검색한다.
+   * 그래프에 주입 입구가 생기면 그때 되살린다.
    */
   function handleBriefing() {
     if (!detail) return
@@ -193,8 +233,7 @@ export function ContractRagPage() {
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault()
     setIsDragging(false)
-    const file = event.dataTransfer.files?.[0]
-    if (file) setStagedFile(file)
+    stageFile(event.dataTransfer.files?.[0] ?? null)
   }
 
   return (
@@ -224,17 +263,20 @@ export function ContractRagPage() {
               aria-label="검색어"
             />
             <label className={styles.scopeSelect}>
-              <span>검색 범위</span>
+              <span>계약 선택</span>
               <select
                 value={scopeContractId ?? ''}
                 onChange={(event) =>
-                  setScopeContractId(event.target.value ? Number(event.target.value) : null)
+                  handleSelectContract(event.target.value ? Number(event.target.value) : null)
                 }
               >
                 <option value="">전체 계약</option>
                 {contracts.map((contract) => (
                   <option key={contract.contract_id} value={contract.contract_id}>
                     {contract.erp_contract_id ?? `#${contract.contract_id}`} · {contract.contract_name}
+                    {contract.document_count === 0
+                      ? ' (미적재)'
+                      : ` (${contract.indexed_chunk_count}청크)`}
                   </option>
                 ))}
               </select>
@@ -281,7 +323,9 @@ export function ContractRagPage() {
               )}
               {search && search.results.length === 0 && (
                 <p className={styles.notice}>
-                  일치하는 조항이 없습니다. 검색 범위를 전체 계약으로 넓히거나 표현을 바꿔 보세요.
+                  {detail && detail.contract.document_count === 0
+                    ? '이 계약에는 적재된 문서가 없습니다. 우측에서 계약서를 올린 뒤 다시 검색하세요.'
+                    : '일치하는 조항이 없습니다. 계약 선택을 전체 계약으로 넓히거나 표현을 바꿔 보세요.'}
                 </p>
               )}
 
@@ -291,11 +335,6 @@ export function ContractRagPage() {
                   const isSelected =
                     selectedClause?.document_id === hit.document_id &&
                     selectedClause?.chunk_index === hit.chunk_index
-                  const isEvidence = evidence.some(
-                    (item) =>
-                      item.document_id === hit.document_id &&
-                      item.chunk_index === hit.chunk_index,
-                  )
                   return (
                     <li key={key}>
                       <button
@@ -318,17 +357,6 @@ export function ContractRagPage() {
                         </p>
                         <p className={styles.clauseContent}>{truncate(hit.content)}</p>
                       </button>
-                      <div className={styles.clauseActions}>
-                        <button
-                          type="button"
-                          className={isEvidence
-                            ? `${styles.evidenceButton} ${styles.evidenceButtonActive}`
-                            : styles.evidenceButton}
-                          onClick={() => toggleEvidence(hit)}
-                        >
-                          {isEvidence ? '근거에서 빼기' : '근거로 사용하기'}
-                        </button>
-                      </div>
                     </li>
                   )
                 })}
@@ -406,7 +434,7 @@ export function ContractRagPage() {
                       type="file"
                       accept=".pdf,.txt"
                       className={styles.fileInput}
-                      onChange={(event) => setStagedFile(event.target.files?.[0] ?? null)}
+                      onChange={(event) => stageFile(event.target.files?.[0] ?? null)}
                       aria-label="계약서 파일 선택"
                     />
                   </div>
@@ -426,14 +454,11 @@ export function ContractRagPage() {
                     onClick={handleBriefing}
                     disabled={!detail.briefing_available}
                   >
-                    이 근거로 AI 브리핑 생성
+                    이 계약으로 AI 브리핑 생성
                   </button>
 
                   {!detail.briefing_available && detail.briefing_blocked_reason && (
                     <p className={styles.notice}>{detail.briefing_blocked_reason}</p>
-                  )}
-                  {detail.briefing_available && evidence.length > 0 && (
-                    <p className={styles.notice}>담아 둔 근거 {evidence.length}건</p>
                   )}
                 </>
               )}
@@ -456,4 +481,9 @@ function truncate(content: string, max = 260): string {
 function formatDate(value: string | null): string {
   if (!value) return '—'
   return value.replaceAll('-', '.')
+}
+
+function formatFileSize(bytes: number): string {
+  const megabytes = bytes / (1024 * 1024)
+  return megabytes >= 1 ? `${megabytes.toFixed(1)}MB` : `${Math.ceil(bytes / 1024)}KB`
 }

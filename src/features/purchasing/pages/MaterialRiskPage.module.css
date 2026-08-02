@@ -304,6 +304,32 @@
   color: var(--color-text-muted);
 }
 
+/* ERP Agent 경고 + 재고 노후 판정. 숫자 옆이 아니라 아래에 모아 표 읽기를 방해하지 않는다. */
+.warningList {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+/* 계약 검토가 필요한 자재. 버튼을 왜 눌러야 하는지 먼저 말한다. */
+.reviewRequired {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border-left: 3px solid var(--color-risk-warning);
+  border-radius: var(--radius-sm);
+}
+
+.secondaryActionUrgent {
+  border-width: 2px;
+  font-weight: var(--font-weight-bold);
+}
+
 .actions {
   display: flex;
   flex-direction: column;

@@ -16,7 +16,8 @@ const TIER_TAB_LABEL: Record<string, string> = {
 }
 
 const CASES = [
-  { email: 'purchasing@test.local', ownPath: '/purchasing', ownHeading: '구매팀 대시보드', tryPath: '/executive' },
+  // 제목이 '구매팀 대시보드' → '구매 위험 관제 대시보드'로 바뀌었다(2026-08-02, 목업 반영).
+  { email: 'purchasing@test.local', ownPath: '/purchasing', ownHeading: '구매 위험 관제 대시보드', tryPath: '/executive' },
   { email: 'planning@test.local', ownPath: '/planning', ownHeading: '경영기획팀 대시보드', tryPath: '/purchasing' },
   { email: 'executive@test.local', ownPath: '/executive', ownHeading: '누적 리스크 탐지 KPI', tryPath: '/planning' },
 ] as const

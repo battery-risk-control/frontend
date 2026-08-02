@@ -6,7 +6,8 @@ import { loginAs } from './utils'
  * 정확히 로그인되는지 확인한다.
  */
 const TEST_ACCOUNTS = [
-  { email: 'purchasing@test.local', path: '/purchasing', heading: '구매팀 대시보드' },
+  // 제목이 '구매팀 대시보드' → '구매 위험 관제 대시보드'로 바뀌었다(2026-08-02, 목업 반영).
+  { email: 'purchasing@test.local', path: '/purchasing', heading: '구매 위험 관제 대시보드' },
   { email: 'planning@test.local', path: '/planning', heading: '경영기획팀 대시보드' },
   { email: 'executive@test.local', path: '/executive', heading: '누적 리스크 탐지 KPI' },
 ] as const

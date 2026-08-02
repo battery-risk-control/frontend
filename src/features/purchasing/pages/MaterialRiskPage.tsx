@@ -53,9 +53,11 @@ export function MaterialRiskPage() {
     }
     // 새로고침을 연타하면 이전 요청이 늦게 도착해 최신 결과를 덮어쓸 수 있다.
     let cancelled = false
-    async function load(token: string) {
+    // 첫 진입은 백엔드 캐시를 그대로 쓰고, "새로고침"을 눌렀을 때만 다시 계산시킨다 —
+    // 눌렀는데 같은 숫자가 나오면 버튼이 고장 난 것으로 보인다.
+    async function load(token: string, forceRefresh: boolean) {
       try {
-        const overview = await fetchMaterialRiskOverview(token)
+        const overview = await fetchMaterialRiskOverview(token, forceRefresh)
         if (cancelled) return
         setSummary(overview.summary)
         setMaterials(overview.materials)
@@ -69,7 +71,7 @@ export function MaterialRiskPage() {
         if (!cancelled) setIsLoading(false)
       }
     }
-    void load(accessToken)
+    void load(accessToken, reloadToken > 0)
     return () => {
       cancelled = true
     }
@@ -296,7 +298,12 @@ function MaterialDetailView({
 
       {detail.unavailable_reason && <p className={styles.blockedReason}>{detail.unavailable_reason}</p>}
 
-      {detail.score !== null && (
+      {/*
+        표시 조건이 "점수가 있는가"가 아니라 "ERP Context를 만들었는가"다. 점수는 없는데
+        재고·의존도는 아는 경우가 실제로 있고(예: 일평균 사용량 누락 → Agent가 점수를 만들지 않음),
+        점수 유무로 막으면 확인할 수 있는 정보까지 통째로 감춘다.
+      */}
+      {hasErpContext(detail) && (
         <section className={styles.detailSection}>
           <h4 className={styles.detailSectionTitle}>ERP 노출 정보</h4>
           <dl className={styles.factList}>
@@ -317,6 +324,15 @@ function MaterialDetailView({
             </p>
           )}
         </section>
+      )}
+
+      {/* ERP Agent가 남긴 경고 + 재고 노후 판정. 숫자를 믿어도 되는지 판단할 근거다. */}
+      {detail.warnings.length > 0 && (
+        <ul className={styles.warningList}>
+          {detail.warnings.map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
       )}
 
       {supplier && (
@@ -350,10 +366,21 @@ function MaterialDetailView({
         </section>
       )}
 
+      {/* ERP Agent가 계약 검토가 필요하다고 판단한 건은 버튼을 눌러야 할 이유를 먼저 말한다. */}
+      {detail.contract_review_required && contract && (
+        <p className={styles.reviewRequired}>
+          ERP 상황상 계약 조항 확인이 필요한 자재입니다.
+        </p>
+      )}
+
       <div className={styles.actions}>
         <button
           type="button"
-          className={styles.secondaryAction}
+          className={
+            detail.contract_review_required
+              ? `${styles.secondaryAction} ${styles.secondaryActionUrgent}`
+              : styles.secondaryAction
+          }
           onClick={() => void handleContractEvidence()}
           disabled={!contract || isSearching}
         >
@@ -406,6 +433,14 @@ function ContractEvidenceView({ evidence }: { evidence: ContractEvidence }) {
       </ul>
     </section>
   )
+}
+
+/**
+ * ERP Context를 만들 수 있었는지. 백엔드가 자재를 찾긴 했지만 재고 행이 없어 계산을 시작조차
+ * 못 한 경우(unavailable_reason만 채워진 응답)와, 계산은 했는데 점수만 없는 경우를 가른다.
+ */
+function hasErpContext(detail: MaterialRiskDetail): boolean {
+  return detail.unit !== null || detail.primary_supplier !== null
 }
 
 function Fact({ label, value }: { label: string; value: string }) {

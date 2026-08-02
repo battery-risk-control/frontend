@@ -323,3 +323,40 @@
   font-size: var(--font-size-sm);
   color: var(--color-risk-critical);
 }
+
+/* 앞 화면(리스크 모니터링) 복귀 링크. 생성 전에는 조용히, 생성 후에는 강조한다 —
+   등급이 갱신됐는지 확인하러 돌아갈 시점이 바로 그때다. */
+.returnLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.returnLink:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.returnLinkReady {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.returnHint {
+  padding: 1px var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-surface);
+  background: var(--color-primary);
+  border-radius: var(--radius-sm);
+}

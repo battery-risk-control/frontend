@@ -1,7 +1,6 @@
 import { fetchWithAuth } from './http'
 import type {
   ContractEvidence,
-  MaterialBriefing,
   MaterialRiskDetail,
   MaterialRiskOverview,
 } from './types'
@@ -26,17 +25,22 @@ export function isMaterialRiskApiConfigured(): boolean {
 /**
  * 상단 KPI + 자재별 위험 목록. 둘이 같은 계산 결과에서 나오므로 한 번에 온다.
  *
- * 자재 수만큼 ERP Exposure Agent 호출이 일어나므로 다른 조회보다 느리다(현재 10종 기준
- * 수백 ms). 화면은 로딩 표시를 반드시 띄운다.
+ * 자재 수만큼 ERP Exposure Agent 호출이 일어나므로 다른 조회보다 느리다(현재 10종 기준 약 0.8초).
+ * 화면은 로딩 표시를 반드시 띄운다. 백엔드에 60초 캐시가 있어 두 번째 진입부터는 즉시 온다.
+ *
+ * `refresh`는 화면의 "새로고침" 버튼 전용이다 — 캐시를 건너뛰고 다시 계산한다. 첫 진입에서 켜면
+ * 캐시가 아무 의미가 없으니 켜지 않는다.
  *
  * 사용 예:
  *   const overview = await fetchMaterialRiskOverview(accessToken)
+ *   const fresh = await fetchMaterialRiskOverview(accessToken, true)
  */
 export async function fetchMaterialRiskOverview(
   accessToken: string,
+  refresh = false,
 ): Promise<MaterialRiskOverview> {
   const result = await fetchWithAuth<MaterialRiskOverview>(
-    '/api/v1/material-risk/overview',
+    `/api/v1/material-risk/overview${refresh ? '?refresh=true' : ''}`,
     accessToken,
   )
   if ('error' in result) {
@@ -92,30 +96,9 @@ export async function fetchContractEvidence(
   return result
 }
 
-/**
- * "AI 브리핑 생성". 이 자재에 대해 멀티에이전트를 실행한다.
- *
- * 이 화면에는 뉴스가 없으므로 외부신호는 백엔드가 DB에 이미 저장된 같은 자재 대분류의 최신
- * 분석에서 끌어온다(응답의 `source_*`가 그 출처). 쓸 분석이 없으면 422가 오는데, 상세의
- * `briefing_available`로 미리 알 수 있어 화면은 버튼을 먼저 비활성화한다.
- *
- * LLM 문구 생성은 기본 off다(`useLlm`) — 등급 산출에 필요 없고 버튼 한 번이 곧 비용이다.
- *
- * 사용 예:
- *   const briefing = await generateMaterialBriefing(accessToken, 'MAT-LI-CARB')
+/*
+ * AI 브리핑 생성 함수는 여기에 없다(2026-08-02 제거). 화면의 "AI 브리핑 생성" 버튼은
+ * /purchasing/ai-briefing?source=MATERIAL&ref={erpMaterialId} 로 이동만 하고, 실행은 그 화면의
+ * aiBriefing API가 맡는다. 백엔드의 POST /material-risk/.../briefing도 같은 이유로 없앴다 —
+ * 브리핑 API가 둘로 보이면 어느 쪽이 진짜인지 계속 헷갈린다.
  */
-export async function generateMaterialBriefing(
-  accessToken: string,
-  erpMaterialId: string,
-  useLlm = false,
-): Promise<MaterialBriefing> {
-  const result = await fetchWithAuth<MaterialBriefing>(
-    `/api/v1/material-risk/materials/${encodeURIComponent(erpMaterialId)}/briefing?useLlm=${useLlm}`,
-    accessToken,
-    { method: 'POST' },
-  )
-  if ('error' in result) {
-    throw new Error(result.message)
-  }
-  return result
-}

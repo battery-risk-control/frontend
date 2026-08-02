@@ -126,6 +126,65 @@ export interface GlobalRiskBoardItem {
   coordinates?: { lat: number; lng: number }
 }
 
+/**
+ * 구매팀 대시보드 우측 "뉴스 상세" 탭이 보여주는 선택 항목.
+ *
+ * **두 곳에서 선택된다** — 아래 "최신 뉴스" 목록(`NewsFeedItem`)과 글로벌 위험 지도의 마커
+ * (`GlobalRiskBoardItem`). 둘은 원천이 달라(`raw_events` vs `analyses`) 필드가 겹치지 않고,
+ * 실측상 `risk_event_id`도 서로 만나지 않는다(2026-08-03 기준 교집합 0건) — 지도는
+ * `material_category`·`severity`·국가가 모두 있는 분석만, 뉴스는 자재가 매칭된 수집 원본만
+ * 올라오기 때문이다. 그래서 한쪽을 다른 쪽으로 찾아 맞추지 못하고 이 공통 모양으로 모은다.
+ *
+ * 지도에서 온 항목에는 `collected_at`·`url`·`headline_original`이 없다(공개 지도 응답에 없는
+ * 필드다). 화면은 있는 것만 렌더한다 — 없는 값을 지어내면 "원문 링크가 있는 줄 알았는데 없는"
+ * 상태가 된다.
+ */
+export interface SelectedArticle {
+  /** 뉴스는 `risk_event_id`, 지도는 `risk_event_id`. 목록의 선택 표시에 쓴다. */
+  id: string
+  /** 어디서 골랐는지. 화면이 "선택 기사"와 "지도에서 선택"을 구분해 표기한다. */
+  origin: 'NEWS' | 'MAP'
+  headline: string
+  material: string
+  grade?: RiskGrade
+  confidence_label: ConfidenceLabel
+  country_code: string | null
+  country_name?: string | null
+  /** 뉴스에서 온 항목만 있다 */
+  collected_at?: string
+  headline_original?: string
+  translated?: boolean
+  url?: string | null
+}
+
+/**
+ * 구매팀 대시보드 우측 "주요 알림" 한 줄.
+ *
+ * **두 원천이 한 목록에 섞인다.**
+ * - 뉴스(`RiskMonitoringEvent`) — 멀티에이전트까지 끝나 종합 위험도가 나온 건 중 심각·주의만.
+ *   외부신호 점수만 있는 잠정 등급은 올리지 않는다("판정이 끝났다"고 오해할 여지를 만들지 않는다).
+ * - 가격(`MaterialPriceSummary`) — 변동성이 높은 자재를 `정보`로. 위험 판정이 아니라 참고 지표다.
+ *
+ * `정보`는 `RiskGrade`(심각/주의/정상)에 없는 값이라 등급 배지를 재사용하지 않고 별도 표기한다 —
+ * 가격 변동성은 공급 위험 등급과 축이 달라 같은 배지로 그리면 3단계 등급 중 하나로 읽힌다.
+ */
+export interface DashboardAlert {
+  id: string
+  level: '심각' | '주의' | '정보'
+  /**
+   * 뉴스는 `08-03 00:51`(현지, 24시간), 가격은 `07-31`(거래일까지).
+   *
+   * 원천마다 정밀도가 달라 문자열로 굳혀 넘긴다 — 가격은 일봉이라 시각 자체가 없고,
+   * 없는 값을 `00:00`으로 채우면 그 시각에 무슨 일이 있었던 것처럼 읽힌다.
+   */
+  timeLabel: string
+  title: string
+  /** 제목 아래 회색 보조 줄. 자재·국가나 등락·변동성처럼 "왜 떴는지"를 적는다. */
+  detail: string
+  /** 클릭 시 이동할 화면 */
+  href: string
+}
+
 /** AI 기반 권고 조치 리스트. 공개 화면이므로 ERP 내부 상세(재고일수, 공급사명)는 노출하지 않는다. */
 export interface AiRecommendation {
   risk_event_id: string
@@ -324,13 +383,57 @@ export interface MaterialRiskGaugeItem {
 
 /**
  * 구매팀 대시보드 확장(Phase 9.4) — 원자재 리스크 개요 5칸 그리드 중 점수 카드 2장용.
- * score/grade 모두 mock 임시값이다 — docs/mock-schemas.md 참고.
+ *
+ * `score`는 `PurchasingKpiSummary`의 ERP노출도·외부신호 평균이다(0~100).
+ *
+ * **`grade`는 선택이다.** 이 두 점수를 등급으로 나누는 임계값이 백엔드에 없다 —
+ * 멀티에이전트는 종합 위험도에만 등급을 매기고, 구성요소인 ERP노출도·외부신호 각각에는
+ * 매기지 않는다. 프론트에서 임계값을 지어내면 화면에만 존재하는 판정이 되므로 비워 두고
+ * 점수만 보여준다(`ScoreCardPanel`이 배지를 생략한다).
  */
 export interface ScoreCardItem {
   label: string
   score: number
-  grade: RiskGrade
+  grade?: RiskGrade
   diffLabel?: string
+}
+
+/**
+ * 1계층 구매팀 대시보드 상단 KPI 5칸
+ * (백엔드 `GET /api/v1/purchasing-dashboard/kpi-summary`).
+ *
+ * 모집단은 **자재 대분류(8종)별 최신 `procurement_risk_assessments` 1건**이다 — 누적 이력이
+ * 아니라 현재 상태를 센다. 같은 자재를 여러 번 평가해도 "지금 심각한 자재 수"는 하나로 센다.
+ *
+ * 평균 점수와 `latest_assessed_at`은 **평가가 0건이면 null**이다(SQL AVG/MAX가 빈 집합에서
+ * null). 0으로 바꿔 내려주지 않으므로 화면이 "0점"과 "아직 평가 없음"을 구분할 수 있다.
+ */
+export interface PurchasingKpiSummary {
+  /** 평가가 존재하는 자재 대분류 수. 0이면 아래 건수·점수가 전부 비어 있다는 뜻이다. */
+  assessed_category_count: number
+  critical_count: number
+  warning_count: number
+  normal_count: number
+  /** ERP 노출도 평균(0~100). 평가 0건이면 null */
+  erp_exposure_score_avg: number | null
+  /** 외부신호 평균(0~100). 평가 0건이면 null */
+  external_signal_score_avg: number | null
+  /** reviewer 노드 검증을 통과한 브리핑 건수 */
+  verified_briefing_count: number
+  latest_assessed_at: string | null
+  /**
+   * 최근 24시간 원본 행 전체 기준. 위 필드들("대분류별 최신 1건" 스냅샷)과 **모집단이 다르므로**
+   * 두 값을 빼서 "전일 대비"로 쓰면 안 된다 — 백엔드 DTO 주석에 같은 경고가 있다.
+   */
+  critical_count_24h: number
+  warning_count_24h: number
+  erp_exposure_score_avg_24h: number | null
+  external_signal_score_avg_24h: number | null
+  /**
+   * 백엔드가 현재 **항상 true로 하드코딩**해 보낸다(`DashboardRepository`). 값 자체는 실제
+   * 집계 결과이므로 이 플래그로 분기하면 안 된다 — 화면에서 쓰지 않는다.
+   */
+  mock: boolean
 }
 
 export interface ImportDependencyBreakdownItem {
@@ -421,7 +524,38 @@ export interface ProcurementRiskAssessment {
   risk_reasons: string[]
   review_passed: boolean | null
   assessed_at: string
+  /** 이 등급을 만든 자재. 대분류에 자재가 여럿이면 그중 가장 심한 쪽 */
+  representative_material_id: string | null
+  /** 유효한 종합 평가가 나온 자재 수 */
+  valid_material_count: number
+  /** 평가가 시도된 자재 수. valid보다 크면 일부만 성공한 것 */
+  target_material_count: number
+  /** 카드에 접히기 전 자재별 결과 */
+  material_assessments: MaterialAssessment[]
 }
+
+/**
+ * 자재 1개의 평가 결과. 한 뉴스가 ERP 자재 여러 개로 펼쳐질 수 있어(리튬·흑연은 2개씩),
+ * 카드는 가장 심한 자재로 접히고 상세에서 전체를 펼쳐 보여준다.
+ *
+ * `valid=false`면 KG 게이트에서 조기 종료된 자재라 등급·점수가 null이고 사유만 `reasons`에 있다.
+ */
+export interface MaterialAssessment {
+  erp_material_id: string
+  valid: boolean
+  risk_level: string | null
+  risk_score: number | null
+  erp_exposure_score: number | null
+  contract_gap_score: number | null
+  reasons: string[]
+  assessed_at: string
+}
+
+/**
+ * 평가 실행 상태. `multi_agent_completed`(유효 평가가 하나라도 있는가)와 축이 다르다 —
+ * 이쪽은 **대상 자재 전부가 평가됐는가**를 말한다.
+ */
+export type AttemptStatus = 'NOT_RUN' | 'COMPLETED' | 'PARTIAL_SUCCESS' | 'EARLY_TERMINATED'
 
 /** 이벤트 상세 (`GET /api/v1/risk-monitoring/events/{eventId}`). */
 export interface RiskMonitoringDetail extends RiskMonitoringEvent {
@@ -436,6 +570,9 @@ export interface RiskMonitoringDetail extends RiskMonitoringEvent {
   /** false면 "ERP·계약 영향 분석" 버튼을 비활성화하고 사유를 보여준다. */
   erp_impact_available: boolean
   erp_impact_blocked_reason: string | null
+  latest_attempt_status: AttemptStatus
+  /** 가장 최근 평가 실행 시각. 한 번도 안 돌았으면 null */
+  latest_attempt_at: string | null
 }
 
 /**
@@ -582,35 +719,10 @@ export interface ContractEvidence {
   mock: boolean
 }
 
-/**
- * "AI 브리핑 생성" 응답 (`POST .../briefing`).
- *
- * **`completed`가 false면 점수를 등급으로 읽으면 안 된다** — KG 게이트에서 조기 종료된
- * 실행도 0점·NORMAL로 응답이 나가기 때문이다. 그 경우 사유가 `risk_reasons`에 담긴다
- * (`ProcurementRiskAssessment.completed`와 같은 판정).
- *
- * `source_*`는 외부신호로 무엇을 썼는지 밝히는 필드다. 이 화면에는 뉴스가 없어 같은 자재
- * 대분류의 저장된 최신 분석을 끌어다 쓰므로, 출처를 감추면 점수를 되짚을 수 없다.
+/*
+ * 자재 화면 전용 브리핑 타입은 여기에 없다(2026-08-02 제거). 원자재 위험 화면의
+ * "AI 브리핑 생성"은 AI 브리핑 화면으로 이동만 하므로 `AiBriefingDetail`을 쓴다.
  */
-export interface MaterialBriefing {
-  assessment_id: string
-  erp_material_id: string
-  material_name: string
-  source_analysis_id: string
-  source_headline: string
-  source_country_code: string | null
-  source_external_signal_score: number | null
-  completed: boolean
-  procurement_risk_level: string
-  procurement_risk_score: number
-  risk_reasons: string[]
-  recommended_actions: string[]
-  briefing: string | null
-  llm_used: boolean
-  llm_error: string | null
-  review_passed: boolean
-  warnings: string[]
-}
 
 /* ------------------------------------------------------------------ */
 /* 1계층 구매팀 "계약 · RAG" 화면 (백엔드 `/api/v1/contract-rag/**`)      */
@@ -727,53 +839,11 @@ export interface ContractReprocessResult {
   }[]
 }
 
-/** 화면에서 "근거로 사용하기"로 담은 조항. */
-export interface ContractEvidenceRef {
-  document_id: string
-  chunk_index: number
-  clause_title: string
-}
-
-/** 브리핑의 입력이 된, DB에 저장돼 있던 가장 최신 관련 뉴스. */
-export interface ContractBriefingSourceNews {
-  analysis_id: string
-  event_id: number | null
-  title: string
-  title_ko: string | null
-  summary_kr: string | null
-  country_code: string | null
-  material_category: string | null
-  impact_domain: string | null
-  severity: string | null
-  severity_score: number | null
-  source_url: string | null
-  collected_at: string | null
-  completed_at: string | null
-}
-
-/**
- * "이 근거로 AI 브리핑 생성" 결과.
- *
- * `composite`가 false면 멀티에이전트가 KG 게이트에서 조기 종료한 실행이라 점수가 항상
- * 0·정상이다 — "평가해보니 정상"이 아니라 **"평가하지 못했다"**는 뜻이라 화면은 점수를
- * 그대로 보여주면 안 된다(`ProcurementRiskAssessment.completed`와 같은 판정).
+/*
+ * 계약·RAG 브리핑 타입(`ContractBriefing` · `ContractEvidenceRef` · `ContractBriefingSourceNews`)은
+ * 2026-08-02에 제거했다. 계약 화면은 브리핑을 실행하지 않고 `/purchasing/ai-briefing?source=CONTRACT`
+ * 로 넘길 뿐이라, 실행 결과 타입은 아래 "AI 브리핑" 화면 쪽에만 있으면 된다.
  */
-export interface ContractBriefing {
-  assessment_id: string | null
-  contract: ContractSummary
-  source_news: ContractBriefingSourceNews
-  composite: boolean
-  procurement_risk_level: string
-  procurement_risk_score: number
-  risk_reasons: string[]
-  briefing: string | null
-  recommended_actions: string[]
-  contract_findings: Record<string, unknown>[]
-  used_evidence: ContractEvidenceRef[]
-  llm_used: boolean
-  review_passed: boolean
-  warnings: string[]
-}
 
 /* ------------------------------------------------------------------ */
 /* 1계층 구매팀 "AI 브리핑" 화면 (백엔드 `/api/v1/ai-briefing/**`)         */
@@ -858,7 +928,7 @@ export interface AiBriefingVerification {
  *
  * `composite`가 false면 KG 게이트에서 조기 종료된 실행이라 점수가 항상 0·정상이다 —
  * "평가해보니 정상"이 아니라 **"평가하지 못했다"**는 뜻이라 등급으로 읽으면 안 된다
- * (`ContractBriefing.composite`와 같은 판정).
+ * (`ProcurementRiskAssessment.completed`와 같은 판정).
  */
 export interface AiBriefingDetail {
   briefing_id: string
@@ -893,6 +963,8 @@ export interface AiBriefingDetail {
 export interface AiBriefingListItem {
   briefing_id: string
   source_type: AiBriefingSource
+  /** 이 브리핑이 어떤 대상으로 만들어졌는지. 상세를 열 때 상단 "분석 대상"까지 함께 맞추는 데 쓴다. */
+  source_ref: string
   subject_title: string | null
   news_id: string
   procurement_risk_level: string

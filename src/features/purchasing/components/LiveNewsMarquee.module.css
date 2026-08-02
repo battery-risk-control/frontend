@@ -1,0 +1,216 @@
+.band {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-primary);
+  border-radius: var(--radius-md);
+  color: #ffffff;
+  overflow: hidden;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.liveBadge {
+  flex-shrink: 0;
+  padding: 2px var(--space-3);
+  border-radius: 999px;
+  background: var(--color-risk-critical);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+}
+
+.viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  /* 양 끝을 흐리게 잘라 글자가 띠 경계에서 뚝 끊기지 않게 한다. */
+  mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+}
+
+.track {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  will-change: transform;
+  animation: marquee 45s linear infinite;
+}
+
+/* -50%가 정확히 복제본 한 벌의 폭이다(원본+복제본 = 100%) — 원본이 다 빠져나가는 순간
+   복제본이 원본의 시작 위치에 와 있어 이음매가 보이지 않는다. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.viewport:hover .track {
+  animation-play-state: paused; /* 링크를 클릭하려면 멈춰야 한다 */
+}
+
+/* 애니메이션 축소를 요청한 사용자에게는 흐르지 않게 둔다(WCAG 2.3.3). 이 경우 첫 몇 건만
+   보이지만, 같은 목록이 아래 "최신 뉴스" 패널에 전부 있어 정보가 사라지지는 않는다. */
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    animation: none;
+  }
+}
+
+.clone {
+  display: inline-flex;
+  align-items: center;
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-right: var(--space-8);
+}
+
+.material {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.16);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.headline,
+.headlineLink {
+  font-size: var(--font-size-sm);
+  color: #ffffff;
+}
+
+.headlineLink {
+  text-decoration: none;
+}
+
+.headlineLink:hover,
+.headlineLink:focus-visible {
+  text-decoration: underline;
+}
+
+.empty {
+  font-size: var(--font-size-sm);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* 통화 교체 애니메이션 시간. LiveNewsMarquee.tsx의 RATE_SWAP_MS와 반드시 같아야 한다 —
+   JS가 이 시간 뒤에 나가는 값을 DOM에서 지운다. */
+.rateChip {
+  --rate-swap-ms: 450ms;
+
+  position: relative; /* .rateLeave의 absolute 기준 */
+  display: block;
+  flex-shrink: 0;
+  /* 통화가 순환하면 라벨 길이가 달라져(USD/KRW ↔ CLP(100)/KRW) 칩 폭이 4초마다 출렁인다.
+     그러면 옆의 헤드라인 영역까지 같이 밀린다. 가장 긴 조합 기준으로 최소 폭을 잡아 고정한다. */
+  min-width: 210px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.12);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  /* 위로 빠지는 값이 칩 밖으로 삐져나오지 않게 잘라낸다. 이 창이 없으면 밴드 위아래로 글자가 샌다. */
+  overflow: hidden;
+}
+
+/* 들어오는 값과 나가는 값이 같은 자리를 쓴다. 나가는 쪽만 absolute로 띄워 레이아웃에서 빼면
+   전환 중에도 칩 높이가 그대로 유지된다(둘 다 흐름에 있으면 칩이 두 줄로 부푼다). */
+.rateEnter,
+.rateLeave {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.rateLeave {
+  position: absolute;
+  inset: var(--space-1) var(--space-3);
+  animation: rate-out var(--rate-swap-ms) ease forwards;
+}
+
+.rateEnter {
+  animation: rate-in var(--rate-swap-ms) ease;
+}
+
+/* 아래에서 올라오며 또렷해진다 */
+@keyframes rate-in {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 위로 빠지며 흐려진다 */
+@keyframes rate-out {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+/* 애니메이션 축소 요청 시에는 전환 없이 값만 바뀐다. 순환 자체도 JS에서 멈추므로 실제로는
+   첫 통화가 고정되지만, 조회가 늦게 끝나 값이 채워지는 순간에도 움직이지 않게 함께 끈다. */
+@media (prefers-reduced-motion: reduce) {
+  .rateEnter,
+  .rateLeave {
+    animation: none;
+  }
+
+  .rateLeave {
+    display: none;
+  }
+}
+
+/* 재정환율 근사 표시. 숫자에 바짝 붙여 "이 값이 근사"라는 걸 알린다. */
+.crossMark {
+  margin-left: 2px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.rateLabel {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.rateValue {
+  font-weight: var(--font-weight-bold);
+}
+
+/* 밴드 배경이 네이비라 --color-risk-* 원색은 대비가 모자란다. 상승 빨강/하락 파랑 관례는
+   유지하되 밝은 쪽 값을 쓴다. */
+.rateUp {
+  color: #ff9b9e;
+}
+
+.rateDown {
+  color: #8fc4ff;
+}
+
+.rateFlat {
+  color: rgba(255, 255, 255, 0.72);
+}

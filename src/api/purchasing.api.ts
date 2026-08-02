@@ -3,10 +3,7 @@ import type {
   ImportDependencyData,
   MaterialPriceSeries,
   MaterialPriceSummary,
-  MaterialRiskGaugeItem,
   RiskEvent,
-  RiskEventBriefing,
-  ScoreCardItem,
 } from './types'
 
 /**
@@ -196,26 +193,12 @@ export function fetchRiskEvents(): RiskEvent[] {
   return MOCK_RISK_EVENTS
 }
 
-/**
- * 1계층 브리핑 자료 열람(Seq 24)용 mock 함수. risk_event_id로 찾은 이벤트의
- * rag_view/output_artifacts만 추출해 반환한다 — 새 데이터를 만들지 않고 같은 근원에서 파생한다.
- * 존재하지 않는 ID면 null을 반환한다.
- *
- * 사용 예:
- *   const briefing = fetchRiskEventBriefing('RISK-2026-0721-001')
+/*
+ * `fetchRiskEventBriefing`은 2026-08-02에 걷어냈다. 유일한 사용처였던 구형 브리핑 열람 화면
+ * (Seq 24, BriefingDetailPage)이 AI 브리핑 화면으로 대체되면서, 하드코딩된 mock 브리핑이
+ * 실제 멀티에이전트 결과와 나란히 보이는 상태가 됐기 때문이다. 브리핑 열람은
+ * `/api/v1/ai-briefing/briefings/{id}`(aiBriefing.api.ts) 하나로 일원화했다.
  */
-export function fetchRiskEventBriefing(riskEventId: string): RiskEventBriefing | null {
-  const event = MOCK_RISK_EVENTS.find((candidate) => candidate.risk_event_id === riskEventId)
-  if (!event) return null
-  return {
-    risk_event_id: event.risk_event_id,
-    material: event.market_context.material,
-    grade: event.grade,
-    confidence_label: event.confidence_label,
-    rag_view: event.rag_view,
-    output_artifacts: event.output_artifacts,
-  }
-}
 
 /**
  * 글로벌 리스크 관제 맵 mock 함수. 원래 api/public.api.ts에 있었으나, 구매팀 대시보드(Phase 9.4)도
@@ -314,38 +297,17 @@ export function fetchMaterialPriceSummaries(): MaterialPriceSummary[] {
   ]
 }
 
-/**
- * 구매팀 대시보드 확장(Phase 9.4, surin materialRiskGauges 이식) — 원자재 리스크 개요
- * 5칸 그리드 중 게이지 카드 3장. surin은 리튬/니켈/흑연 3종을 쓰지만, 우리 risk_event mock에는
- * 흑연이 없고(코발트만 존재) surin 값을 그대로 가져오라는 지시에 따라 그대로 사용한다 —
- * docs/mock-schemas.md "임시 mock 값" 표에 흑연 불일치를 등재해 둔다. grade는 surin의 4단계
- * (정상/주의/경고/심각) 대신 기존 3단계 RiskGrade로 매핑했다(경고→심각).
+/*
+ * `fetchMaterialRiskGauges`·`fetchScoreCards`(원자재 리스크 개요 5칸의 mock)는 2026-08-02에
+ * 걷어냈다. 구매팀 대시보드가 실 데이터로 넘어가면서 게이지는 `/material-risk/overview`,
+ * 점수 카드는 `/purchasing-dashboard/kpi-summary`에서 파생하게 됐고(변환은
+ * `purchasingDashboard.api.ts`의 `toMaterialRiskGauges`·`toScoreCards`), 그 값들과 나란히 두면
+ * 어느 쪽이 실제 평가 결과인지 구분되지 않기 때문이다. 특히 mock 쪽에는 우리 ERP에 없는
+ * 자재(흑연)와 근거 없는 "전일 대비" 문구가 들어 있었다.
  *
- * 사용 예:
- *   const gauges = fetchMaterialRiskGauges()
+ * 아래 `fetchImportDependency`를 비롯한 나머지 mock은 남는다 — 비로그인 공개 대시보드가
+ * `VITE_API_BASE_URL` 미설정(①단계)에서 폴백으로 쓴다.
  */
-export function fetchMaterialRiskGauges(): MaterialRiskGaugeItem[] {
-  return [
-    { name: '리튬', basis: '(탄산리튬 기준)', grade: '심각', changeLabel: '전일 대비 ▲ 4' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요. surin 원본 level="경고"를 3단계 RiskGrade로 매핑
-    { name: '니켈', basis: '(황산니켈 기준)', grade: '주의', changeLabel: '전일 대비 ▼ 2' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
-    { name: '흑연', basis: '(구형흑연 기준)', grade: '심각', changeLabel: '전일 대비 ▲ 6' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요. surin 원본 level="경고"를 3단계 RiskGrade로 매핑. risk_event mock에는 흑연이 없어(코발트만 존재) 다른 패널과 자재 구성이 어긋난다 — docs/mock-schemas.md 참고
-  ]
-}
-
-/**
- * 구매팀 대시보드 확장(Phase 9.4, surin summaryScores 이식) — 원자재 리스크 개요 5칸 그리드 중
- * 점수 카드 2장. score/grade 모두 mock 임시값이다 — docs/mock-schemas.md 참고, 후속 검증 필요.
- * grade는 surin 원본 문구("높음"/"주의")를 기존 3단계 RiskGrade로 매핑했다(높음→심각).
- *
- * 사용 예:
- *   const cards = fetchScoreCards()
- */
-export function fetchScoreCards(): ScoreCardItem[] {
-  return [
-    { label: '외부 리스크 종합 점수', score: 72, grade: '심각', diffLabel: '전일 대비 ▲ +8p' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요. surin 원본 level="높음"을 3단계 RiskGrade로 매핑
-    { label: 'ERP 영향 점수', score: 65, grade: '주의', diffLabel: '전일 대비 ▲ +6p' }, // mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요
-  ]
-}
 
 /**
  * 구매팀 대시보드 확장(Phase 9.4, surin importDependency 이식) — 수입 의존도 도넛차트.

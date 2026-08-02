@@ -38,6 +38,9 @@
 }
 
 .material {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
 }
@@ -48,4 +51,21 @@
 
 .recommendation {
   color: var(--color-text);
+}
+
+/* MaterialRiskStatusPanel과 같은 표식 — "평가 불가"는 위험도가 아니라 상태라 등급 색을 안 쓴다. */
+.unavailable {
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
 }

@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { CircleMarker, GeoJSON, MapContainer, TileLayer, Tooltip } from 'react-leaflet'
-import type { PathOptions } from 'leaflet'
+import { Fragment, useState } from 'react'
+import { CircleMarker, GeoJSON, MapContainer, Marker, TileLayer, Tooltip } from 'react-leaflet'
+import { divIcon, type PathOptions } from 'leaflet'
 import { feature } from 'topojson-client'
 import type { GeometryCollection, Topology } from 'topojson-specification'
 import countriesTopology from 'world-atlas/countries-110m.json'
@@ -13,6 +13,16 @@ import styles from './GlobalRiskBoard.module.css'
 
 interface GlobalRiskBoardProps {
   items: GlobalRiskBoardItem[]
+  /**
+   * 마커를 클릭했을 때 상위 화면에 알린다(선택). 구매팀 대시보드가 우측 "뉴스 상세" 탭을
+   * 그 이벤트로 바꾸는 데 쓴다.
+   *
+   * **넘기면 카드 안쪽 상세 패널을 자동으로 펼치지 않는다.** 상위가 이미 다른 자리에
+   * 상세를 띄우고 있는데 카드 안에서도 같은 내용이 펼쳐지면 같은 정보가 두 군데 뜬다.
+   * 안 넘기면(비로그인 공개 대시보드) 기존처럼 카드 안 패널이 펼쳐진다 — 그쪽엔 받아줄
+   * 우측 패널이 없다.
+   */
+  onSelectItem?: (item: GlobalRiskBoardItem) => void
 }
 
 type ViewMode = 'event' | 'country'
@@ -67,6 +77,83 @@ const countries = feature(
 
 function isLocated(item: GlobalRiskBoardItem): item is LocatedItem {
   return Boolean(item.country_code && item.coordinates)
+}
+
+/** `divIcon`은 HTML 문자열을 그대로 삽입하므로, 백엔드에서 온 국가명·자재명을 그대로 넣지 않는다. */
+function escapeHtml(text: string): string {
+  return text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+}
+
+interface MarkerTooltipProps {
+  title: string
+  material: string
+  grade: RiskGrade
+  confidenceLabel: GlobalRiskBoardItem['confidence_label']
+  summary: string
+  /** 국가뷰에서 대표 이벤트 말고 더 있는 건수. 0이면 표시하지 않는다. */
+  extraCount?: number
+  /** 클릭 결과가 어디에 뜨는지. 화면마다 달라서 안내 문구를 바꾼다. */
+  detailPlacement: 'aside' | 'card'
+}
+
+/**
+ * 마커에 마우스를 올렸을 때 뜨는 상세 — 국가·자재·등급·신뢰도와 **뉴스 요약**.
+ *
+ * 요약(`event_summary`)이 핵심이다. 예전에는 hover에서 `confidence_label` 하나만 더 보여줬는데,
+ * 마커가 무슨 사건인지는 클릭해야만 알 수 있었다. 번역본이 있으면 백엔드가 이미 한국어로
+ * 내려주므로(`raw_events.title_ko` 조인) 화면에서 손대지 않는다.
+ */
+function MarkerTooltip({
+  title,
+  material,
+  grade,
+  confidenceLabel,
+  summary,
+  extraCount = 0,
+  detailPlacement,
+}: MarkerTooltipProps) {
+  return (
+    <div className={styles.tooltipBody}>
+      <div className={styles.tooltipTitle}>{title}</div>
+      <div className={styles.tooltipBadges}>
+        <RiskGradeBadge grade={grade} />
+        <ConfidenceBadge label={confidenceLabel} />
+        <span className={styles.tooltipMaterial}>{material}</span>
+      </div>
+      <p className={styles.tooltipSummary}>{summary}</p>
+      {extraCount > 0 && <p className={styles.tooltipExtra}>이 국가에 {extraCount}건 더 있습니다</p>}
+      <p className={styles.tooltipHint}>
+        {detailPlacement === 'aside'
+          ? '클릭하면 오른쪽 "뉴스 상세"에서 볼 수 있어요'
+          : '클릭하면 아래에서 관련 뉴스를 볼 수 있어요'}
+      </p>
+    </div>
+  )
+}
+
+/**
+ * 마커 옆에 상시 표시되는 이름표.
+ *
+ * **`<Tooltip permanent>`가 아니라 별도 `<Marker>` 레이어로 만든다.** Leaflet은 레이어 하나에
+ * Tooltip을 하나만 바인딩해서(마지막 호출이 앞의 것을 덮어씀), 상시 라벨을 Tooltip으로 쓰면
+ * 그 마커에 hover용 Tooltip을 더 붙일 수 없다. 라벨을 이 레이어로 빼면 CircleMarker의 Tooltip
+ * 자리가 비어 hover 상세(뉴스 요약)를 붙일 수 있다 — surin `GlobalRiskMap`이 쓰는 구성이다.
+ */
+function labelIcon(text: string, color: string) {
+  return divIcon({
+    className: '',
+    html:
+      `<span style="position:relative;left:12px;top:-8px;display:inline-block;white-space:nowrap;` +
+      `background:#ffffff;border:1px solid ${color}55;color:#1A1A1A;font-weight:700;font-size:11px;` +
+      `line-height:1;padding:3px 7px;border-radius:6px;box-shadow:0 1px 3px rgba(15,23,42,0.15);">` +
+      `${escapeHtml(text)}</span>`,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  })
 }
 
 function ChevronIcon({ expanded }: { expanded: boolean }) {
@@ -161,19 +248,10 @@ function groupByCountry(items: LocatedItem[]): CountryGroup[] {
  * 사용 예:
  *   <GlobalRiskBoard items={items} />
  */
-export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
+export function GlobalRiskBoard({ items, onSelectItem }: GlobalRiskBoardProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('event')
   const [selected, setSelected] = useState<SelectedDetail | null>(null)
   const [panelExpanded, setPanelExpanded] = useState(false)
-  // hover 시 confidence_label 노출용. Leaflet은 레이어 하나당 Tooltip을 하나만 바인딩할 수
-  // 있어(위 국가뷰 라벨+건수 병합 주석 참고, bindTooltip이 마지막 호출만 유지) 기존 상시
-  // 라벨용 Tooltip과 별개로 두 번째 Tooltip을 마커에 추가할 수 없다. 대신 기존 permanent
-  // Tooltip 하나를 그대로 유지하면서, 그 안에 hover 중인 마커일 때만 ConfidenceBadge를 추가로
-  // 렌더링하는 방식으로 우회한다 — 그래서 hover 감지 자체는 CircleMarker의
-  // eventHandlers(mouseover/mouseout)로 이 state를 갱신하는 최소한의 커스텀 로직이 필요하다
-  // (완전히 Leaflet 자동 처리에만 맡기는 방식은 이 제약 때문에 불가능).
-  const [hoveredKey, setHoveredKey] = useState<string | null>(null)
-
   const locatedItems = items.filter(isLocated)
   const countryGroups = groupByCountry(locatedItems)
   const eventMarkerPositions = computeEventMarkerPositions(locatedItems)
@@ -185,12 +263,17 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
 
   function handleSelectEvent(item: LocatedItem) {
     setSelected({ label: item.material, events: [item] })
-    setPanelExpanded(true)
+    // 상위가 상세를 받아가면 카드 안쪽까지 펼치지 않는다(같은 내용이 두 군데 뜬다).
+    setPanelExpanded(!onSelectItem)
+    onSelectItem?.(item)
   }
 
   function handleSelectCountry(group: CountryGroup) {
     setSelected({ label: group.countryName, events: group.events })
-    setPanelExpanded(true)
+    setPanelExpanded(!onSelectItem)
+    // 국가뷰 마커는 여러 이벤트를 대표하므로, 색·라벨에 이미 쓰고 있는 대표 이벤트를
+    // 그대로 넘긴다 — 여기서 새로운 대표 선정 규칙을 만들지 않는다.
+    onSelectItem?.(group.representative)
   }
 
   return (
@@ -232,79 +315,88 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
             />
             <GeoJSON data={countries} style={BASE_STYLE} interactive={false} />
 
+            {/* 마커 한 개는 레이어 두 벌로 만든다 — 원(CircleMarker)과 이름표(Marker+divIcon).
+                Leaflet이 레이어당 Tooltip을 하나만 바인딩해서, 이름표를 `<Tooltip permanent>`로
+                두면 그 마커에 hover 상세를 더 붙일 수 없기 때문이다(bindTooltip이 마지막 호출만
+                유지). 이름표를 따로 빼 두면 원의 Tooltip 자리가 비어 hover 상세를 붙일 수 있다.
+                이름표에도 같은 click 핸들러를 걸어 어느 쪽을 눌러도 같게 동작하게 한다. */}
             {viewMode === 'event'
               ? locatedItems.map((item) => {
                   const position = eventMarkerPositions.get(item.risk_event_id)!
+                  const label = `${item.country_name ?? item.country_code} · ${item.material}`
                   return (
-                    <CircleMarker
-                      key={item.risk_event_id}
-                      center={[position.lat, position.lng]}
-                      radius={9}
-                      pathOptions={{
-                        color: '#FFFFFF',
-                        weight: 2,
-                        fillColor: GRADE_COLOR[item.grade],
-                        fillOpacity: 0.9,
-                      }}
-                      eventHandlers={{
-                        click: () => handleSelectEvent(item),
-                        mouseover: () => setHoveredKey(item.risk_event_id),
-                        mouseout: () => setHoveredKey(null),
-                      }}
-                    >
-                      <Tooltip
-                        permanent
-                        direction={position.labelDirection}
-                        offset={[0, position.labelDirection === 'top' ? -6 : 6]}
-                        opacity={0.95}
-                        className={styles.markerLabel}
+                    <Fragment key={item.risk_event_id}>
+                      <CircleMarker
+                        center={[position.lat, position.lng]}
+                        radius={9}
+                        pathOptions={{
+                          color: '#FFFFFF',
+                          weight: 2,
+                          fillColor: GRADE_COLOR[item.grade],
+                          fillOpacity: 0.9,
+                        }}
+                        eventHandlers={{ click: () => handleSelectEvent(item) }}
                       >
-                        {item.country_name ?? item.country_code} · {item.material}
-                        {hoveredKey === item.risk_event_id && (
-                          <span className={styles.markerLabelConfidence}>
-                            <ConfidenceBadge label={item.confidence_label} />
-                          </span>
-                        )}
-                      </Tooltip>
-                    </CircleMarker>
+                        {/* sticky: 커서를 따라와 마커가 작아도 툴팁이 손에서 벗어나지 않는다. */}
+                        <Tooltip sticky direction="top" opacity={1} className={styles.markerTooltip}>
+                          <MarkerTooltip
+                            title={item.country_name ?? item.country_code}
+                            material={item.material}
+                            grade={item.grade}
+                            confidenceLabel={item.confidence_label}
+                            summary={item.event_summary}
+                            detailPlacement={onSelectItem ? 'aside' : 'card'}
+                          />
+                        </Tooltip>
+                      </CircleMarker>
+                      <Marker
+                        position={[position.lat, position.lng]}
+                        icon={labelIcon(label, GRADE_COLOR[item.grade])}
+                        eventHandlers={{ click: () => handleSelectEvent(item) }}
+                      />
+                    </Fragment>
                   )
                 })
-              : countryGroups.map((group) => (
-                  <CircleMarker
-                    key={group.countryCode}
-                    center={[group.coordinates.lat, group.coordinates.lng]}
-                    radius={10}
-                    pathOptions={{
-                      color: '#FFFFFF',
-                      weight: 2,
-                      fillColor: GRADE_COLOR[group.representative.grade],
-                      fillOpacity: 0.9,
-                    }}
-                    eventHandlers={{
-                      click: () => handleSelectCountry(group),
-                      mouseover: () => setHoveredKey(group.countryCode),
-                      mouseout: () => setHoveredKey(null),
-                    }}
-                  >
-                    {/* react-leaflet은 레이어 하나에 <Tooltip>을 여러 개 붙이면 bindTooltip이
-                        마지막 호출만 유지해 이전 것을 덮어쓴다 — 라벨과 건수를 반드시 하나의
-                        Tooltip으로 합쳐야 한다(둘로 나누면 이벤트 2건 이상 국가에서 라벨이 사라짐).
-                        hover 시 confidence_label을 추가로 보여줄 때도 같은 이유로 두 번째
-                        Tooltip을 새로 붙이지 않고 이 Tooltip 안에 조건부로 끼워넣는다. 여러
-                        risk_event를 대표하는 국가뷰 마커라 confidence_label도 이미 색상/등급
-                        텍스트에 쓰는 것과 같은 대표값(representative)을 그대로 쓴다 — 새로운
-                        집계 규칙을 만들지 않는다. */}
-                    <Tooltip permanent direction="top" offset={[0, -6]} opacity={0.95} className={styles.markerLabel}>
-                      {group.countryName} · {group.representative.grade}
-                      {group.events.length > 1 && ` ×${group.events.length}`}
-                      {hoveredKey === group.countryCode && (
-                        <span className={styles.markerLabelConfidence}>
-                          <ConfidenceBadge label={group.representative.confidence_label} />
-                        </span>
-                      )}
-                    </Tooltip>
-                  </CircleMarker>
-                ))}
+              : countryGroups.map((group) => {
+                  const label =
+                    group.events.length > 1
+                      ? `${group.countryName} ×${group.events.length}`
+                      : group.countryName
+                  return (
+                    <Fragment key={group.countryCode}>
+                      <CircleMarker
+                        center={[group.coordinates.lat, group.coordinates.lng]}
+                        radius={10}
+                        pathOptions={{
+                          color: '#FFFFFF',
+                          weight: 2,
+                          fillColor: GRADE_COLOR[group.representative.grade],
+                          fillOpacity: 0.9,
+                        }}
+                        eventHandlers={{ click: () => handleSelectCountry(group) }}
+                      >
+                        {/* 여러 risk_event를 대표하는 마커라, 색·라벨에 이미 쓰는 대표값
+                            (representative)을 툴팁에도 그대로 쓴다 — 새로운 집계 규칙을 만들지 않는다. */}
+                        <Tooltip sticky direction="top" opacity={1} className={styles.markerTooltip}>
+                          <MarkerTooltip
+                            title={group.countryName}
+                            material={group.representative.material}
+                            grade={group.representative.grade}
+                            confidenceLabel={group.representative.confidence_label}
+                            summary={group.representative.event_summary}
+                            extraCount={group.events.length - 1}
+                            detailPlacement={onSelectItem ? 'aside' : 'card'}
+                          />
+                        </Tooltip>
+                      </CircleMarker>
+                      <Marker
+                        position={[group.coordinates.lat, group.coordinates.lng]}
+                        icon={labelIcon(label, GRADE_COLOR[group.representative.grade])}
+                        eventHandlers={{ click: () => handleSelectCountry(group) }}
+                      />
+                    </Fragment>
+                  )
+                })}
           </MapContainer>
 
           <div className={styles.legend}>

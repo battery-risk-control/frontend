@@ -3,7 +3,6 @@ import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { PublicDashboardPage } from '../features/public/pages/PublicDashboardPage'
 import { AuthPage } from '../features/auth/pages/AuthPage'
 import { PurchasingDashboardPage } from '../features/purchasing/pages/PurchasingDashboardPage'
-import { BriefingDetailPage } from '../features/purchasing/pages/BriefingDetailPage'
 import { RiskMonitoringPage } from '../features/purchasing/pages/RiskMonitoringPage'
 import { MaterialRiskPage } from '../features/purchasing/pages/MaterialRiskPage'
 import { ContractRagPage } from '../features/purchasing/pages/ContractRagPage'
@@ -96,11 +95,17 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
+      {/*
+        구형 브리핑 열람 화면(Seq 24). 화면 자체는 걷어냈다 — 백엔드 API가 아니라 하드코딩된
+        mock 데이터를 그리던 것이라, 새 AI 브리핑과 나란히 두면 어느 쪽이 실제 결과인지
+        구분되지 않았다. 기존 링크·북마크가 죽지 않도록 경로만 남겨 AI 브리핑으로 보낸다.
+        (riskEventId는 새 화면의 source/ref로 옮길 수 없다 — placeholder API의 자체 식별자다.)
+      */}
       <Route
         path="/purchasing/briefing/:riskEventId"
         element={
           <RequireAuth tier="purchasing">
-            <BriefingDetailPage />
+            <Navigate to="/purchasing/ai-briefing" replace />
           </RequireAuth>
         }
       />

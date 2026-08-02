@@ -58,19 +58,28 @@ export async function fetchAiBriefingContext(
  * 누르는 순간 문구 생성까지 도는 것이 이 화면의 약속이다. 비용이 나가는 호출이므로 화면은
  * 진행 중 표시를 반드시 띄우고 버튼을 잠근다.
  *
+ * `analysisId`는 **프리필이 돌려준 값을 그대로 넘긴다.** 자재·계약 대상은 서버가 "같은 대분류의
+ * 최신 분석"을 그때그때 고르는데, 프리필과 생성 사이에 수집 스케줄러가 새 분석을 넣으면 화면이
+ * 보여준 외부신호와 다른 뉴스로 실행된다. 이 값을 실어 보내면 그 창이 닫힌다.
+ *
  * 사용 예:
- *   const briefing = await generateAiBriefing(accessToken, 'MATERIAL', 'MAT-CO-SULF')
+ *   const briefing = await generateAiBriefing(
+ *     accessToken, 'MATERIAL', 'MAT-CO-SULF', true, context.analysis_id)
  */
 export async function generateAiBriefing(
   accessToken: string,
   source: AiBriefingSource,
   ref: string,
   useLlm = true,
+  analysisId: string | null = null,
 ): Promise<AiBriefingDetail> {
   return unwrap(await fetchWithAuth<AiBriefingDetail>(
     '/api/v1/ai-briefing/briefings',
     accessToken,
-    { method: 'POST', body: JSON.stringify({ source, ref, use_llm: useLlm }) },
+    {
+      method: 'POST',
+      body: JSON.stringify({ source, ref, use_llm: useLlm, analysis_id: analysisId }),
+    },
   ))
 }
 

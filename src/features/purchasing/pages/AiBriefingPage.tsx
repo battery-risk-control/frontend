@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   fetchAiBriefing,
   fetchAiBriefingContext,
@@ -24,6 +24,24 @@ import styles from './AiBriefingPage.module.css'
 const SOURCES: AiBriefingSource[] = ['NEWS', 'MATERIAL', 'CONTRACT']
 
 /**
+ * 복귀 경로 화이트리스트. 앞 화면이 넘긴 {@code returnTo}를 <b>그대로 믿고 이동하면 안 된다</b> —
+ * 쿼리스트링은 누구나 조작할 수 있어서, `//evil.example.com` 같은 값이 오면 오픈 리다이렉트가 된다.
+ *
+ * <p>구매팀 화면 내부 경로만 허용한다. 판정은 문자열 기준이며 `//`(프로토콜 상대 URL)과
+ * 백슬래시를 함께 막는다 — 브라우저가 `/\evil.com`을 외부 주소로 해석하는 경우가 있다.
+ */
+function safeReturnTo(value: string | null): string | null {
+  if (!value) {
+    return null
+  }
+  const normalized = value.trim()
+  if (!normalized.startsWith('/purchasing/') || normalized.includes('//') || normalized.includes('\\')) {
+    return null
+  }
+  return normalized
+}
+
+/**
  * 1계층 구매팀 AI 브리핑. 상단 "분석 대상 · ERP 연결" + 좌측 브리핑 본문 + 우측 분석 근거·최근 브리핑.
  *
  * 이 화면에는 **두 가지 진입 경로**가 있고 화면이 그리는 것도 그만큼 갈린다.
@@ -46,11 +64,17 @@ interface ContextState {
   error: string | null
 }
 
+/** 열람 중인 브리핑. `key`(briefing_id)로 URL과 짝을 맞춘다 — 아래 주석 참고. */
+interface DetailState {
+  key: string
+  value: AiBriefingDetail
+}
+
 export function AiBriefingPage() {
   const { accessToken } = useAuthState()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [contextState, setContextState] = useState<ContextState | null>(null)
-  const [detail, setDetail] = useState<AiBriefingDetail | null>(null)
+  const [detailState, setDetailState] = useState<DetailState | null>(null)
   const [recent, setRecent] = useState<AiBriefingListItem[]>([])
   const [actionError, setActionError] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -63,10 +87,21 @@ export function AiBriefingPage() {
     : null
   const ref = searchParams.get('ref')
   const targetKey = source && ref ? `${source}:${ref}` : null
+  const returnTo = safeReturnTo(searchParams.get('returnTo'))
 
   const applied = contextState && contextState.key === targetKey ? contextState : null
   const context = applied?.value ?? null
   const contextError = applied?.error ?? null
+
+  /*
+   * 열람 중인 브리핑은 **URL이 원본**이다(`?briefing={id}`). 예전에는 상세를 여는 것이 `detail`
+   * state만 바꿔서, 코발트 대상을 프리필해 둔 채 니켈 브리핑을 열면 상단은 코발트, 본문은 니켈로
+   * 갈라졌다. 지금은 상세를 열 때 source·ref까지 함께 URL에 넣으므로 상단·본문·생성 버튼이
+   * 항상 같은 대상을 가리킨다. 새로고침하거나 링크를 공유해도 같은 브리핑이 열리는 건 덤이다.
+   */
+  const briefingId = searchParams.get('briefing')
+  const detail = detailState && detailState.key === briefingId ? detailState.value : null
+  const loadedBriefingId = detailState?.key ?? null
 
   // 앞 화면에서 넘어온 대상의 프리필. 생성은 하지 않는다.
   useEffect(() => {
@@ -115,6 +150,27 @@ export function AiBriefingPage() {
     }
   }, [accessToken, apiConfigured, recentToken])
 
+  // URL의 briefing으로 상세를 채운다. 방금 생성해 이미 손에 든 것은 다시 부르지 않는다.
+  useEffect(() => {
+    if (!accessToken || !apiConfigured || !briefingId || loadedBriefingId === briefingId) {
+      return
+    }
+    let cancelled = false
+    async function load(token: string, id: string) {
+      try {
+        const value = await fetchAiBriefing(token, id)
+        if (!cancelled) setDetailState({ key: id, value })
+      } catch (err) {
+        if (cancelled) return
+        setActionError(err instanceof Error ? err.message : '브리핑을 불러오지 못했습니다.')
+      }
+    }
+    void load(accessToken, briefingId)
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken, apiConfigured, briefingId, loadedBriefingId])
+
   const refreshRecent = useCallback(() => setRecentToken((previous) => previous + 1), [])
 
   async function handleGenerate() {
@@ -122,7 +178,14 @@ export function AiBriefingPage() {
     setIsGenerating(true)
     setActionError(null)
     try {
-      setDetail(await generateAiBriefing(accessToken, source, ref))
+      // analysis_id를 함께 보내 프리필이 보여준 그 뉴스로 고정한다 — 안 보내면 서버가 다시 고르고,
+      // 그 사이 수집 스케줄러가 새 분석을 넣으면 상단 외부신호와 결과가 어긋난다.
+      const created = await generateAiBriefing(
+        accessToken, source, ref, true, context?.analysis_id ?? null)
+      setDetailState({ key: created.briefing_id, value: created })
+      const next = new URLSearchParams(searchParams)
+      next.set('briefing', created.briefing_id)
+      setSearchParams(next, { replace: true })
       refreshRecent()
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'AI 브리핑 생성에 실패했습니다.')
@@ -131,14 +194,17 @@ export function AiBriefingPage() {
     }
   }
 
-  async function handleOpen(briefingId: string) {
-    if (!accessToken) return
+  /**
+   * "브리핑 상세 보기". 본문만 바꾸지 않고 **대상까지 함께 옮긴다** — 그러지 않으면 상단
+   * "분석 대상 · ERP 연결"이 이전 대상으로 남아 본문과 다른 것을 가리킨다.
+   */
+  function handleOpen(item: AiBriefingListItem) {
     setActionError(null)
-    try {
-      setDetail(await fetchAiBriefing(accessToken, briefingId))
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : '브리핑을 불러오지 못했습니다.')
-    }
+    const next = new URLSearchParams(searchParams)
+    next.set('source', item.source_type)
+    next.set('ref', item.source_ref)
+    next.set('briefing', item.briefing_id)
+    setSearchParams(next)
   }
 
   return (
@@ -168,6 +234,19 @@ export function AiBriefingPage() {
             isGenerating={isGenerating}
             onGenerate={() => void handleGenerate()}
           />
+          {/*
+           * 앞 화면으로 돌아가는 링크. 생성이 끝난 뒤 강조하는 이유는, 그때가 등급 변화를
+           * 확인하러 돌아갈 시점이기 때문이다. returnTo에 eventId가 실려 있어 같은 기사가 다시 열린다.
+           */}
+          {returnTo && (
+            <Link
+              to={returnTo}
+              className={detail ? `${styles.returnLink} ${styles.returnLinkReady}` : styles.returnLink}
+            >
+              ← 리스크 모니터링으로 돌아가기
+              {detail && <span className={styles.returnHint}>갱신된 등급 확인</span>}
+            </Link>
+          )}
           {contextError && <p className={styles.error}>{contextError}</p>}
           {context && !context.generate_available && context.generate_blocked_reason && (
             <p className={styles.blockedReason}>{context.generate_blocked_reason}</p>
@@ -180,7 +259,10 @@ export function AiBriefingPage() {
                 구매 위험 브리핑
               </h2>
               {isGenerating && <p className={styles.notice}>멀티에이전트 실행 중…</p>}
-              {!isGenerating && !detail && (
+              {!isGenerating && !detail && briefingId && (
+                <p className={styles.notice}>브리핑을 불러오는 중…</p>
+              )}
+              {!isGenerating && !detail && !briefingId && (
                 <p className={styles.notice}>
                   {source && ref
                     ? '"LLM 브리핑 생성"을 누르면 ERP · 계약 근거를 모아 브리핑을 만듭니다.'
@@ -192,7 +274,7 @@ export function AiBriefingPage() {
 
             <div className={styles.sideColumn}>
               <EvidencePanel detail={detail} />
-              <RecentPanel items={recent} onOpen={(id) => void handleOpen(id)} />
+              <RecentPanel items={recent} onOpen={handleOpen} />
             </div>
           </div>
         </main>
@@ -398,7 +480,8 @@ function RecentPanel({
   onOpen,
 }: {
   items: AiBriefingListItem[]
-  onOpen: (briefingId: string) => void
+  /** 항목 전체를 넘긴다 — 상세를 열 때 `source_type`·`source_ref`로 상단 대상까지 맞춰야 한다. */
+  onOpen: (item: AiBriefingListItem) => void
 }) {
   return (
     <section className={styles.sidePanel} aria-labelledby="recent-heading">
@@ -421,7 +504,7 @@ function RecentPanel({
           <button
             type="button"
             className={styles.secondaryAction}
-            onClick={() => onOpen(item.briefing_id)}
+            onClick={() => onOpen(item)}
           >
             브리핑 상세 보기
           </button>

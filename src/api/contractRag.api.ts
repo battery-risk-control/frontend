@@ -1,9 +1,7 @@
 import { fetchWithAuth, uploadWithAuth } from './http'
 import type {
-  ContractBriefing,
   ContractClauseSearchResult,
   ContractDetail,
-  ContractEvidenceRef,
   ContractReprocessResult,
   ContractSummary,
   ContractUploadResult,
@@ -15,6 +13,11 @@ import type {
  * `riskMonitoring.api.ts`와 같은 방침으로 **mock 폴백이 없다.** 이 화면이 보여주는 것은
  * ChromaDB에 실제로 적재된 계약 조항과 그 유사도라서, 지어낸 조항을 띄우면 "계약서가
  * 적재돼 있다"는 잘못된 인상을 준다 — 백엔드가 없으면 빈 목록과 안내 문구가 정확하다.
+ *
+ * **브리핑 실행 함수는 여기 없다.** 화면의 "AI 브리핑 생성"은 실행이 아니라
+ * `/purchasing/ai-briefing?source=CONTRACT`로의 이동이고, 실제 호출은 `aiBriefing.api.ts`가 맡는다.
+ * 2026-08-02에 `generateContractBriefing`(`POST /contract-rag/briefings`)을 걷어냈다 —
+ * 같은 멀티에이전트를 두 경로가 각자 부르면 이쪽 결과만 브리핑 이력에 안 남는다.
  *
  * 모든 호출이 인증을 요구하므로 `accessToken`을 인자로 받는다(`useAuthState()`에 있다).
  */
@@ -34,11 +37,14 @@ function unwrap<T>(result: T | { error: string; message: string }): T {
 }
 
 /**
- * 계약 목록. 기본은 ChromaDB에 적재된 계약만 온다 — 적재 안 된 계약을 골라도 검색이
- * 항상 비어 화면이 고장 난 것처럼 보이기 때문이다.
+ * 계약 목록. `includeUnindexed=true`면 문서가 한 건도 없는 계약까지 온다.
+ *
+ * 화면은 **true로 부른다** — 신규 계약은 검색 결과에 나올 수가 없어서, 목록에서까지 빠지면
+ * 첫 문서를 올릴 진입로가 사라지기 때문이다. 대신 `document_count`가 0이면 화면이 "미적재"를
+ * 붙여 검색이 빌 것임을 미리 알린다.
  *
  * 사용 예:
- *   const contracts = await fetchContracts(accessToken)
+ *   const contracts = await fetchContracts(accessToken, true)
  */
 export async function fetchContracts(
   accessToken: string,
@@ -128,33 +134,5 @@ export async function reprocessContractDocuments(
     `/api/v1/contract-rag/contracts/${contractId}/reprocess`,
     accessToken,
     { method: 'POST' },
-  ))
-}
-
-/**
- * "이 근거로 AI 브리핑 생성". 이 계약의 자재와 관련된, DB에 이미 저장된 가장 최신 뉴스
- * 분석을 찾아 멀티에이전트를 돌린다. 뉴스를 새로 수집하지 않는다.
- *
- * 관련 뉴스가 없으면 422와 사유가 오는데, 계약 상세의 `briefing_available`로 미리 알 수 있어
- * 화면은 버튼을 먼저 비활성화한다.
- *
- * LLM 브리핑 문구 생성은 기본 off다(`useLlm`) — 등급 산출에 필요 없고 버튼 한 번이 곧 비용이다.
- *
- * 사용 예:
- *   const briefing = await generateContractBriefing(accessToken, 11, evidence)
- */
-export async function generateContractBriefing(
-  accessToken: string,
-  contractId: number,
-  evidence: ContractEvidenceRef[] = [],
-  useLlm = false,
-): Promise<ContractBriefing> {
-  return unwrap(await fetchWithAuth<ContractBriefing>(
-    '/api/v1/contract-rag/briefings',
-    accessToken,
-    {
-      method: 'POST',
-      body: JSON.stringify({ contract_id: contractId, evidence, use_llm: useLlm }),
-    },
   ))
 }

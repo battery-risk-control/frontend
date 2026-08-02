@@ -112,14 +112,21 @@ export function fetchAiRecommendations(): AiRecommendation[] {
  * F3 분석(LLM)이 돌지 않아도 채워진다. 백엔드는 자재가 특정된 뉴스만 내려보내고, 그런 뉴스가
  * 아직 없으면 placeholder로 폴백한다 — 공급망과 무관한 기사가 속보 패널에 뜨지 않게 하기 위함.
  *
+ * `limit`(1~100, 생략 시 백엔드 기본 20)으로 건수만 조절한다. 마퀴는 작게, 목록은 크게 쓰지만
+ * **엔드포인트는 하나다** — 마퀴용 API를 따로 두면 상단 자막과 아래 목록이 서로 다른 기사를
+ * 가리키게 된다. 한 화면에서 둘 다 쓸 때는 크게 한 번 받아 앞부분을 잘라 쓰면 요청이 1회로 끝난다.
+ *
  * 사용 예:
  *   const feed = await fetchPublicNewsFeed()
+ *   const top5 = await fetchPublicNewsFeed(5)
  */
-export async function fetchPublicNewsFeed(): Promise<NewsFeedItem[]> {
+export async function fetchPublicNewsFeed(limit?: number): Promise<NewsFeedItem[]> {
   if (!API_BASE_URL) {
     return fetchNewsFeed()
   }
-  const result = await fetchJson<NewsFeedItem[]>('/api/v1/public/news-feed')
+  const result = await fetchJson<NewsFeedItem[]>(
+    limit === undefined ? '/api/v1/public/news-feed' : `/api/v1/public/news-feed?limit=${limit}`,
+  )
   if ('error' in result) {
     throw new Error(result.message)
   }

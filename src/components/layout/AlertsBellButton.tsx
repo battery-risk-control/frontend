@@ -3,6 +3,7 @@ import styles from './AlertsBellButton.module.css'
 interface AlertsBellButtonProps {
   count: number
   expanded: boolean
+  disabled?: boolean
   onToggle: () => void
   onMouseEnter: () => void
   onMouseLeave: () => void
@@ -21,12 +22,13 @@ interface AlertsBellButtonProps {
  *   <AlertsBellButton count={alerts.length} expanded={expanded} onToggle={toggle}
  *     onMouseEnter={handlePreviewEnter} onMouseLeave={handlePreviewLeave} />
  */
-export function AlertsBellButton({ count, expanded, onToggle, onMouseEnter, onMouseLeave }: AlertsBellButtonProps) {
+export function AlertsBellButton({ count, expanded, disabled, onToggle, onMouseEnter, onMouseLeave }: AlertsBellButtonProps) {
   return (
     <button
       type="button"
       className={styles.button}
       onClick={onToggle}
+      disabled={disabled}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       aria-label={expanded ? '주요 알림 패널 접기' : '주요 알림 패널 펼치기'}

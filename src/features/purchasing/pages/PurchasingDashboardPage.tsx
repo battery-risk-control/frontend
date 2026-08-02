@@ -94,7 +94,12 @@ export function PurchasingDashboardPage() {
   const exchangeRates = fetchExchangeRates()
   const alerts = selectAlertEvents(events)
 
-  const { expanded: alertsExpanded, toggle: toggleAlertsExpanded, expand: expandAlerts } = useAlertsPanelState()
+  const {
+    expanded: alertsExpanded,
+    isNarrowViewport: alertsPanelNarrowViewport,
+    toggle: toggleAlertsExpanded,
+    expand: expandAlerts,
+  } = useAlertsPanelState()
   const [isPreviewing, setIsPreviewing] = useState(false)
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // 마커/국가 클릭 결과(2차 데모 수정 2-3) — GlobalRiskBoard의 onSelect 콜백으로 받아
@@ -151,6 +156,7 @@ export function PurchasingDashboardPage() {
           <AlertsBellButton
             count={alerts.length}
             expanded={alertsExpanded}
+            disabled={alertsPanelNarrowViewport}
             onToggle={toggleAlertsExpanded}
             onMouseEnter={handlePreviewMouseEnter}
             onMouseLeave={handlePreviewMouseLeave}

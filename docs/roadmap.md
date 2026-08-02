@@ -105,6 +105,23 @@
   - QA: docs/qa-checklist.md E(mock-schemas.md 반영)는 이 Phase 완료 후 별도 확인 후
     진행, 나머지 A~H 특이사항 없음. tsc/eslint/build 통과.
 
+- [x] Phase 12 — 2계층 경영기획팀 대시보드 7탭 확장 (`feat/planning-tier-dashboard` 브랜치, 2026-08-02)
+  기존 `PlanningDashboardPage`(사이드바 2항목 해시 placeholder, 단일 페이지 3섹션)를
+  사이드바 7탭(전략 대시보드/자재 위험/수입 의존도/공급사 분석/계약 현황/AI 브리핑/데이터
+  품질/설정) 구조로 확장. 프론트엔드 mock 전용(사업부 개념이 백엔드에 없어 백엔드 연동은
+  별도 라운드). 신규 공용 컴포넌트 2개(`RankedBarChart`/`EntityBadgeList`, 기존
+  `ComparisonChart`/`VendorRiskHistory` 패턴 일반화) + 신규 페이지 6개 + `lib/planningNav.ts`
+  (7탭 공용 사이드바, 처음부터 실제 라우트로 연결 — 1계층의 "SideNav 해시 placeholder로
+  남아 미기능" 문제 반복 안 함). 상세는 `docs/timeline.md` "Phase 12" 참고.
+  - [x] Phase 12.1 — 2계층 반응형 대응 + C13(구매팀 대시보드 650px 이하 오버플로) 해결
+    (2026-08-02): C12(필터 pill 줄바꿈) 수정, 차트 패널 `min-width:0` 누락 버그 수정,
+    `SideNav`/`AlertsPanel` 자동 접힘(`NARROW_SHELL_BREAKPOINT_PX=650`)으로 구매팀·
+    경영기획팀 양쪽의 좁은 뷰포트 오버플로를 공용 Provider 레벨에서 해결. 상세는
+    `docs/timeline.md` "Phase 12.1", `docs/roadmap-candidates.md` C12/C13 참고.
+  - [ ] Phase 13(후보) — 2계층 백엔드 연동: **미착수**. 사업부(business_unit) 개념이
+    ERP/백엔드 스키마에 아예 없어(현재 `BUSINESS_UNIT_BY_MATERIAL` 프론트 임시 매핑으로만
+    존재) 실 데이터 연동 전 사업부 마스터 데이터 설계가 선행 필요.
+
 ## 재사용 규칙 (Phase 3에서 결정되는 인터페이스는 이후 Phase가 그대로 따른다)
 - `ConfidenceBadge`/`RiskGradeBadge`의 props 타입은 이후 모든 화면에서 동일하게 재사용한다 — 화면별로 별도 배지를 새로 만들지 않는다.
 - `Header`/`Footer`/`SideNav`는 `components/layout/`에서 한 번만 구현하고, `features/*`는 이를 import해서 쓰기만 한다.

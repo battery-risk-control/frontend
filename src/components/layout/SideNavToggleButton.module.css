@@ -20,3 +20,13 @@
   background: var(--color-bg);
   color: var(--color-text);
 }
+
+.toggleButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.toggleButton:disabled:hover {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}

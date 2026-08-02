@@ -242,14 +242,17 @@ README.md의 "기술 스택" 목록 문구는 이 조사 결과를 반영해 "�
 react-query`는 여전히 설치만 된 상태 그대로다 — 이 상태는 유지되고, `QueryClientProvider`
 정식 도입은 별도 작업으로 계속 미뤄진다.
 
-## C12 — Planning 대시보드 필터 pill 줄바꿈 안 됨 (착수 전, 2026-07-27)
+## C12 — Planning 대시보드 필터 pill 줄바꿈 안 됨 (해결됨, 2026-08-02)
 
 460px 이하에서 필터 pill(`.filters`, '사업부 전체'/'2026년 2분기' 등)이 줄바꿈되지 않아
 오버플로 발생. grid 컬럼 문제가 아니라 flex/inline 요소 줄바꿈 부재가 원인 —
 `ImportDependencyRow`(C 근처, 이번 수정 건)와는 다른 원인. `ImportDependencyRow` 조사 중
 우연히 발견, 범위 밖이라 별도 기록만 함.
 
-## C13 — 650px 이하에서 `<main>` 비수축 요소 총합으로 인한 재오버플로 (착수 전, 2026-07-27)
+**해결**: `PlanningDashboardPage.module.css`의 `.filters`에 `flex-wrap: wrap` 추가.
+375px까지 실측(줄바꿈 정상, 겹침 없음).
+
+## C13 — 650px 이하에서 `<main>` 비수축 요소 총합으로 인한 재오버플로 (해결됨, 2026-08-02)
 
 940px 미디어 쿼리(`ImportDependencyRow` 직렬 전환, C12 근처 커밋) 적용 후 정상 확인됐으나,
 SideNav 펼침 상태에서 650px 이하로 좁히면 오버플로가 다시 나타남. 원인은
@@ -260,6 +263,19 @@ SideNav(220px)+PageSectionDots 레일(40px)+AlertsPanel(280px, 기본 펼침)이
 범위를 벗어나는 페이지 레이아웃 셸 문제라 별도 조사·설계 필요(예: 특정 폭 이하에서
 SideNav/AlertsPanel도 자동 접힘, 또는 셸 요소 자체에 최소 폭 이하로는 `<main>`이 안
 줄어들도록 하한 설정 등 — 방향 미정).
+
+**해결**: Phase 12(2계층) QA 중 같은 현상이 2계층에도 재현됨을 확인해 함께 처리. 신규
+공용 훅 `lib/useIsNarrowViewport.ts`(matchMedia 기반) + 상수 `lib/responsiveBreakpoints.ts`의
+`NARROW_SHELL_BREAKPOINT_PX`(650, 이 문서에서 실측한 값 그대로 승격)를 도입해,
+`SideNavProvider`/`AlertsPanelProvider`가 이 폭 이하에서는 사용자의 수동 펼침 여부와
+무관하게 항상 접힘으로 강제하도록 변경(`collapsed || isNarrowViewport` /
+`expanded && !isNarrowViewport`). 수동 토글 버튼(`SideNavToggleButton`/`AlertsBellButton`)은
+이 상태일 때 `disabled` 처리(다시 펼쳐서 오버플로가 재현되는 걸 방지) — 두 Provider가
+전역(App.tsx 최상위)에 있어 구매팀·경영기획팀 양쪽에 한 번의 수정으로 적용됨. 375px/460px/
+550px/650px 전 구간에서 구매팀·경영기획팀(7탭) 전부 재실측(오버플로 0), 1280px에서 기존
+수동 토글 정상 동작(비활성화 안 됨) 확인. 차트 패널(`ComparisonChart`/`RankedBarChart`)에도
+`min-width: 0`이 없어 부모가 좁아져도 recharts SVG가 안 줄어드는 별도 버그를 이 조사 중
+같이 발견·수정.
 
 ## C14 — 가격 추이 카드 폭 오버플로(1280px, 페이지 레벨 스크롤바 미발생이라 기존 판정 방식으로는 미검출) (착수 전, 2026-07-29)
 

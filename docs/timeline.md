@@ -745,3 +745,108 @@ UX-01-DB) 2차 명세에 맞춰 구매팀 대시보드 본문을 재배치하고
   QA A~H: B(GlobalRiskBoard 소비처 전수 grep, 공개 대시보드 회귀 스크린샷으로 확인)/
   D(마커뉴스 닫기 버튼에 `text-decoration:underline`)/G(`.scratch/` 임시 스크립트,
   git status 정상) 확인. E(mock-schemas.md)는 5단계로 분리.
+
+## Phase 12 — 2계층 경영기획팀 대시보드 7탭 확장 (`feat/planning-tier-dashboard`, 2026-08-02)
+조원과 파트를 나눠(비로그인/1~3계층) 사용자가 2계층을 맡음. 기존 `PlanningDashboardPage`는
+사이드바 2항목(해시 placeholder)뿐인 단일 페이지였는데, 사용자가 제시한 목표 캡처
+(사이드바 "BATTERY RISK CONTROL" + 7탭: 전략 대시보드/자재 위험/수입 의존도/공급사 분석/
+계약 현황/AI 브리핑/데이터 품질/설정)를 기준으로 실제 코드를 확장했다. Figma 없이
+`mcp__visualize__show_widget`으로 러프 초안 → 사용자 피드백("부족하다, 각 탭 더 자세하게")
+→ 캡처와 동일한 카드 스타일로 재작업(v3) → 승인 → 실제 구현 계획 승인, 3라운드에 걸쳐
+시각 초안을 다듬은 뒤 실제 코드로 옮겼다.
+- **범위 확정**: 1계층 관례(mock-schemas.md "API 계약 확정 전 mock 함수 우선 구현")를 따라
+  이번 라운드는 **프론트엔드 mock 전용** — 사업부(business_unit) 개념 자체가 ERP/백엔드
+  스키마에 없어(기존 `BUSINESS_UNIT_BY_MATERIAL` 임시 매핑이 이미 그 한계를 문서화) 백엔드
+  연동은 별도 라운드로 미룸.
+- **기존 자산 재사용**: `KpiSummaryCards`(수정 없이 7탭 전부의 KPI 4칸에 재사용),
+  `ComparisonChart`의 Recharts 단일 계열 막대 패턴(→ 필드명 일반화한 신규
+  `RankedBarChart`의 참고 구현), `VendorRiskHistory`의 뱃지+리스트 패턴(→ 신규
+  `EntityBadgeList`로 일반화). `minji` 브랜치의 1계층 "필터바+목록/상세 2단" 패턴은 참고만
+  하고 이식하지 않음(2계층은 비교·집계 중심이라 승인된 초안이 카드형으로 확정됨).
+- **신규 공용 컴포넌트 2개**: `RankedBarChart`("이름+막대+값", `tone`으로 리스크 색상 매핑),
+  `EntityBadgeList`("이름+보조텍스트+상태뱃지"). 둘 다 `features/planning/components/`에
+  추가, 7탭 전체가 공유.
+- **6개 신규 페이지 + 라우팅**: `MaterialRiskPage`/`ImportDependencyPage`/
+  `SupplierAnalysisPage`/`ContractStatusPage`/`AiBriefingSummaryPage`/`DataQualityPage`
+  (`/planning/materials`·`/import-dependency`·`/suppliers`·`/contracts`·`/briefings`·
+  `/data-quality`, 전부 `RequireAuth tier="planning"`). 사이드바를 페이지별 중복 정의 대신
+  `lib/planningNav.ts`의 `PLANNING_SIDE_NAV_ITEMS`(7탭 공용, 1계층 `SIDE_NAV_ITEMS` 추출
+  전례와 동일 목적)로 통합 — **1계층이 겪은 "SideNav가 해시 placeholder로 남아 미기능"
+  문제를 반복하지 않기 위해 처음부터 전부 실제 라우트로 연결**("설정"만 상세 미정이라
+  의도적으로 해시 유지).
+- **mock 데이터**: `api/planning.api.ts`에 6개 `fetchXxxDashboard()`/`fetchDataQualityStatus()`
+  함수 추가 — 자재 위험/AI 브리핑은 `risk_event` mock에서 실제 파생, 수입 의존도는 1계층
+  `fetchImportDependency()` 재사용, 공급사 분석은 기존 `vendor_risk_history` 확장, 계약
+  현황/데이터 품질은 대응하는 실측 데이터 자체가 없어 전 필드 mock 임시값(`docs/mock-schemas.md`
+  "임시 mock 값" 표에 등재).
+- **DataQualityPage 설계 조정**: ERP 연동/RAG 인덱스/마지막 갱신은 숫자가 아닌 상태 텍스트라
+  숫자 전용인 `KpiSummaryCards`에 안 맞아, 별도 상태 카드(`grid3`)로 분리하고 자재 커버리지만
+  `KpiSummaryCards`로 유지 — 억지로 끼워 맞추지 않고 컴포넌트 계약을 지켰다.
+- **검증**: `npx tsc -b`/`eslint`/`vite build` 통과(중간에 Recharts `LabelList` formatter
+  타입 에러 1건 발견·수정 — `RenderableText`가 `string|number|null|undefined`를 포함해
+  `unknown`으로 완화). `npm run dev`(mock)로 `planning@test.local` 로그인 후 사이드바 7탭
+  전부 클릭해 실제 라우트 이동 + 승인된 초안과 일치하는 콘텐츠 렌더링 확인, 콘솔 에러 없음.
+- QA A~H: B(`KpiSummaryCards`/`RankedBarChart`/`EntityBadgeList` 소비처 전수 확인 후
+  7탭에 일관 적용)/E(요구사항 Seq 25 "2계층 경영기획팀 대시보드"에 대응하는 확장,
+  mock-schemas.md 동시 갱신)/F(신규 카드형 UI 전부 지정 공용 컴포넌트 사용, 자체 `.panel`
+  스타일 신규 작성 없음)/G(임시 스크립트 없음, `git status` 의도한 파일만 표시) 확인.
+  A/C/D/H는 해당 없음(접근 제어·클릭 요소·레이아웃 수치 변경 없음, 번호 매긴 지시문 아님).
+
+## Phase 12.1 — 2계층 반응형 대응 + C12/C13 셸 오버플로 해결 (2026-08-02)
+
+Phase 12 완료 직후, 사용자 지시로 신규 7탭이 실제 좁은 뷰포트에서 검증된 적이 없다는
+점(Phase 12 QA에서 "A/C/D/H 해당없음"으로만 처리)을 이어서 점검했다.
+
+- **C12 수정**: `PlanningDashboardPage.module.css`의 `.filters`에 `flex-wrap: wrap` 추가
+  (460px 이하에서 필터 pill 4개가 줄바꿈 안 되던 문제).
+- **차트 패널 min-width 버그 발견·수정**: `ComparisonChart`/`RankedBarChart`의 `.panel`에
+  `min-width: 0`이 없어, 부모(`<main>`)가 좁아져도 recharts SVG가 전혀 안 줄어들고 넘치는
+  버그(375px에서 `.recharts-wrapper`가 927px로 렌더링됨을 실측). 두 컴포넌트 `.panel`에
+  `min-width: 0` 추가.
+- **C13(구매팀 대시보드 650px 이하 오버플로)가 2계층에서도 재현됨을 확인** — 근본 원인이
+  같은 공용 컴포넌트(`SideNav`/`AlertsPanel`, 둘 다 `flex-shrink:0` 고정폭)라 사용자 확인 후
+  두 계층을 한 번에 해결하기로 방향 결정. 신규 공용 훅 `lib/useIsNarrowViewport.ts`
+  (matchMedia 기반, `change` 이벤트 구독) + 상수 `lib/responsiveBreakpoints.ts`의
+  `NARROW_SHELL_BREAKPOINT_PX = 650`(C13에서 실측한 값을 그대로 승격) 도입.
+  `SideNavProvider`/`AlertsPanelProvider`가 이 폭 이하에서는 사용자의 수동 펼침 여부와
+  무관하게 항상 접힘으로 강제(`collapsed || isNarrowViewport` / `expanded &&
+  !isNarrowViewport`). 두 Context 모두 App.tsx 최상위 Provider라 구매팀·경영기획팀 양쪽에
+  한 번의 수정으로 적용됨(설계상 공유, 중복 구현 아님).
+  - 수동 토글 버튼(`SideNavToggleButton`/`AlertsBellButton`)은 이 강제 접힘 상태일 때
+    `disabled` 처리 — 펼쳐도 시각적으로 아무 변화가 없어 혼란을 주는 대신, 다시 펼쳐서
+    오버플로가 재현되는 것 자체를 막았다.
+- **검증**: `npx tsc -b`/`eslint`/`vite build` 통과(중간에 `useIsNarrowViewport`가 이펙트
+  안에서 동기 `setState`를 호출하던 `react-hooks/set-state-in-effect` 위반 1건 발견·수정 —
+  초기값은 `useState` lazy initializer로 이미 계산되므로 이펙트 안 중복 호출 제거).
+  Playwright/Browser 자동화 환경이 실제 `window.resize`/`matchMedia change` 이벤트를
+  발생시키지 않는 한계를 발견해(라이브 `matches` 값은 갱신되나 이벤트 미발생), 폭 변경 후
+  새로고침(재마운트)으로 우회 검증 — 실제 사용자 브라우저의 창 크기 조절은 표준 이벤트라
+  영향 없음. 375/460/550/650/700/1280px 전 구간에서 구매팀(`purchasing@test.local`)·
+  경영기획팀 7탭(`planning@test.local`) 전부 재실측(`document.documentElement.scrollWidth`
+  == `body` 폭, 오버플로 0), 1280px에서 기존 수동 토글 정상 동작(`disabled: false`) 확인.
+- QA A~H: B(`SideNav`/`AlertsPanel`을 쓰는 모든 화면 — 구매팀/경영기획팀 7탭/브리핑 상세 —
+  전수 확인 후 동일 로직 적용)/C(해당 없음, 접근 제어 변경 아님)/F(기존 지정 컴포넌트
+  범위 내 수정, 신규 `.panel` 스타일 없음)/G(임시 스크립트 없음) 확인. A/D/H는 해당 없음.
+  `docs/roadmap-candidates.md`의 C12/C13을 해결됨으로 갱신.
+
+## SideNav 활성 탭 표시 (2026-08-02)
+
+Phase 12.1 직후 사용자가 "사이드 메뉴 전 항목이 흰색이라 현재 어느 탭에 있는지 알 수
+없다"고 지적 — `SideNav.tsx`가 그동안 `collapsed` 상태만 반영할 뿐, 현재 경로와 항목을
+비교하는 로직 자체가 없었음(신규 구현, 회귀 아님).
+
+- `SideNav.tsx`에 `useLocation()` + `isSideNavItemActive(pathname, hash, href)` 신규 함수로
+  현재 위치와 각 항목의 `href`를 비교, 일치하면 `linkActive` 클래스 + `aria-current="page"`
+  적용. 해시가 있는 `href`(`/purchasing#briefing`처럼 아직 실제 라우트로 안 연결된
+  placeholder, C3)는 경로와 해시 둘 다 일치해야 활성으로 판단 — 그렇지 않으면 같은
+  페이지(`/purchasing`)를 가리키는 해시 placeholder 5개가 전부 동시에 활성으로 보이는
+  잘못된 결과가 나온다.
+- `SideNav.module.css`: `.link`에 `border-left: 3px solid transparent` 기본값을 두고
+  `.linkActive`에서 `var(--color-primary)`로 채움 + 배경 `var(--color-bg)` + 텍스트
+  `var(--color-primary)` + bold. `border-box`가 전역 적용돼 있어(`index.css`) border 유무와
+  무관하게 레이아웃 이동 없음.
+- **검증**: `tsc`/`eslint`/`vite build` 통과. Planning 7탭 전부 실제 클릭 이동 후
+  `linkActive`가 정확히 현재 탭 하나에만 붙는 것 확인(전환 시 이전 탭은 즉시 해제).
+  Purchasing 대시보드(해시 placeholder 5개)는 URL에 해시가 없는 기본 상태에서 아무 항목도
+  거짓 활성화되지 않음을 확인 — 새 로직이 기존 C3(SideNav 미기능) 상태를 악화시키지
+  않았다.

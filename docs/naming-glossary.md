@@ -13,17 +13,17 @@
 | `main.tsx` | 앱 진입점 — ReactDOM 렌더링, BrowserRouter 연결 |
 | `api/auth.api.ts` | 인증(로그인/회원가입) mock API |
 | `api/executive.api.ts` | 3계층 경영진 대시보드 mock API |
-| `api/planning.api.ts` | 2계층 경영기획팀 대시보드 mock API |
+| `api/planning.api.ts` | 2계층 경영기획팀 대시보드 mock API — 전략 대시보드 + 2026-08-02 신규 6탭(자재 위험/수입 의존도/공급사 분석/계약 현황/AI 브리핑/데이터 품질) |
 | `api/public.api.ts` | 비로그인 공개 대시보드 API(Phase 9.4에서 fetchMaterialPriceTrends/fetchMaterialPriceSummaries를 purchasing.api.ts로 옮기고 재수출만 함; 2026-07-27 — fetchPublicRiskBoard 신규로 지도만 실 API 연동, 나머지는 여전히 mock; 2026-07-29 — fetchNewsFeed도 같은 이유로 purchasing.api.ts로 이동, 재수출만) |
 | `api/purchasing.api.ts` | 1계층 구매팀 대시보드 mock API — risk_event 원천 데이터 + Phase 9.4에서 이동된 글로벌 리스크 맵/가격 추이 mock + 신규 원자재 리스크 개요/수입 의존도 mock + 2026-07-29 이동된 뉴스 속보 mock/신규 환율정보 mock |
 | `api/types.ts` | 전 화면 공용 API 응답 타입 정의 |
 | `app/routes.tsx` | 최상위 라우트 정의 및 로그인 가드 |
 | `components/layout/Breadcrumb.tsx` | 브레드크럼(탐색 위치 안내) |
 | `components/layout/Footer.tsx` | 공통 하단 푸터 |
-| `components/layout/AlertsBellButton.tsx` | 헤더 알림 벨 아이콘(2026-07-27 신규) — `Header`의 `accountExtra` 슬롯에 들어감 |
+| `components/layout/AlertsBellButton.tsx` | 헤더 알림 벨 아이콘(2026-07-27 신규) — `Header`의 `accountExtra` 슬롯에 들어감. 2026-08-02 — `disabled` prop 추가(좁은 뷰포트에서 `AlertsPanel`이 강제 접힘일 때 비활성화, C13 해결) |
 | `components/layout/Header.tsx` | 공통 상단 헤더(로고 = 홈 링크). 2026-07-27 — `accountExtra` prop 추가(계정정보-로그아웃 사이 슬롯, 선택) |
-| `components/layout/SideNav.tsx` | 사이드 메뉴 내비게이션(Phase 9.4부터 SideNavContext의 collapsed 상태 반영) |
-| `components/layout/SideNavToggleButton.tsx` | SideNav 접기/펼치기 토글 버튼(Phase 9.4 신규) — SideNav 바깥에 위치 |
+| `components/layout/SideNav.tsx` | 사이드 메뉴 내비게이션(Phase 9.4부터 SideNavContext의 collapsed 상태 반영). 2026-08-02 — `useLocation()`으로 현재 경로/해시와 각 항목의 `href`를 비교해 활성 탭 표시(`linkActive`) 추가 |
+| `components/layout/SideNavToggleButton.tsx` | SideNav 접기/펼치기 토글 버튼(Phase 9.4 신규) — SideNav 바깥에 위치. 2026-08-02 — 좁은 뷰포트에서 강제 접힘일 때 `disabled` 처리(C13 해결) |
 | `components/layout/SkipLink.tsx` | 본문 바로가기 링크(접근성) |
 | `components/ui/ConfidenceBadge.tsx` | 리스크 판단 신뢰도 라벨 배지 |
 | `components/ui/ConfirmModal.tsx` | 확인/취소 모달 |
@@ -47,9 +47,17 @@
 | `features/executive/components/SavingsSimulation.tsx` | 예산 절감 시뮬레이션 카드 |
 | `features/executive/pages/ExecutiveDashboardPage.tsx` | 3계층 경영진 대시보드 페이지 |
 | `features/planning/components/ComparisonChart.tsx` | 사업부별 리스크 노출도 비교 차트 |
+| `features/planning/components/EntityBadgeList.tsx` | "이름+뱃지" 공용 리스트(2026-08-02 신규) — VendorRiskHistory 패턴 일반화, 7탭 공유 |
 | `features/planning/components/KpiSummaryCards.tsx` | KPI 요약 카드 |
+| `features/planning/components/RankedBarChart.tsx` | "이름+막대+값" 공용 랭킹 차트(2026-08-02 신규) — ComparisonChart 패턴 일반화, 7탭 공유 |
 | `features/planning/components/VendorRiskHistory.tsx` | 협력사 리스크 이력 및 탐색 리스트 |
-| `features/planning/pages/PlanningDashboardPage.tsx` | 2계층 경영기획팀 대시보드 페이지 |
+| `features/planning/pages/AiBriefingSummaryPage.tsx` | 2계층 AI 브리핑 탭(2026-08-02 신규) — 1계층 브리핑을 등급·사업부 단위로 취합 |
+| `features/planning/pages/ContractStatusPage.tsx` | 2계층 계약 현황 탭(2026-08-02 신규) — 사업부별 계약 커버리지·만료 임박 |
+| `features/planning/pages/DataQualityPage.tsx` | 2계층 데이터 품질 탭(2026-08-02 신규) — 자재 커버리지·신뢰도 라벨 분포 |
+| `features/planning/pages/ImportDependencyPage.tsx` | 2계층 수입 의존도 탭(2026-08-02 신규) — 국가×사업부 이중 매트릭스 |
+| `features/planning/pages/MaterialRiskPage.tsx` | 2계층 자재 위험 탭(2026-08-02 신규) — 전사 자재 순위 + 사업부별 노출 |
+| `features/planning/pages/PlanningDashboardPage.tsx` | 2계층 경영기획팀 대시보드 "전략 대시보드" 탭. 2026-08-02 — 사이드바를 7탭 공용 목록(`PLANNING_SIDE_NAV_ITEMS`)으로 확장 |
+| `features/planning/pages/SupplierAnalysisPage.tsx` | 2계층 공급사 분석 탭(2026-08-02 신규) — 협력사 리스크 이력 랭킹 + 연결 사업부 |
 | `features/public/components/AiPriorityList.tsx` | AI 기반 권고 조치 리스트 |
 | `features/public/pages/PublicDashboardPage.tsx` | 비로그인 공개 대시보드 페이지 |
 | `features/purchasing/components/AlertsPanel.tsx` | 주요 알림 및 빠른 작업 패널. 2026-07-27 — `AlertsPanelContext`의 `expanded`로 펼침/접힘, 접힘+호버 시 미리보기 추가(오류 및 기능 미흡 발견 #7). 2026-07-29(2차 데모 수정 1) — `QuickActionsPanel`을 최상위 형제로 따로 안 두고 이 컴포넌트의 자식(서브섹션)으로 렌더링. 2026-07-29 후속(수정 2-1) — 펼침 상태의 "주요 알림" 서브섹션(제목+리스트) 표시 코드 제거(같은 원본 데이터를 다루는 "마커뉴스"와 중복 판단, `alerts` prop 자체를 컴포넌트에서 제거, `fetchRiskEvents`/`selectAlertEvents` 등 데이터는 불변) — 이제 "빠른 작업" 하나만 렌더링. 같은 날 추가 후속 — 접힘+호버 미리보기도 더 이상 "주요 알림 상위 4개"를 별도 하드코딩(`AlertItem`/`PREVIEW_COUNT`)해 보여주지 않고, 펼침 패널과 동일한 `QuickActionsPanel`을 그대로 재사용(두 상태가 같은 소스를 표시하도록 통일) — 이때 래퍼 `ScrollCard`(`alerts-preview-heading`)도 제거(`QuickActionsPanel`이 이미 자체 `ScrollCard`를 가져 이중 타이틀바를 피함). 마커 클릭 시 `GlobalRiskBoard`의 `onSelect`에서 올라온 `markerNews`/`onCloseMarkerNews` props를 `QuickActionsPanel`로 그대로 전달 |
@@ -70,12 +78,15 @@
 | `lib/AuthContext.ts` | 인증 상태 Context 객체 정의 |
 | `lib/AuthProvider.tsx` | 인증 상태 Provider 컴포넌트 |
 | `lib/dashboardPaths.ts` | org_tier별 대시보드 경로 매핑 |
-| `lib/AlertsPanelContext.ts` | AlertsPanel 펼침/접힘 상태 Context 객체 정의(2026-07-27 신규, SideNavContext와 동일 패턴). 2026-07-29 — `expand`(강제 펼침, `toggle`과 별도) 액션 추가 — 마커 클릭 시 이미 펼쳐진 상태에서도 접히지 않고 항상 펼쳐지게 하는 용도 |
-| `lib/AlertsPanelProvider.tsx` | AlertsPanel 펼침/접힘 상태 Provider 컴포넌트(2026-07-27 신규) — `DEFAULT_ALERTS_EXPANDED` 기본값 상수도 이 파일에 있음. 2026-07-29 — `expand: () => setExpanded(true)` 구현 추가 |
+| `lib/planningNav.ts` | 2계층 사이드 메뉴 7항목 매핑(2026-08-02 신규) — 여러 페이지가 공유 |
+| `lib/AlertsPanelContext.ts` | AlertsPanel 펼침/접힘 상태 Context 객체 정의(2026-07-27 신규, SideNavContext와 동일 패턴). 2026-07-29 — `expand`(강제 펼침, `toggle`과 별도) 액션 추가 — 마커 클릭 시 이미 펼쳐진 상태에서도 접히지 않고 항상 펼쳐지게 하는 용도. 2026-08-02 — `isNarrowViewport` 필드 추가(C13 해결) |
+| `lib/AlertsPanelProvider.tsx` | AlertsPanel 펼침/접힘 상태 Provider 컴포넌트(2026-07-27 신규) — `DEFAULT_ALERTS_EXPANDED` 기본값 상수도 이 파일에 있음. 2026-07-29 — `expand: () => setExpanded(true)` 구현 추가. 2026-08-02 — `NARROW_SHELL_BREAKPOINT_PX` 이하에서 `expanded`를 강제로 `false`로 덮어씀(C13 해결) |
 | `lib/riskEventId.ts` | risk_event_id 날짜 파싱 유틸 |
 | `lib/selectAlertEvents.ts` | 알림 대상 risk_event 필터 함수(2026-07-27 신규, `AlertsPanel.tsx`에서 분리 — react-refresh 규칙상 컴포넌트 파일은 컴포넌트만 export해야 해서) — `AlertsPanel`(전체 목록)과 `AlertsBellButton`의 배지 숫자 양쪽이 재사용 |
-| `lib/SideNavContext.ts` | SideNav 접기/펼치기 상태 Context 객체 정의(Phase 9.4 신규) |
-| `lib/SideNavProvider.tsx` | SideNav 접기/펼치기 상태 Provider 컴포넌트(Phase 9.4 신규) |
+| `lib/SideNavContext.ts` | SideNav 접기/펼치기 상태 Context 객체 정의(Phase 9.4 신규). 2026-08-02 — `isNarrowViewport` 필드 추가(C13 해결) |
+| `lib/SideNavProvider.tsx` | SideNav 접기/펼치기 상태 Provider 컴포넌트(Phase 9.4 신규). 2026-08-02 — `NARROW_SHELL_BREAKPOINT_PX` 이하에서 `collapsed`를 강제로 `true`로 덮어씀(C13 해결) |
+| `lib/responsiveBreakpoints.ts` | 셸 요소(SideNav/AlertsPanel) 자동 접힘 기준폭 상수(2026-08-02 신규) |
+| `lib/useIsNarrowViewport.ts` | 뷰포트 폭이 기준값 이하인지 추적하는 공용 훅(2026-08-02 신규, matchMedia 기반) |
 | `lib/tierLabels.ts` | org_tier별 한글 라벨 매핑 |
 | `lib/useAlertsPanelState.ts` | AlertsPanel 펼침/접힘 상태 접근 훅(2026-07-27 신규) |
 | `lib/useAuthState.ts` | 인증 상태 접근 훅 |
@@ -109,6 +120,12 @@
 | physical | logical | 역할 |
 |---|---|---|
 | `fetchPlanningDashboard` | 2계층 대시보드 조회 함수 | KPI 요약 / 사업부별 노출도 / 협력사 리스크 이력을 1계층 `risk_event`에서 파생해 반환 |
+| `fetchMaterialRiskDashboard` | 2계층 자재 위험 탭 조회 함수 | 2026-08-02 신규. `risk_event`를 자재별로 묶어 전사 순위 산출(`fetchPlanningDashboard()`와 같은 GRADE_SEVERITY×24 산식 재사용) |
+| `fetchImportDependencyDashboard` | 2계층 수입 의존도 탭 조회 함수 | 2026-08-02 신규. 1계층 `fetchImportDependency()`의 국가별 breakdown 재사용 + 사업부 축은 mock 임시값 |
+| `fetchSupplierAnalysisDashboard` | 2계층 공급사 분석 탭 조회 함수 | 2026-08-02 신규. `fetchPlanningDashboard().vendor_risk_history`를 랭킹·연결 사업부로 확장 |
+| `fetchContractStatusDashboard` | 2계층 계약 현황 탭 조회 함수 | 2026-08-02 신규. 계약-사업부 매핑 실측 데이터가 없어 전 필드 mock 임시값 |
+| `fetchAiBriefingSummaryDashboard` | 2계층 AI 브리핑 탭 조회 함수 | 2026-08-02 신규. `risk_event`의 rag_view/grade를 사업부 단위로 취합 |
+| `fetchDataQualityStatus` | 2계층 데이터 품질 탭 조회 함수 | 2026-08-02 신규. 전 필드 mock 임시값(실제 파이프라인 모니터링 연동 전) |
 
 ### `api/public.api.ts`
 | physical | logical | 역할 |
@@ -164,6 +181,14 @@
 | `RiskExposureByUnit` | 사업부별 리스크 노출도 타입 | 사업부명/노출도 점수 |
 | `VendorRiskHistoryItem` | 협력사 리스크 이력 항목 타입 | 공급사ID/명/90일 이력 건수/최신 등급·신뢰도 |
 | `PlanningDashboardResponse` | 2계층 대시보드 응답 타입 | business_unit + period + kpi_summary + risk_exposure_by_unit + vendor_risk_history |
+| `RankedBarItem` | RankedBarChart 공용 입력 타입 | 2026-08-02 신규. name/value/value_suffix(선택)/tone(선택 — critical/warning/normal/neutral) |
+| `EntityBadgeItem` | EntityBadgeList 공용 입력 타입 | 2026-08-02 신규. id/primary/secondary(선택)/badge(선택 — label+tone) |
+| `MaterialRiskRankItem`/`MaterialRiskDashboardResponse` | 2계층 자재 위험 탭 타입 | 2026-08-02 신규. 전사 자재 순위(material/score/rank/grade) + 최고 위험 자재의 사업부별 노출 |
+| `CountryDependencyItem`/`UnitDependencyItem`/`ImportDependencyDashboardResponse` | 2계층 수입 의존도 탭 타입 | 2026-08-02 신규. 국가별/사업부별 의존도 + 대체 공급망 후보 |
+| `SupplierRiskRankItem`/`SupplierAnalysisDashboardResponse` | 2계층 공급사 분석 탭 타입 | 2026-08-02 신규. 90일 이력 랭킹 + 연결 사업부 + 추천 공급사 |
+| `ContractCoverageItem`/`ContractStatusDashboardResponse` | 2계층 계약 현황 탭 타입 | 2026-08-02 신규. 사업부별 계약 커버리지 + 만료 임박 계약(전 필드 mock 임시값) |
+| `BriefingSummaryItem`/`AiBriefingSummaryDashboardResponse` | 2계층 AI 브리핑 탭 타입 | 2026-08-02 신규. 사업부별 브리핑 분포 + 최근 브리핑 목록 |
+| `DataQualityStatus` | 2계층 데이터 품질 탭 타입 | 2026-08-02 신규. ERP/RAG 연동 상태 + 자재 커버리지 + 신뢰도 라벨 분포(전 필드 mock 임시값) |
 | `CumulativeRiskKpi` | 누적 리스크 KPI 타입 | 탐지/응답 건수·비율, 심각 건수, 평균 대응 소요 |
 | `SavingsSimulation` | 절감 시뮬레이션 타입 | is_simulation(항상 true)/예상 절감액/가정 |
 | `EnterpriseRiskSummaryItem` | 전사 리스크 요약 항목 타입 | 사업부명/노출도 점수/추세 |
@@ -204,7 +229,8 @@
 | physical | logical | 역할 |
 |---|---|---|
 | `SideNavItem` | 사이드 메뉴 항목 타입 | 라벨/href |
-| `SideNav` | 사이드 메뉴 컴포넌트 | 하위 화면이 많은 대시보드용 좌측 내비게이션(`Link` 기반). Phase 9.4부터 `useSideNavState()`의 `collapsed`를 읽어 폭 0으로 접힘(내부 `<Link>`에 `tabIndex={-1}`, `<nav>`에 `aria-hidden` 적용) |
+| `isSideNavItemActive` | 사이드 메뉴 항목 활성 여부 판단 함수(2026-08-02 신규) | `href`에 해시가 있으면(`/purchasing#briefing`처럼 아직 실제 라우트로 연결 안 된 placeholder, C3) 경로+해시 둘 다 일치해야 활성으로 판단 — 그래야 해시 placeholder 항목들이 같은 페이지라는 이유만으로 전부 동시에 활성 표시되지 않는다. 해시가 없으면(Planning 7탭 등 실제 라우트) 경로만 비교 |
+| `SideNav` | 사이드 메뉴 컴포넌트 | 하위 화면이 많은 대시보드용 좌측 내비게이션(`Link` 기반). Phase 9.4부터 `useSideNavState()`의 `collapsed`를 읽어 폭 0으로 접힘(내부 `<Link>`에 `tabIndex={-1}`, `<nav>`에 `aria-hidden` 적용). 2026-08-02 — `useLocation()`+`isSideNavItemActive`로 현재 탭에 `linkActive` 클래스와 `aria-current="page"` 적용 |
 
 ### `components/layout/SideNavToggleButton.tsx`
 | physical | logical | 역할 |
@@ -337,20 +363,60 @@
 |---|---|---|
 | `ComparisonChart` | 핵심 시각화 및 비교 차트 컴포넌트 | 사업부별 리스크 노출도 막대그래프(Recharts, 단일 계열) |
 
+### `features/planning/components/EntityBadgeList.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `EntityBadgeList` | "이름+뱃지" 공용 리스트 컴포넌트 | 2026-08-02 신규. `VendorRiskHistory`의 뱃지+리스트 구조를 일반화 — `{id, primary, secondary?, badge?}[]` 입력, 적격 공급사 추천/만료 임박 계약/최근 브리핑에 재사용 |
+
 ### `features/planning/components/KpiSummaryCards.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `KpiSummaryCards` | KPI 요약 카드 컴포넌트 | `kpi_summary` 배열을 카드로 렌더링 |
+| `KpiSummaryCards` | KPI 요약 카드 컴포넌트 | `kpi_summary` 배열을 카드로 렌더링 — 2026-08-02부터 7탭 전부가 공유 |
+
+### `features/planning/components/RankedBarChart.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `RankedBarChart` | "이름+막대+값" 공용 랭킹 차트 컴포넌트 | 2026-08-02 신규. `ComparisonChart`의 Recharts 단일 계열 막대 패턴을 일반화 — `{name, value, value_suffix?, tone?}[]` 입력, `tone`에 따라 `--color-risk-*` 토큰으로 막대색 매핑. 자재 순위/국가 의존도/공급사 랭킹/계약 커버리지/신뢰도 분포 등에 재사용 |
 
 ### `features/planning/components/VendorRiskHistory.tsx`
 | physical | logical | 역할 |
 |---|---|---|
 | `VendorRiskHistory` | 협력사 리스크 이력 및 탐색 컴포넌트 | `vendor_risk_history` 리스트, 등급/신뢰도 배지 포함 |
 
+### `features/planning/pages/AiBriefingSummaryPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `AiBriefingSummaryPage` | 2계층 AI 브리핑 탭 페이지 | 2026-08-02 신규(`/planning/briefings`). KPI 4칸 + 사업부별 브리핑 분포(`RankedBarChart`) + 최근 브리핑 리스트(`RiskGradeBadge` 재사용) |
+
+### `features/planning/pages/ContractStatusPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ContractStatusPage` | 2계층 계약 현황 탭 페이지 | 2026-08-02 신규(`/planning/contracts`). KPI 4칸 + 사업부별 커버리지(`RankedBarChart`) + 만료 임박 계약(`EntityBadgeList`) |
+
+### `features/planning/pages/DataQualityPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `DataQualityPage` | 2계층 데이터 품질 탭 페이지 | 2026-08-02 신규(`/planning/data-quality`). ERP/RAG 상태 카드(숫자 아님 — `KpiSummaryCards` 대신 별도 상태 카드로 표시) + 자재 커버리지(`KpiSummaryCards`) + 신뢰도 라벨 분포(`RankedBarChart`) |
+
+### `features/planning/pages/ImportDependencyPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ImportDependencyPage` | 2계층 수입 의존도 탭 페이지 | 2026-08-02 신규(`/planning/import-dependency`). KPI 4칸 + 국가별/사업부별 의존도 2컬럼(`RankedBarChart` ×2) + 대체 공급망 후보(`EntityBadgeList`) |
+
+### `features/planning/pages/MaterialRiskPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `MaterialRiskPage` | 2계층 자재 위험 탭 페이지 | 2026-08-02 신규(`/planning/materials`). KPI 4칸 + 자재 순위/사업부별 노출 2컬럼(`RankedBarChart` ×2) + 분기 대비 변화 인사이트 카드 |
+
 ### `features/planning/pages/PlanningDashboardPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `PlanningDashboardPage` | 2계층 경영기획팀 대시보드 페이지 | 좌측 사이드바 + 단일 컬럼(KPI 카드 → 비교 차트 → 협력사 이력) |
+| `PlanningDashboardPage` | 2계층 경영기획팀 대시보드 "전략 대시보드" 탭 페이지 | 좌측 사이드바 + 단일 컬럼(KPI 카드 → 비교 차트 → 협력사 이력). 2026-08-02 — 사이드바를 `PLANNING_SIDE_NAV_ITEMS`(7탭 공용)로 확장, 나머지 6탭은 별도 페이지로 신설 |
+
+### `features/planning/pages/SupplierAnalysisPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `SupplierAnalysisPage` | 2계층 공급사 분석 탭 페이지 | 2026-08-02 신규(`/planning/suppliers`). KPI 4칸 + 리스크 이력 랭킹/사업부 연결 2컬럼(`RankedBarChart` ×2) + 적격 공급사 추천(`EntityBadgeList`) |
 
 ### `features/public/components/AiPriorityList.tsx`
 | physical | logical | 역할 |
@@ -458,6 +524,11 @@
 |---|---|---|
 | `DASHBOARD_PATH_BY_TIER` | org_tier별 대시보드 경로 매핑 상수 | `AuthPage`(로그인 성공 후 이동)와 `app/routes.tsx`의 `RequireAuth`(계층 불일치 리다이렉트)가 공용으로 참조(Phase 8) |
 
+### `lib/planningNav.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `PLANNING_SIDE_NAV_ITEMS` | 2계층 사이드 메뉴 7항목 매핑 상수 | 2026-08-02 신규. `PlanningDashboardPage`/`MaterialRiskPage`/`ImportDependencyPage`/`SupplierAnalysisPage`/`ContractStatusPage`/`AiBriefingSummaryPage`/`DataQualityPage` 7개 페이지가 공유(1계층 `SIDE_NAV_ITEMS` 추출 전례와 동일 목적). "설정"만 상세 미정 placeholder라 해시(`/planning#settings`)로 남김 |
+
 ### `lib/riskEventId.ts`
 | physical | logical | 역할 |
 |---|---|---|
@@ -466,14 +537,14 @@
 ### `lib/AlertsPanelContext.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `AlertsPanelContextValue` | AlertsPanel Context 값 타입 | 2026-07-27 신규. `expanded`(펼침 여부)/`toggle`(토글 함수) — `SideNavContextValue`와 동일 형태. 2026-07-29 — `expand`(강제 펼침, 이미 펼쳐진 상태에서 호출해도 접히지 않음) 필드 추가, 마커 클릭 시 자동 펼침(`PurchasingDashboardPage`의 `handleMarkerSelect`) 용도 |
+| `AlertsPanelContextValue` | AlertsPanel Context 값 타입 | 2026-07-27 신규. `expanded`(펼침 여부)/`toggle`(토글 함수) — `SideNavContextValue`와 동일 형태. 2026-07-29 — `expand`(강제 펼침, 이미 펼쳐진 상태에서 호출해도 접히지 않음) 필드 추가, 마커 클릭 시 자동 펼침(`PurchasingDashboardPage`의 `handleMarkerSelect`) 용도. 2026-08-02 — `isNarrowViewport`(강제 접힘 여부, `AlertsBellButton` `disabled` 판단용) 필드 추가 |
 | `AlertsPanelContext` | AlertsPanel Context 객체 | `AlertsPanelProvider`/`useAlertsPanelState`가 공유하는 React Context — `SideNavContext`와 동일 패턴 |
 
 ### `lib/AlertsPanelProvider.tsx`
 | physical | logical | 역할 |
 |---|---|---|
 | `DEFAULT_ALERTS_EXPANDED` | AlertsPanel 기본 펼침 상태 상수(`true`) | 이 값 하나만 바꾸면 기본 동작(펼침/접힘)이 전체적으로 뒤집힌다(하드코딩 대신 이름 붙은 상수로 한 곳에 선언) |
-| `AlertsPanelProvider` | AlertsPanel 펼침/접힘 상태 Provider 컴포넌트 | 2026-07-27 신규. `App.tsx`에서 `SideNavProvider` 안·`AppRoutes` 바깥에 래핑 — 지금은 `PurchasingDashboardPage` 하나만 쓰지만 페이지 이동(예: 브리핑 상세) 간에도 펼침 상태 유지가 필요해 `SideNavContext`와 동일하게 앱 최상위에 둠(실측: Purchasing→브리핑 상세→뒤로가기 왕복에서 유지 확인) |
+| `AlertsPanelProvider` | AlertsPanel 펼침/접힘 상태 Provider 컴포넌트 | 2026-07-27 신규. `App.tsx`에서 `SideNavProvider` 안·`AppRoutes` 바깥에 래핑 — 지금은 `PurchasingDashboardPage` 하나만 쓰지만 페이지 이동(예: 브리핑 상세) 간에도 펼침 상태 유지가 필요해 `SideNavContext`와 동일하게 앱 최상위에 둠(실측: Purchasing→브리핑 상세→뒤로가기 왕복에서 유지 확인). 2026-08-02 — `useIsNarrowViewport(NARROW_SHELL_BREAKPOINT_PX)`로 좁은 뷰포트를 감지해 `expanded`를 `expanded && !isNarrowViewport`로 계산(C13 해결) |
 
 ### `lib/useAlertsPanelState.ts`
 | physical | logical | 역할 |
@@ -488,13 +559,23 @@
 ### `lib/SideNavContext.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `SideNavContextValue` | SideNav Context 값 타입 | Phase 9.4 신규. `collapsed`(접힘 여부)/`toggle`(토글 함수) |
+| `SideNavContextValue` | SideNav Context 값 타입 | Phase 9.4 신규. `collapsed`(접힘 여부)/`toggle`(토글 함수). 2026-08-02 — `isNarrowViewport`(강제 접힘 여부, `SideNavToggleButton` `disabled` 판단용) 필드 추가 |
 | `SideNavContext` | SideNav Context 객체 | `SideNavProvider`/`useSideNavState`가 공유하는 React Context — `AuthContext.ts`와 동일 패턴 |
 
 ### `lib/SideNavProvider.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `SideNavProvider` | SideNav 접기/펼치기 상태 Provider 컴포넌트 | Phase 9.4 신규. `App.tsx`에서 `AuthProvider` 안·`AppRoutes` 바깥에 래핑 — Purchasing/BriefingDetail/Planning 3개 페이지가 공유해 페이지 이동 간에도 접힘 상태 유지 |
+| `SideNavProvider` | SideNav 접기/펼치기 상태 Provider 컴포넌트 | Phase 9.4 신규. `App.tsx`에서 `AuthProvider` 안·`AppRoutes` 바깥에 래핑 — Purchasing/BriefingDetail/Planning 3개 페이지가 공유해 페이지 이동 간에도 접힘 상태 유지. 2026-08-02 — `useIsNarrowViewport(NARROW_SHELL_BREAKPOINT_PX)`로 좁은 뷰포트를 감지해 `collapsed`를 `collapsed || isNarrowViewport`로 계산(C13 해결, 구매팀·경영기획팀 공용 적용) |
+
+### `lib/responsiveBreakpoints.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `NARROW_SHELL_BREAKPOINT_PX` | 셸 요소 자동 접힘 기준폭 상수(`650`) | `docs/roadmap-candidates.md` C13에서 실측한 값을 그대로 승격. `SideNavProvider`/`AlertsPanelProvider`가 공용 참조 |
+
+### `lib/useIsNarrowViewport.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `useIsNarrowViewport` | 뷰포트 좁음 여부 추적 훅 | `matchMedia('(max-width: ...)')`의 `matches`를 `useState` lazy initializer로 초기화하고 `change` 이벤트로 갱신 |
 
 ### `lib/tierLabels.ts`
 | physical | logical | 역할 |

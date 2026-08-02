@@ -223,6 +223,113 @@ export interface PlanningDashboardResponse {
 }
 
 /**
+ * 2계층 사이드바 7탭 확장(전략 대시보드 외 6탭). `RankedBarChart`/`EntityBadgeList` 공용
+ * 컴포넌트 입력 타입 + 탭별 응답 타입 — mock-schemas.md "1. 2계층" 갱신본 참고.
+ */
+
+/** RankedBarChart 공용 입력 항목 — "이름+막대+값" 패턴(자재 순위/국가 의존도/공급사 랭킹 등)에 재사용. */
+export interface RankedBarItem {
+  name: string
+  value: number
+  value_suffix?: string
+  tone?: 'critical' | 'warning' | 'normal' | 'neutral'
+}
+
+/** EntityBadgeList 공용 입력 항목 — 공급사/계약/브리핑 리스트에 재사용(VendorRiskHistory 패턴 일반화). */
+export interface EntityBadgeItem {
+  id: string
+  primary: string
+  secondary?: string
+  badge?: { label: string; tone: 'success' | 'warning' | 'neutral' }
+}
+
+/** 자재 위험 탭. */
+export interface MaterialRiskRankItem {
+  material: string
+  score: number
+  rank: number
+  grade: RiskGrade
+}
+
+export interface MaterialRiskDashboardResponse {
+  kpi_summary: KpiSummaryItem[]
+  ranking: MaterialRiskRankItem[]
+  top_material_unit_exposure: RiskExposureByUnit[]
+  quarter_change_label: string
+}
+
+/** 수입 의존도 탭. */
+export interface CountryDependencyItem {
+  country: string
+  share_ratio: number
+}
+
+export interface UnitDependencyItem {
+  business_unit: string
+  country: string
+  share_ratio: number
+}
+
+export interface ImportDependencyDashboardResponse {
+  kpi_summary: KpiSummaryItem[]
+  by_country: CountryDependencyItem[]
+  by_unit: UnitDependencyItem[]
+  alternative_suppliers: EntityBadgeItem[]
+}
+
+/** 공급사 분석 탭. */
+export interface SupplierRiskRankItem {
+  vendor_id: string
+  vendor_name: string
+  risk_count_90d: number
+  approved_status: 'APPROVED' | 'REVIEW'
+  linked_units: string[]
+}
+
+export interface SupplierAnalysisDashboardResponse {
+  kpi_summary: KpiSummaryItem[]
+  ranking: SupplierRiskRankItem[]
+  recommended: EntityBadgeItem[]
+}
+
+/** 계약 현황 탭. */
+export interface ContractCoverageItem {
+  business_unit: string
+  contract_count: number
+}
+
+export interface ContractStatusDashboardResponse {
+  kpi_summary: KpiSummaryItem[]
+  coverage_by_unit: ContractCoverageItem[]
+  expiring: EntityBadgeItem[]
+}
+
+/** AI 브리핑 탭. */
+export interface BriefingSummaryItem {
+  risk_event_id: string
+  material: string
+  grade: RiskGrade
+  headline: string
+  business_unit: string
+}
+
+export interface AiBriefingSummaryDashboardResponse {
+  kpi_summary: KpiSummaryItem[]
+  by_unit: RankedBarItem[]
+  recent: BriefingSummaryItem[]
+}
+
+/** 데이터 품질 탭 — 전 필드 mock 임시값(docs/mock-schemas.md "임시 mock 값" 표 참고). */
+export interface DataQualityStatus {
+  erp_sync_status: string
+  rag_index_status: string
+  material_coverage_count: number
+  material_coverage_total: number
+  last_updated_label: string
+  confidence_distribution: { label: ConfidenceLabel; ratio: number }[]
+}
+
+/**
  * 3계층 경영진 대시보드 — mock-schemas.md "3. 3계층" 참고.
  * critical_count/avg_response_days는 Figma "경영진 대시보드" 프레임의 화면 설명 예시
  * ("이번 분기 리스크 탐지 32건, 심각 등급 5건, 평균 대응 소요 2.3일")에 맞춰 확장 원칙에 따라 추가했다.

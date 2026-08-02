@@ -5,16 +5,14 @@ import { SideNavToggleButton } from '../../../components/layout/SideNavToggleBut
 import { KpiSummaryCards } from '../components/KpiSummaryCards'
 import { ComparisonChart } from '../components/ComparisonChart'
 import { VendorRiskHistory } from '../components/VendorRiskHistory'
+import { PLANNING_SIDE_NAV_ITEMS } from '../../../lib/planningNav'
 import styles from './PlanningDashboardPage.module.css'
 
-const SIDE_NAV_ITEMS = [
-  { label: '노출도 비교', href: '#exposure' },
-  { label: '협력사 이력', href: '#vendor-history' },
-]
-
 /**
- * 2계층 경영기획팀 대시보드 (Seq 25). Figma "경영기획팀 대시보드" 프레임 기준으로
- * 좌측 사이드바 + 단일 컬럼(KPI 요약 카드 → 핵심 시각화 및 비교 → 협력사 리스크 이력 및 탐색) 구조를 따른다.
+ * 2계층 경영기획팀 대시보드 (Seq 25) — "전략 대시보드" 탭. Figma "경영기획팀 대시보드" 프레임
+ * 기준으로 좌측 사이드바(7탭 공용, `PLANNING_SIDE_NAV_ITEMS`) + 단일 컬럼(KPI 요약 카드 →
+ * 핵심 시각화 및 비교 → 협력사 리스크 이력 및 탐색) 구조를 따른다. 2026-08-02 — 사이드바를
+ * 2항목 해시 placeholder에서 7탭 실제 라우트로 확장.
  */
 export function PlanningDashboardPage() {
   const dashboard = fetchPlanningDashboard()
@@ -24,7 +22,7 @@ export function PlanningDashboardPage() {
       <Header />
       <div className={styles.body}>
         <SideNavToggleButton />
-        <SideNav items={SIDE_NAV_ITEMS} />
+        <SideNav items={PLANNING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <header className={styles.topBar}>
             <h1 className={styles.heading}>경영기획팀 대시보드</h1>

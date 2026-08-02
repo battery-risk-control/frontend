@@ -5,6 +5,12 @@ import { AuthPage } from '../features/auth/pages/AuthPage'
 import { PurchasingDashboardPage } from '../features/purchasing/pages/PurchasingDashboardPage'
 import { BriefingDetailPage } from '../features/purchasing/pages/BriefingDetailPage'
 import { PlanningDashboardPage } from '../features/planning/pages/PlanningDashboardPage'
+import { MaterialRiskPage } from '../features/planning/pages/MaterialRiskPage'
+import { ImportDependencyPage } from '../features/planning/pages/ImportDependencyPage'
+import { SupplierAnalysisPage } from '../features/planning/pages/SupplierAnalysisPage'
+import { ContractStatusPage } from '../features/planning/pages/ContractStatusPage'
+import { AiBriefingSummaryPage } from '../features/planning/pages/AiBriefingSummaryPage'
+import { DataQualityPage } from '../features/planning/pages/DataQualityPage'
 import { ExecutiveDashboardPage } from '../features/executive/pages/ExecutiveDashboardPage'
 import { useAuthState } from '../lib/useAuthState'
 import { DASHBOARD_PATH_BY_TIER } from '../lib/dashboardPaths'
@@ -69,6 +75,54 @@ export function AppRoutes() {
         element={
           <RequireAuth tier="planning">
             <PlanningDashboardPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/planning/materials"
+        element={
+          <RequireAuth tier="planning">
+            <MaterialRiskPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/planning/import-dependency"
+        element={
+          <RequireAuth tier="planning">
+            <ImportDependencyPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/planning/suppliers"
+        element={
+          <RequireAuth tier="planning">
+            <SupplierAnalysisPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/planning/contracts"
+        element={
+          <RequireAuth tier="planning">
+            <ContractStatusPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/planning/briefings"
+        element={
+          <RequireAuth tier="planning">
+            <AiBriefingSummaryPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/planning/data-quality"
+        element={
+          <RequireAuth tier="planning">
+            <DataQualityPage />
           </RequireAuth>
         }
       />

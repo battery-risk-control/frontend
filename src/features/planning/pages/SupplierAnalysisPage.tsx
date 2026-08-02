@@ -25,6 +25,7 @@ export function SupplierAnalysisPage() {
   const linkedUnitItems = (topVendor?.linked_units ?? []).map((unit) => ({
     name: unit,
     value: topVendor?.risk_count_90d ?? 0,
+    value_suffix: '건',
     tone: 'neutral' as const,
   }))
 

@@ -45,6 +45,7 @@ export function RankedBarChart({ title, caption, items }: RankedBarChartProps) {
             />
             <Tooltip
               cursor={{ fill: 'var(--color-bg)' }}
+              isAnimationActive={false}
               contentStyle={{
                 background: 'var(--color-surface)',
                 border: '1px solid var(--color-border)',

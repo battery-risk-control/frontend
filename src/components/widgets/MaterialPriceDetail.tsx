@@ -224,6 +224,7 @@ export function MaterialPriceDetail({ series, summaries }: MaterialPriceDetailPr
             />
             <YAxis width={36} tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} tickLine={false} axisLine={false} />
             <Tooltip
+              isAnimationActive={false}
               contentStyle={{
                 background: 'var(--color-surface)',
                 border: '1px solid var(--color-border)',

@@ -282,9 +282,28 @@
  * 같은 화면에서 등급 배지도 그 색을 쓰므로 "정상 등급"과 "실행 버튼"이 같은 색이었다 —
  * 색이 곧 등급을 뜻하는 화면에서 액션에 등급 색을 쓰면 의미가 섞인다.
  */
+/*
+ * 이 화면에서 유일하게 무언가를 실행하는 버튼이라 다른 버튼보다 크게 둔다 — 상단 바에서
+ * 분석 대상·ERP 연결 두 칸과 나란히 서는데, 같은 크기면 어느 것이 눌러야 할 것인지 읽히지
+ * 않는다.
+ *
+ * `min-width`는 라벨이 "LLM 브리핑 생성"에서 "생성 중…"으로 짧아질 때 버튼이 줄어들며 옆
+ * 칸까지 밀리는 것을 막는다. 누른 직후에 레이아웃이 움직이면 잘못 눌렀나 싶어진다.
+ */
 .primaryAction {
+  min-width: 200px;
+  padding: var(--space-4) var(--space-8);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
   color: var(--color-surface);
   background: var(--color-primary);
+}
+
+/* 좁은 화면에서는 상단 바가 1열로 접혀 버튼이 가로 전체를 쓴다 — 최소 너비가 방해되지 않게. */
+@media (max-width: 900px) {
+  .primaryAction {
+    min-width: 0;
+  }
 }
 
 .secondaryAction {

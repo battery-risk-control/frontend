@@ -16,6 +16,7 @@ import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
+import { SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
 import { useAuthState } from '../../../lib/useAuthState'
 import { PURCHASING_SIDE_NAV_ITEMS } from '../../../lib/purchasingNav'
 import styles from './RiskMonitoringPage.module.css'
@@ -328,7 +329,13 @@ export function RiskMonitoringPage() {
               <h2 id="event-list-heading" className={styles.panelHeading}>
                 이벤트 목록 · {events.length}건
               </h2>
-              {isLoading && <p className={styles.notice}>불러오는 중…</p>}
+              {/* 텍스트 한 줄 대신 들어올 목록 모양으로 자리를 잡는다 — 도착할 때 화면이
+                  튀지 않고, 몇 건쯤 오는지도 미리 읽힌다. */}
+              {isLoading && (
+                <div aria-busy="true" aria-label="이벤트 목록 불러오는 중">
+                  <SkeletonText lines={6} lastLineWidth="45%" />
+                </div>
+              )}
               {listError && <p className={styles.error}>{listError}</p>}
               {!isLoading && !listError && events.length === 0 && (
                 <p className={styles.notice}>

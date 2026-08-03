@@ -17,6 +17,7 @@ import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
+import { SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
 import { useAuthState } from '../../../lib/useAuthState'
 import { PURCHASING_SIDE_NAV_ITEMS } from '../../../lib/purchasingNav'
 import styles from './MaterialRiskPage.module.css'
@@ -125,7 +126,11 @@ export function MaterialRiskPage() {
               <h2 id="material-list-heading" className={styles.panelHeading}>
                 자재별 위험 현황
               </h2>
-              {isLoading && <p className={styles.notice}>불러오는 중…</p>}
+              {isLoading && (
+                <div aria-busy="true" aria-label="자재별 위험 현황 불러오는 중">
+                  <SkeletonText lines={6} lastLineWidth="50%" />
+                </div>
+              )}
               {listError && <p className={styles.error}>{listError}</p>}
               {!isLoading && !listError && materials.length === 0 && (
                 <p className={styles.notice}>평가할 ERP 자재가 없습니다.</p>

@@ -18,6 +18,7 @@ import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
+import { SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
 import { useAuthState } from '../../../lib/useAuthState'
 import { PURCHASING_SIDE_NAV_ITEMS } from '../../../lib/purchasingNav'
 import styles from './ContractRagPage.module.css'
@@ -47,6 +48,8 @@ export function ContractRagPage() {
   const { accessToken } = useAuthState()
   const navigate = useNavigate()
   const [contracts, setContracts] = useState<ContractSummary[]>([])
+  /** 계약 목록 조회 중인지. select는 자리표시자를 넣을 데가 없어 안내 문구와 비활성으로 알린다. */
+  const [contractsLoading, setContractsLoading] = useState(true)
   const [query, setQuery] = useState(DEFAULT_QUERY)
   const [scopeContractId, setScopeContractId] = useState<number | null>(null)
   const [search, setSearch] = useState<ContractClauseSearchResult | null>(null)
@@ -80,9 +83,13 @@ export function ContractRagPage() {
 
   useEffect(() => {
     let cancelled = false
-    void fetchContractList().then((rows) => {
-      if (!cancelled) setContracts(rows)
-    })
+    void fetchContractList()
+      .then((rows) => {
+        if (!cancelled) setContracts(rows)
+      })
+      .finally(() => {
+        if (!cancelled) setContractsLoading(false)
+      })
     return () => {
       cancelled = true
     }
@@ -266,11 +273,14 @@ export function ContractRagPage() {
               <span>계약 선택</span>
               <select
                 value={scopeContractId ?? ''}
+                disabled={contractsLoading}
                 onChange={(event) =>
                   handleSelectContract(event.target.value ? Number(event.target.value) : null)
                 }
               >
-                <option value="">전체 계약</option>
+                {/* 목록이 오기 전에 "전체 계약"만 띄우면 계약이 하나도 없는 것처럼 읽힌다.
+                    select에는 자리표시자를 넣을 수 없어 문구와 비활성으로 대신한다. */}
+                <option value="">{contractsLoading ? '계약 목록 불러오는 중…' : '전체 계약'}</option>
                 {contracts.map((contract) => (
                   <option key={contract.contract_id} value={contract.contract_id}>
                     {contract.erp_contract_id ?? `#${contract.contract_id}`} · {contract.contract_name}
@@ -316,12 +326,19 @@ export function ContractRagPage() {
               </h2>
 
               {searchError && <p className={styles.error}>{searchError}</p>}
-              {!search && !searchError && (
+              {/* 조항 검색은 임베딩 조회라 눈에 띄게 걸린다. 버튼만 "검색 중…"으로 바뀌고
+                  본문이 비어 있으면 결과가 없는 것으로 읽혀서, 결과 자리에도 표시한다. */}
+              {isSearching && (
+                <div aria-busy="true" aria-label="계약 조항 검색 중">
+                  <SkeletonText lines={5} lastLineWidth="55%" />
+                </div>
+              )}
+              {!isSearching && !search && !searchError && (
                 <p className={styles.notice}>
                   검색어를 넣고 "계약서 검색"을 누르면 의미가 가까운 조항을 유사도 순으로 보여줍니다.
                 </p>
               )}
-              {search && search.results.length === 0 && (
+              {!isSearching && search && search.results.length === 0 && (
                 <p className={styles.notice}>
                   {detail && detail.contract.document_count === 0
                     ? '이 계약에는 적재된 문서가 없습니다. 우측에서 계약서를 올린 뒤 다시 검색하세요.'

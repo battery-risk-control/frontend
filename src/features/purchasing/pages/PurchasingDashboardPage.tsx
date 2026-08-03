@@ -255,6 +255,9 @@ export function PurchasingDashboardPage() {
   // 누를 때마다 다시 부를 이유가 없어서다. 둘을 반드시 **같은 days로** 부른다.
   useEffect(() => {
     let cancelled = false
+    // 기간 탭을 바꾸면 다시 불러오므로 로딩을 되켠다. 초기값 true만으로는 첫 조회에만
+    // 자리표시자가 뜨고, 이후 재조회는 이전 구간 데이터를 띄운 채로 조용히 바뀐다.
+    setPriceLoading(true)
     const days = PERIOD_DAYS[period]
     fetchPublicPriceTrends(days)
       .then((series) => {
@@ -283,6 +286,10 @@ export function PurchasingDashboardPage() {
   // 환율·지도·가격까지 전부 다시 불린다.
   useEffect(() => {
     let cancelled = false
+    // 화살표로 페이지를 넘길 때마다 다시 불러오므로 로딩을 되켠다 — 이게 없으면 첫 조회
+    // 이후로는 자리표시자가 영영 안 뜨고, 넘긴 뒤에도 이전 페이지 목록이 그대로 남아
+    // "화살표가 안 먹는다"처럼 보인다.
+    setNewsLoading(true)
     fetchPublicNewsFeed(NEWS_FEED_PAGE_SIZE, newsPage * NEWS_FEED_PAGE_SIZE)
       .then((items) => {
         if (cancelled) return
@@ -313,6 +320,13 @@ export function PurchasingDashboardPage() {
   useEffect(() => {
     if (!accessToken) return
     let cancelled = false
+    // "대응 완료" 후 reloadKey로 다시 부를 때도 자리표시자가 떠야 한다.
+    setKpiLoading(true)
+    setMaterialRiskLoading(true)
+    setSupplierLoading(true)
+    setMaterialsLoading(true)
+    setAlertsLoading(true)
+    setBriefingsLoading(true)
     fetchPurchasingKpiSummary(accessToken)
       .then((summary) => {
         if (!cancelled) setKpi(summary)

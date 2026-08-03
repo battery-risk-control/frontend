@@ -13,6 +13,7 @@ import type {
   AiBriefingListItem,
   AiBriefingSource,
 } from '../../../api/types'
+import { SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
@@ -79,6 +80,8 @@ export function AiBriefingPage() {
   const [contextState, setContextState] = useState<ContextState | null>(null)
   const [detailState, setDetailState] = useState<DetailState | null>(null)
   const [recent, setRecent] = useState<AiBriefingListItem[]>([])
+  /** 최근 브리핑 조회 중인지. "저장된 브리핑이 아직 없습니다"와 구분해야 한다. */
+  const [recentLoading, setRecentLoading] = useState(true)
   const [actionError, setActionError] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [recentToken, setRecentToken] = useState(0)
@@ -147,6 +150,8 @@ export function AiBriefingPage() {
       } catch {
         // 최근 목록이 비어도 생성은 할 수 있어야 하므로 화면을 막지 않는다.
         if (!cancelled) setRecent([])
+      } finally {
+        if (!cancelled) setRecentLoading(false)
       }
     }
     void load(accessToken)
@@ -285,7 +290,9 @@ export function AiBriefingPage() {
               </h2>
               {isGenerating && <p className={styles.notice}>멀티에이전트 실행 중…</p>}
               {!isGenerating && !detail && briefingId && (
-                <p className={styles.notice}>브리핑을 불러오는 중…</p>
+                <div aria-busy="true" aria-label="브리핑 불러오는 중">
+                  <SkeletonText lines={7} lastLineWidth="60%" />
+                </div>
               )}
               {!isGenerating && !detail && !briefingId && (
                 <p className={styles.notice}>
@@ -299,7 +306,7 @@ export function AiBriefingPage() {
 
             <div className={styles.sideColumn}>
               <EvidencePanel detail={detail} />
-              <RecentPanel items={recent} onOpen={handleOpen} />
+              <RecentPanel items={recent} isLoading={recentLoading} onOpen={handleOpen} />
             </div>
           </div>
         </main>
@@ -538,9 +545,11 @@ function EvidenceRow({
 /** 우측 하단 "최근 브리핑". 팀 전체 공용이라 다른 사람이 만든 것도 보인다. */
 function RecentPanel({
   items,
+  isLoading,
   onOpen,
 }: {
   items: AiBriefingListItem[]
+  isLoading: boolean
   /** 항목 전체를 넘긴다 — 상세를 열 때 `source_type`·`source_ref`로 상단 대상까지 맞춰야 한다. */
   onOpen: (item: AiBriefingListItem) => void
 }) {
@@ -549,7 +558,14 @@ function RecentPanel({
       <h2 id="recent-heading" className={styles.panelHeading}>
         최근 브리핑
       </h2>
-      {items.length === 0 && <p className={styles.notice}>저장된 브리핑이 아직 없습니다.</p>}
+      {isLoading && (
+        <div aria-busy="true" aria-label="최근 브리핑 불러오는 중">
+          <SkeletonText lines={6} lastLineWidth="45%" />
+        </div>
+      )}
+      {!isLoading && items.length === 0 && (
+        <p className={styles.notice}>저장된 브리핑이 아직 없습니다.</p>
+      )}
       {items.map((item) => (
         <article key={item.briefing_id} className={styles.recentCard}>
           <p className={styles.recentTitle}>{item.subject_title ?? item.news_id}</p>

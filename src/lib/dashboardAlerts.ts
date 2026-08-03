@@ -87,17 +87,28 @@ function toPriceAlerts(
     .map((summary) => {
       const matched = series.find((item) => item.material === summary.material)
       const latest = matched?.points.at(-1)
+      // 두 값은 **다른 것**이라 따로 보여준다.
+      //   거래일  — 이 가격이 형성된 날. 일봉이라 날짜까지만 있다.
+      //   갱신    — 그 행을 마지막으로 적재한 시각.
+      // 주말·휴장이면 둘이 며칠 벌어진다(실측: 거래일 07-31, 갱신 08-03). 하나로 합치면
+      // "3일 전 가격인데 방금 갱신됨"이라는 사실이 사라진다. 거래일에 00:00을 붙여 시각을
+      // 지어내지도 않는다 — 그 시각에 무슨 일이 있었던 것처럼 읽힌다.
+      const tradingDay = latest ? latest.date.slice(5) : null
+      const refreshedAt = latest?.updated_at ? toTimeLabel(latest.updated_at) : null
       return {
         id: `price-${summary.material}`,
         level: '정보' as const,
-        // 거래일(date)은 일봉이라 날짜뿐이다. 시각은 그 행을 마지막으로 적재한 updated_at에서
-        // 온다 — 거래일에 "00:00"을 붙이면 그 시각에 무슨 일이 있었던 것처럼 읽히므로
-        // 지어내지 않고 실제 갱신 시각을 쓴다. 옛 응답에는 이 필드가 없어 날짜로 떨어진다.
-        timeLabel: latest?.updated_at
-          ? toTimeLabel(latest.updated_at)
-          : latest?.date.slice(5) ?? '—',
+        // 좁은 사이드패널의 머리줄에는 "언제 들어온 값인가"만 둔다. 거래일은 아래 보조 줄로
+        // 내린다 — 둘을 머리줄에 같이 넣으면 등급 배지와 한 줄에서 밀린다.
+        timeLabel: refreshedAt ? `갱신 ${refreshedAt}` : tradingDay ?? '—',
         title: `${summary.material} 가격 변동성 주의`,
-        detail: `구간 등락 ${summary.change_label} · 연율화 변동성 ${summary.risk_score}%`,
+        detail: [
+          tradingDay ? `거래일 ${tradingDay}` : null,
+          `구간 등락 ${summary.change_label}`,
+          `연율화 변동성 ${summary.risk_score}%`,
+        ]
+          .filter(Boolean)
+          .join(' · '),
         href: '/purchasing#material-price-detail-heading',
       }
     })

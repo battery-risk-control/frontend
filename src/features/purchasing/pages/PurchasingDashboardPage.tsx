@@ -15,8 +15,6 @@ import {
   fetchMaterialRiskSummary,
   fetchPurchasingKpiSummary,
   fetchSupplierOverview,
-  toMaterialRiskGauges,
-  toScoreCards,
 } from '../../../api/purchasingDashboard.api'
 import { fetchMaterialRiskOverview } from '../../../api/materialRisk.api'
 import { fetchRiskMonitoringEvents } from '../../../api/riskMonitoring.api'
@@ -54,7 +52,7 @@ import { PurchasingDashboardHeader } from '../components/PurchasingDashboardHead
 import { PurchasingKpiRow } from '../components/PurchasingKpiRow'
 import { LiveNewsMarquee } from '../components/LiveNewsMarquee'
 import { LatestNewsPanel } from '../components/LatestNewsPanel'
-import { MaterialRiskOverviewSection } from '../components/MaterialRiskOverviewSection'
+import { MaterialRiskGaugeGrid } from '../components/MaterialRiskGaugeGrid'
 import { MaterialRiskSummaryTable } from '../components/MaterialRiskSummaryTable'
 import { AcknowledgedPanel } from '../components/AcknowledgedPanel'
 import { SupplierOverviewPanel } from '../components/SupplierOverviewPanel'
@@ -213,8 +211,6 @@ export function PurchasingDashboardPage() {
   // 주요 알림은 두 원천이 섞인다 — 멀티에이전트 판정이 심각·주의인 뉴스 + 변동성이 큰 자재(정보).
   // 가격 쪽은 기간 탭(period)에 따라 함께 바뀐다. 같은 구간에서 파생한 값이라 그게 맞다.
   const alerts = buildDashboardAlerts(monitoringEvents, priceSeries, priceSummaries)
-  const gauges = toMaterialRiskGauges(materials)
-  const scoreCards = toScoreCards(kpi)
 
   const { expanded: alertsExpanded, toggle: toggleAlertsExpanded } = useAlertsPanelState()
   const [isPreviewing, setIsPreviewing] = useState(false)
@@ -542,6 +538,9 @@ export function PurchasingDashboardPage() {
             pendingAssessmentId={pendingAssessmentId}
             onAcknowledge={handleAcknowledge}
           />
+          {/* 같은 배열을 게이지로도 읽는다. 기본은 접힘 — 펼쳐두면 바로 위 표와 같은 값이
+              두 벌로 보여 그때는 진짜 중복이 된다. */}
+          <MaterialRiskGaugeGrid items={materialRiskSummary} />
           {/* 위 표에서 "대응 완료"로 내려간 항목이 여기로 옮겨진다. 되돌릴 자리가 여기뿐이다.
               옆이 아니라 아래에 두는 이유: main 컬럼이 SideNav(220) + 우측 패널(320) + 도트
               레일(40)에 이미 눌려 있어, 5칸짜리 표 옆에 300px를 떼면 "주요 이슈" 칸이 먼저
@@ -554,8 +553,13 @@ export function PurchasingDashboardPage() {
           />
 
           {/* ── 목업에 없는 기존 구성 (아래) ───────────────────────
-              목업이 화면 전체를 반영한 것이 아니라, 지우지 않고 아래로 내렸다. */}
-          <MaterialRiskOverviewSection gauges={gauges} scoreCards={scoreCards} />
+              목업이 화면 전체를 반영한 것이 아니라, 지우지 않고 아래로 내렸다.
+
+              MaterialRiskOverviewSection은 2026-08-03에 제거했다. 옆에 붙어 있던
+              "외부 리스크 종합 점수"·"ERP 영향 점수" 카드가 상단 KPI와 **같은 필드**를
+              같은 방식으로 다시 그렸고(kpi.external_signal_score_avg /
+              erp_exposure_score_avg), 게이지는 위 표와 단위가 어긋난 데다 하드코딩
+              placeholder까지 섞여 있었다. 게이지는 표 바로 아래 접기 UI로 옮겼다. */}
           <MaterialRiskStatusPanel materials={materials} />
           <ErpImpactPanel materials={materials} />
           <PurchasePriorityPanel materials={materials} isLoading={materialsLoading} />

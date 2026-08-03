@@ -1,12 +1,10 @@
 import { fetchWithAuth } from './http'
 import type {
   AcknowledgedItem,
-  MaterialRiskGaugeItem,
   MaterialRiskItem,
   MaterialRiskSummaryItem,
   PurchasingKpiSummary,
   RiskGrade,
-  ScoreCardItem,
   SupplierOverview,
 } from './types'
 
@@ -173,61 +171,6 @@ const GRADE_SEVERITY: Record<RiskGrade, number> = {
   정상: 1,
 }
 
-/** 게이지 카드로 세울 자재 수. surin 이식 당시의 3장 구성을 유지한다. */
-const GAUGE_COUNT = 3
-
-/**
- * 자재별 위험 목록(`/material-risk/overview`)에서 게이지 카드 3장을 고른다.
- *
- * **평가하지 못한 자재(`grade === null`)는 제외한다.** 게이지는 등급이 있어야 그려지는데,
- * 재고 데이터가 없어 평가가 안 된 자재를 '정상'으로 채우면 "확인해보니 괜찮다"로 읽힌다 —
- * 실제로는 확인하지 못한 것이다. 그런 자재는 `MaterialRiskStatusPanel`이 "평가 불가"로 따로 보여준다.
- *
- * 기존 mock에는 `changeLabel`("전일 대비 ▲ 4")이 있었지만 채우지 않는다. `/material-risk/overview`는
- * 현재 스냅샷만 주고 전일 점수를 주지 않아, 비교 대상 없이 만들면 화면에만 존재하는 숫자가 된다.
- *
- * 사용 예:
- *   const gauges = toMaterialRiskGauges(overview.materials)
- */
-export function toMaterialRiskGauges(materials: MaterialRiskItem[]): MaterialRiskGaugeItem[] {
-  return materials
-    .filter((material): material is MaterialRiskItem & { grade: RiskGrade } => material.grade !== null)
-    .sort((a, b) => {
-      const severityDiff = GRADE_SEVERITY[b.grade] - GRADE_SEVERITY[a.grade]
-      if (severityDiff !== 0) return severityDiff
-      return (b.score ?? 0) - (a.score ?? 0)
-    })
-    .slice(0, GAUGE_COUNT)
-    .map((material) => ({
-      name: material.material_name,
-      basis: `(${material.erp_material_id})`,
-      grade: material.grade,
-    }))
-}
-
-/**
- * KPI 요약에서 점수 카드 2장(외부 리스크 종합 / ERP 영향)을 만든다.
- *
- * 평가가 0건이면 백엔드가 평균을 null로 주므로 카드 자체를 만들지 않는다 — 0점 카드를 띄우면
- * "위험이 없다"로 읽히는데 실제로는 "아직 평가하지 않았다"이기 때문이다.
- *
- * `grade`는 채우지 않는다(`ScoreCardItem.grade` 주석 참고) — 이 두 점수를 등급으로 나누는
- * 임계값이 백엔드에 없다.
- *
- * 사용 예:
- *   const cards = toScoreCards(kpi)
- */
-export function toScoreCards(kpi: PurchasingKpiSummary | null): ScoreCardItem[] {
-  if (!kpi) return []
-  const cards: ScoreCardItem[] = []
-  if (kpi.external_signal_score_avg !== null) {
-    cards.push({ label: '외부 리스크 종합 점수', score: Math.round(kpi.external_signal_score_avg) })
-  }
-  if (kpi.erp_exposure_score_avg !== null) {
-    cards.push({ label: 'ERP 영향 점수', score: Math.round(kpi.erp_exposure_score_avg) })
-  }
-  return cards
-}
 
 /**
  * 구매 대응 우선순위 정렬. 별도 우선순위 스키마가 없으므로 자재별 위험 목록에서 파생한다 —

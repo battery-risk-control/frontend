@@ -193,7 +193,7 @@
 
 - `ExchangeRateItem`/`ExchangeRateBoard` 타입(`api/types.ts`) 신규 — 기존 `NewsExchangeTicker`용
   `ExchangeRateItem`(Phase 11, `youngjin/2nd-demo-layout` 브랜치 계열)과는 **이름은 같지만 이
-  브랜치엔 존재하지 않는 별개 타입**이다. 이 브랜치(`youngjin/demo-layout-v3`)는 Phase 11 이전
+  브랜치엔 존재하지 않는 별개 타입**이다. 이 브랜치(`feat/public-tier`)는 Phase 11 이전
   시점에서 갈라져 그 타입이 없는 상태이므로 이번 이식이 신규 추가이며 충돌이 없다 — 다만 향후
   두 브랜치를 합칠 때는 두 `ExchangeRateItem` 스키마(필드 구성이 다름)를 어느 쪽으로 통일할지
   별도 조율이 필요하다(사전 조사에서 이미 확인된 충돌 지점).

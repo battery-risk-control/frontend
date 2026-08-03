@@ -121,6 +121,24 @@
   - [ ] Phase 13(후보) — 2계층 백엔드 연동: **미착수**. 사업부(business_unit) 개념이
     ERP/백엔드 스키마에 아예 없어(현재 `BUSINESS_UNIT_BY_MATERIAL` 프론트 임시 매핑으로만
     존재) 실 데이터 연동 전 사업부 마스터 데이터 설계가 선행 필요.
+  - [x] Phase 12.2 — 2계층 실 백엔드 검증 후 발견된 화면 일관성/색상 개선(2026-08-03):
+    실 Spring 백엔드(격리 Docker 검증 스택)로 2계층 7탭을 전부 검증하는 과정에서 사용자가
+    지적한 3가지를 반영. (1) "전략 대시보드"에 1계층/공개 대시보드와 동일한
+    `GlobalRiskBoard`(글로벌 리스크 관제 맵)를 `useGlobalRiskBoard()` 신규 훅(공개
+    엔드포인트 `GET /api/v1/public/risk-board` 재사용, 인증 불필요)으로 추가 — 새 백엔드
+    작업 없음. (2) `RankedBarChart`에 선택적 `legend` prop 신설(색점+텍스트 칩) —
+    "공급사 분석" 탭 "리스크 이력 랭킹"(REVIEW/APPROVED)에 적용. (3) "데이터 품질" 탭
+    "신뢰도 라벨 분포"가 리스크 등급 색상(`--color-risk-*`)을 신뢐도 라벨 색상(확정/참고/
+    경고)에 잘못 재사용하던 문제 발견(`design-tokens.md`가 이미 "서로 다른 축"이라 명시한
+    원칙 위반) — `RankedBarItem['tone']`에 `'reference'` 추가, 참고 항목만
+    `--color-confidence-reference`로 교체하고 범례도 함께 추가. 전수 스캔 결과 `tone` 사용처
+    중 이 유형의 문제는 이 1건뿐이었다. 또한 이번 세션에서 "사업부별 리스크 노출도" 쿼리를
+    최근 1건 스냅샷 → 이번 분기 누적 평균으로 변경(`PlanningDashboardRepository.
+    loadRiskExposureByUnit()`), RAG 상태 조회 Jackson snake_case 역직렬화 버그
+    (`fastApiRestClient`가 전역 SNAKE_CASE 설정을 안 타는 문제, `@JsonProperty` 추가로 수정),
+    KG 게이트 미배선 시 ERP/계약 분석이 통째로 스킵되는 버그(`kg_service` 호스트 프로세스로
+    기동 + `KG_SERVICE_BASE_URL` 배선)도 함께 발견·수정됨 — 전부 백엔드(`빅프로젝트/backend`)
+    변경.
 
 ## 재사용 규칙 (Phase 3에서 결정되는 인터페이스는 이후 Phase가 그대로 따른다)
 - `ConfidenceBadge`/`RiskGradeBadge`의 props 타입은 이후 모든 화면에서 동일하게 재사용한다 — 화면별로 별도 배지를 새로 만들지 않는다.

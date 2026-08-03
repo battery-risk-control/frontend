@@ -7,7 +7,6 @@
 .body {
   display: flex;
   flex: 1;
-  background: var(--color-bg);
 }
 
 .main {
@@ -19,6 +18,13 @@
   padding: var(--space-6);
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
 .heading {
   margin: 0;
   font-size: var(--font-size-xl);
@@ -26,59 +32,53 @@
   color: var(--color-text);
 }
 
-.subheading {
-  margin: var(--space-1) 0 0;
+.unit {
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
 
-.grid2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
-}
-
-.grid3 {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: var(--space-4);
-}
-
-@media (max-width: 940px) {
-  .grid2,
-  .grid3 {
-    grid-template-columns: 1fr;
-  }
-}
-
-.unitSelect {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
-  font-size: var(--font-size-xs);
-  font-family: inherit;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.insightCard {
+.section {
   padding: var(--space-4);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
 
-.insightTitle {
-  margin: 0 0 var(--space-2);
+.sectionTitle {
+  margin: 0 0 var(--space-3);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-bold);
   color: var(--color-primary);
 }
 
-.insightBody {
+.bodyText {
   margin: 0;
   font-size: var(--font-size-sm);
   color: var(--color-text);
+}
+
+.pointList {
+  margin: 0;
+  padding-left: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.findingJson {
+  margin: 0;
+  padding: var(--space-2);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
 }

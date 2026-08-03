@@ -1,8 +1,11 @@
 import { fetchImportDependency, fetchRiskEvents } from './purchasing.api'
 import { parseRiskEventDate } from '../lib/riskEventId'
+import { fetchWithAuth } from './http'
 import type {
+  AiBriefingDetailResponse,
   AiBriefingSummaryDashboardResponse,
   BriefingSummaryItem,
+  ContractDetailResponse,
   ContractStatusDashboardResponse,
   CountryDependencyItem,
   DataQualityStatus,
@@ -20,6 +23,14 @@ import type {
   UnitDependencyItem,
   VendorRiskHistoryItem,
 } from './types'
+
+/**
+ * ①단계(mock)/②③단계(실 백엔드) 분기 기준. `fetchPublicRiskBoard()`(public.api.ts)와
+ * 동일한 패턴이지만, 2계층 API는 전부 인증이 필요해 `fetchJson` 대신 `fetchWithAuth`를 쓴다.
+ * 2026-08-03부터 `/api/v1/planning/*` 7개 + 상세 2개(9개)가 실제로 연결됐다
+ * (`docs/backend-api-contracts.md` 참고).
+ */
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
 
 const GRADE_SEVERITY: Record<RiskGrade, number> = { 심각: 3, 주의: 2, 정상: 1 }
 
@@ -44,16 +55,27 @@ const VENDOR_ID_BY_NAME: Record<string, string> = {
 }
 
 /**
- * 2계층 경영기획팀 대시보드 mock 함수. purchasing.api.ts의 risk_event mock 배열에서
- * risk_exposure_by_unit·vendor_risk_history를 파생시켜 같은 근원 데이터를 재사용한다.
+ * 전략 대시보드 탭(사이드바 1번째, `GET /api/v1/planning/strategy-dashboard`).
  *
  * 사용 예:
- *   const dashboard = fetchPlanningDashboard()
+ *   const dashboard = await fetchPlanningDashboard(accessToken)
  */
-export function fetchPlanningDashboard(
-  businessUnit = '전체',
-  period = '2026Q3',
-): PlanningDashboardResponse {
+export async function fetchPlanningDashboard(token: string): Promise<PlanningDashboardResponse> {
+  if (!API_BASE_URL) return fetchPlanningDashboardMock()
+  const result = await fetchWithAuth<PlanningDashboardResponse>('/api/v1/planning/strategy-dashboard', token)
+  if ('error' in result) throw new Error(result.message)
+  return result
+}
+
+/**
+ * 2계층 경영기획팀 대시보드 mock. purchasing.api.ts의 risk_event mock 배열에서
+ * risk_exposure_by_unit·vendor_risk_history를 파생시켜 같은 근원 데이터를 재사용한다.
+ *
+ * export하는 이유: 3계층 executive.api.ts의 `fetchExecutiveDashboard()`가
+ * `risk_exposure_by_unit`을 그대로 압축 인용한다(mock-schemas.md 확장 원칙) — 3계층은
+ * 이번 2계층 실 연동 작업 범위 밖이라 계속 이 mock을 직접 참조한다.
+ */
+export function fetchPlanningDashboardMock(): PlanningDashboardResponse {
   const events = fetchRiskEvents()
 
   const criticalCount = events.filter((event) => event.grade === '심각').length
@@ -105,17 +127,24 @@ export function fetchPlanningDashboard(
     },
   )
 
-  return { business_unit: businessUnit, period, kpi_summary, risk_exposure_by_unit, vendor_risk_history }
+  return { business_unit: '전체', period: '2026Q3', kpi_summary, risk_exposure_by_unit, vendor_risk_history }
 }
 
 /**
- * 자재 위험 탭(사이드바 2번째). risk_event mock을 자재별로 묶어 전사 순위를 매긴다 —
- * fetchPlanningDashboard()의 risk_exposure_by_unit와 같은 GRADE_SEVERITY×24 환산을 재사용.
+ * 자재 위험 탭(사이드바 2번째, `GET /api/v1/planning/material-risk`).
  *
  * 사용 예:
- *   const dashboard = fetchMaterialRiskDashboard()
+ *   const dashboard = await fetchMaterialRiskDashboard(accessToken)
  */
-export function fetchMaterialRiskDashboard(): MaterialRiskDashboardResponse {
+export async function fetchMaterialRiskDashboard(token: string): Promise<MaterialRiskDashboardResponse> {
+  if (!API_BASE_URL) return fetchMaterialRiskDashboardMock()
+  const result = await fetchWithAuth<MaterialRiskDashboardResponse>('/api/v1/planning/material-risk', token)
+  if ('error' in result) throw new Error(result.message)
+  return result
+}
+
+/** risk_event mock을 자재별로 묶어 전사 순위를 매긴다 — fetchPlanningDashboardMock()과 같은 GRADE_SEVERITY×24 환산을 재사용. */
+function fetchMaterialRiskDashboardMock(): MaterialRiskDashboardResponse {
   const events = fetchRiskEvents()
 
   const severityByMaterial = new Map<string, number[]>()
@@ -136,16 +165,19 @@ export function fetchMaterialRiskDashboard(): MaterialRiskDashboardResponse {
     .sort((a, b) => b.score - a.score)
     .map((item, index) => ({ ...item, rank: index + 1 }))
 
-  const topMaterial = ranking[0]?.material
-  const topMaterialEvents = events.filter((event) => event.market_context.material === topMaterial)
-  const severityByUnitForTop = new Map<string, number[]>()
-  for (const event of topMaterialEvents) {
+  // 필드명은 "top_material_..."이지만, 최상위 1개 자재로만 필터링하면 그 자재가 속하지 않은
+  // 사업부가 통째로 빠져버린다(예: 코발트가 1위면 배터리셀사업부가 아예 미표시) — 실 백엔드
+  // `loadTopMaterialUnitExposure()`가 이름과 달리 실제로는 전체 자재를 평균 내는 것과 동일하게
+  // mock도 전체 자재 기준으로 계산한다(fetchPlanningDashboardMock()의 risk_exposure_by_unit과
+  // 동일 로직).
+  const severityByUnit = new Map<string, number[]>()
+  for (const event of events) {
     const unit = BUSINESS_UNIT_BY_MATERIAL[event.market_context.material] ?? '기타'
-    const severities = severityByUnitForTop.get(unit) ?? []
+    const severities = severityByUnit.get(unit) ?? []
     severities.push(GRADE_SEVERITY[event.grade])
-    severityByUnitForTop.set(unit, severities)
+    severityByUnit.set(unit, severities)
   }
-  const top_material_unit_exposure: RiskExposureByUnit[] = Array.from(severityByUnitForTop.entries()).map(
+  const top_material_unit_exposure: RiskExposureByUnit[] = Array.from(severityByUnit.entries()).map(
     ([unit, severities]) => ({
       business_unit: unit,
       exposure_score: Math.round((severities.reduce((sum, value) => sum + value, 0) / severities.length) * 24),
@@ -170,13 +202,20 @@ export function fetchMaterialRiskDashboard(): MaterialRiskDashboardResponse {
 }
 
 /**
- * 수입 의존도 탭(사이드바 3번째). 1계층 fetchImportDependency()의 국가별 breakdown을
- * 재사용하고, 사업부 축은 risk_event 자재→사업부 매핑에 얹어 데모용으로 파생한다.
+ * 수입 의존도 탭(사이드바 3번째, `GET /api/v1/planning/import-dependency`).
  *
  * 사용 예:
- *   const dashboard = fetchImportDependencyDashboard()
+ *   const dashboard = await fetchImportDependencyDashboard(accessToken)
  */
-export function fetchImportDependencyDashboard(): ImportDependencyDashboardResponse {
+export async function fetchImportDependencyDashboard(token: string): Promise<ImportDependencyDashboardResponse> {
+  if (!API_BASE_URL) return fetchImportDependencyDashboardMock()
+  const result = await fetchWithAuth<ImportDependencyDashboardResponse>('/api/v1/planning/import-dependency', token)
+  if ('error' in result) throw new Error(result.message)
+  return result
+}
+
+/** 1계층 fetchImportDependency()의 국가별 breakdown을 재사용하고, 사업부 축은 데모용으로 파생한다. */
+function fetchImportDependencyDashboardMock(): ImportDependencyDashboardResponse {
   const dependency = fetchImportDependency()
 
   const by_country: CountryDependencyItem[] = dependency.breakdown.map((item) => ({
@@ -212,14 +251,21 @@ export function fetchImportDependencyDashboard(): ImportDependencyDashboardRespo
 }
 
 /**
- * 공급사 분석 탭(사이드바 4번째). fetchPlanningDashboard()의 vendor_risk_history를
- * 랭킹·연결 사업부 정보로 확장한다.
+ * 공급사 분석 탭(사이드바 4번째, `GET /api/v1/planning/supplier-analysis`).
  *
  * 사용 예:
- *   const dashboard = fetchSupplierAnalysisDashboard()
+ *   const dashboard = await fetchSupplierAnalysisDashboard(accessToken)
  */
-export function fetchSupplierAnalysisDashboard(): SupplierAnalysisDashboardResponse {
-  const { vendor_risk_history } = fetchPlanningDashboard()
+export async function fetchSupplierAnalysisDashboard(token: string): Promise<SupplierAnalysisDashboardResponse> {
+  if (!API_BASE_URL) return fetchSupplierAnalysisDashboardMock()
+  const result = await fetchWithAuth<SupplierAnalysisDashboardResponse>('/api/v1/planning/supplier-analysis', token)
+  if ('error' in result) throw new Error(result.message)
+  return result
+}
+
+/** fetchPlanningDashboardMock()의 vendor_risk_history를 랭킹·연결 사업부 정보로 확장한다. */
+function fetchSupplierAnalysisDashboardMock(): SupplierAnalysisDashboardResponse {
+  const { vendor_risk_history } = fetchPlanningDashboardMock()
 
   const ranking: SupplierRiskRankItem[] = [...vendor_risk_history]
     .sort((a, b) => b.risk_count_90d - a.risk_count_90d)
@@ -254,13 +300,20 @@ export function fetchSupplierAnalysisDashboard(): SupplierAnalysisDashboardRespo
 }
 
 /**
- * 계약 현황 탭(사이드바 5번째). risk_event/ERP 어느 쪽에도 계약-사업부 매핑이 없어 전 필드
- * mock 임시값 — docs/mock-schemas.md "임시 mock 값" 표에 등재.
+ * 계약 현황 탭(사이드바 5번째, `GET /api/v1/planning/contracts`).
  *
  * 사용 예:
- *   const dashboard = fetchContractStatusDashboard()
+ *   const dashboard = await fetchContractStatusDashboard(accessToken)
  */
-export function fetchContractStatusDashboard(): ContractStatusDashboardResponse {
+export async function fetchContractStatusDashboard(token: string): Promise<ContractStatusDashboardResponse> {
+  if (!API_BASE_URL) return fetchContractStatusDashboardMock()
+  const result = await fetchWithAuth<ContractStatusDashboardResponse>('/api/v1/planning/contracts', token)
+  if ('error' in result) throw new Error(result.message)
+  return result
+}
+
+/** risk_event/ERP 어느 쪽에도 계약-사업부 매핑이 없어 전 필드 mock 임시값 — docs/mock-schemas.md "임시 mock 값" 표에 등재. */
+function fetchContractStatusDashboardMock(): ContractStatusDashboardResponse {
   const kpi_summary: KpiSummaryItem[] = [
     { label: 'ACTIVE', value: 24, unit: '건' },
     { label: '만료 임박', value: 3, unit: '건' },
@@ -283,12 +336,20 @@ export function fetchContractStatusDashboard(): ContractStatusDashboardResponse 
 }
 
 /**
- * AI 브리핑 탭(사이드바 6번째). risk_event mock의 rag_view/grade를 사업부 단위로 취합한다.
+ * AI 브리핑 탭(사이드바 6번째, `GET /api/v1/planning/ai-briefing`).
  *
  * 사용 예:
- *   const dashboard = fetchAiBriefingSummaryDashboard()
+ *   const dashboard = await fetchAiBriefingSummaryDashboard(accessToken)
  */
-export function fetchAiBriefingSummaryDashboard(): AiBriefingSummaryDashboardResponse {
+export async function fetchAiBriefingSummaryDashboard(token: string): Promise<AiBriefingSummaryDashboardResponse> {
+  if (!API_BASE_URL) return fetchAiBriefingSummaryDashboardMock()
+  const result = await fetchWithAuth<AiBriefingSummaryDashboardResponse>('/api/v1/planning/ai-briefing', token)
+  if ('error' in result) throw new Error(result.message)
+  return result
+}
+
+/** risk_event mock의 rag_view/grade를 사업부 단위로 취합한다. */
+function fetchAiBriefingSummaryDashboardMock(): AiBriefingSummaryDashboardResponse {
   const events = fetchRiskEvents()
 
   const recent: BriefingSummaryItem[] = [...events]
@@ -326,12 +387,20 @@ export function fetchAiBriefingSummaryDashboard(): AiBriefingSummaryDashboardRes
 }
 
 /**
- * 데이터 품질 탭(사이드바 7번째). 전 필드 mock 임시값 — 실제 파이프라인 모니터링 연동 전.
+ * 데이터 품질 탭(사이드바 7번째, `GET /api/v1/planning/data-quality`).
  *
  * 사용 예:
- *   const status = fetchDataQualityStatus()
+ *   const status = await fetchDataQualityStatus(accessToken)
  */
-export function fetchDataQualityStatus(): DataQualityStatus {
+export async function fetchDataQualityStatus(token: string): Promise<DataQualityStatus> {
+  if (!API_BASE_URL) return fetchDataQualityStatusMock()
+  const result = await fetchWithAuth<DataQualityStatus>('/api/v1/planning/data-quality', token)
+  if ('error' in result) throw new Error(result.message)
+  return result
+}
+
+/** 전 필드 mock 임시값 — 실제 파이프라인 모니터링 연동 전. */
+function fetchDataQualityStatusMock(): DataQualityStatus {
   return {
     erp_sync_status: '정상',
     rag_index_status: '정상',
@@ -343,5 +412,83 @@ export function fetchDataQualityStatus(): DataQualityStatus {
       { label: '참고', ratio: 41 },
       { label: '경고', ratio: 17 },
     ],
+  }
+}
+
+/**
+ * AI 브리핑 드릴다운 상세(`GET /api/v1/planning/ai-briefing/{analysisId}`). 2026-08-03 신규.
+ *
+ * 사용 예:
+ *   const detail = await fetchAiBriefingDetail(accessToken, analysisId)
+ */
+export async function fetchAiBriefingDetail(token: string, analysisId: string): Promise<AiBriefingDetailResponse> {
+  if (!API_BASE_URL) return fetchAiBriefingDetailMock(analysisId)
+  const result = await fetchWithAuth<AiBriefingDetailResponse>(
+    `/api/v1/planning/ai-briefing/${encodeURIComponent(analysisId)}`,
+    token,
+  )
+  if ('error' in result) throw new Error(result.message)
+  return result
+}
+
+/**
+ * mock 임시값 — 실제 백엔드는 procurement_risk_assessments의 LLM 브리핑 본문/근거를
+ * 반환하지만, 1계층 risk_event mock의 `recent` 목록엔 그런 상세 필드가 없어 화면 확인용으로
+ * 합성한다. `recent`에 없는 id는 찾을 수 없음으로 처리(1계층 BriefingDetailPage와 동일 관례).
+ */
+function fetchAiBriefingDetailMock(analysisId: string): AiBriefingDetailResponse {
+  const { recent } = fetchAiBriefingSummaryDashboardMock()
+  const item = recent.find((entry) => entry.risk_event_id === analysisId)
+  if (!item) {
+    throw new Error('해당 브리핑을 찾을 수 없습니다.')
+  }
+  return {
+    analysis_id: item.risk_event_id,
+    material: item.material,
+    business_unit: item.business_unit,
+    grade: item.grade,
+    headline: item.headline,
+    event_content: item.headline,
+    briefing: `${item.headline} — 관련 브리핑 본문(mock 임시값, 실제 LLM 생성 텍스트 아님).`,
+    recommended_actions: ['대체 공급사 컨택 검토', '안전재고 확대 검토'],
+    contract_findings: [],
+    warnings: [],
+    assessed_at: null,
+  }
+}
+
+/**
+ * 계약 상세 드릴다운(`GET /api/v1/planning/contracts/{contractNumber}`). 2026-08-03 신규.
+ *
+ * 사용 예:
+ *   const detail = await fetchContractDetail(accessToken, contractNumber)
+ */
+export async function fetchContractDetail(token: string, contractNumber: string): Promise<ContractDetailResponse> {
+  if (!API_BASE_URL) return fetchContractDetailMock(contractNumber)
+  const result = await fetchWithAuth<ContractDetailResponse>(
+    `/api/v1/planning/contracts/${encodeURIComponent(contractNumber)}`,
+    token,
+  )
+  if ('error' in result) throw new Error(result.message)
+  return result
+}
+
+/** mock 임시값 — fetchContractStatusDashboardMock()의 `expiring` 목록에서 찾아 합성한다. */
+function fetchContractDetailMock(contractNumber: string): ContractDetailResponse {
+  const { expiring } = fetchContractStatusDashboardMock()
+  const item = expiring.find((entry) => entry.id === contractNumber)
+  if (!item) {
+    throw new Error('해당 계약을 찾을 수 없습니다.')
+  }
+  return {
+    contract_number: item.id,
+    contract_name: `${item.id} 공급 계약`,
+    supplier_name: '공급사A',
+    material_name: null,
+    business_unit: item.secondary ?? null,
+    status: 'ACTIVE',
+    start_date: null,
+    end_date: null,
+    documents: [],
   }
 }

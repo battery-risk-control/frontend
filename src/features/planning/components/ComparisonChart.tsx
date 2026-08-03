@@ -1,5 +1,6 @@
 import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { RiskExposureByUnit } from '../../../api/types'
+import { formatScore } from '../../../lib/formatScore'
 import styles from './ComparisonChart.module.css'
 
 interface ComparisonChartProps {
@@ -34,6 +35,7 @@ export function ComparisonChart({ items }: ComparisonChartProps) {
             <YAxis
               width={32}
               domain={[0, 'dataMax + 10']}
+              tickFormatter={(value: number) => formatScore(value)}
               tick={{ fill: 'var(--color-text-muted)', fontSize: 12 }}
               tickLine={false}
               axisLine={false}
@@ -41,6 +43,7 @@ export function ComparisonChart({ items }: ComparisonChartProps) {
             <Tooltip
               cursor={{ fill: 'var(--color-bg)' }}
               isAnimationActive={false}
+              formatter={(value: unknown) => (value === null || value === undefined ? '' : `${formatScore(Number(value))}점`)}
               contentStyle={{
                 background: 'var(--color-surface)',
                 border: '1px solid var(--color-border)',
@@ -49,10 +52,18 @@ export function ComparisonChart({ items }: ComparisonChartProps) {
               }}
               labelStyle={{ color: 'var(--color-text)', fontWeight: 'var(--font-weight-bold)' }}
             />
-            <Bar dataKey="exposure_score" name="노출도 점수" fill="var(--color-primary)" maxBarSize={64} radius={[4, 4, 0, 0]}>
+            <Bar
+              dataKey="exposure_score"
+              name="노출도 점수"
+              fill="var(--color-primary)"
+              maxBarSize={64}
+              radius={[4, 4, 0, 0]}
+              isAnimationActive={false}
+            >
               <LabelList
                 dataKey="exposure_score"
                 position="top"
+                formatter={(value: unknown) => (value === null || value === undefined ? '' : `${formatScore(Number(value))}점`)}
                 fill="var(--color-text)"
                 fontSize={12}
                 fontWeight="var(--font-weight-bold)"

@@ -98,15 +98,86 @@
 - `api/types.ts`의 `GlobalRiskBoardItem`과 **필드가 1:1로 정확히 일치**한다(백엔드 DTO
   주석에도 "프론트 GlobalRiskBoardItem 계약과 1:1"로 명시) — 변환 로직 없이 응답 배열을
   그대로 `GlobalRiskBoardItem[]`로 쓸 수 있다.
-- **데이터 내용은 아직 placeholder다** — 백엔드 컨트롤러 주석: "데이터 내용은 F3/F4
-  모델·뉴스 파이프라인 배선 전까지 결정론적 placeholder다(리스크 이벤트 원본과 동일)."
-  응답에 이를 나타내는 별도 플래그 필드는 없다(경영진 대시보드의 `savings_simulation.
-  is_simulation`과 다름) — FE도 별도 placeholder 표시 UI를 추가하지 않는다(공개
-  대시보드의 다른 3개 패널도 mock 기반이나 표시가 없는 기존 관례와 일관 유지).
+- **(2026-08-03 갱신) 이제 실제 `analyses` 테이블에서 파생된다** — 이전 기록("데이터 내용은
+  F3/F4 모델·뉴스 파이프라인 배선 전까지 결정론적 placeholder")은 최신 백엔드 코드와 어긋난
+  오래된 메모였다. `RiskEventService.riskBoard()`(코드 직접 확인)는 실제 `analyses` 테이블을
+  `(country_code, material_category)` 기준으로 중복 제거해 조회하고, `RISK_BOARD_MAX_MARKERS`
+  상한을 적용한다 — 실 데이터가 없을 때만 `PLACEHOLDER_EVENTS`로 폴백한다. 응답에 이를
+  나타내는 별도 플래그 필드는 없다(경영진 대시보드의 `savings_simulation.is_simulation`과
+  다름) — FE도 별도 placeholder/실데이터 구분 표시 UI를 추가하지 않는다.
 - FE 연동: `src/api/public.api.ts`의 `fetchPublicRiskBoard()`가 `VITE_API_BASE_URL` 설정
   시 이 엔드포인트를, 미설정 시(①단계) `purchasing.api.ts`의 `fetchGlobalRiskBoard()`(mock)
   를 그대로 반환한다. 구매팀 대시보드가 쓰는 `fetchGlobalRiskBoard()`는 이 계약과 무관하게
   mock 그대로 유지된다(의도된 분리).
+
+## 3. 2계층 경영기획팀 대시보드
+
+`backend` 레포 `spring-backend/.../controller/PlanningDashboardController.java`,
+`dto/PlanningDashboardDto.java`, `repository/PlanningDashboardRepository.java` 코드
+직접 확인 + 격리 Docker(`planning-verify-postgres`/`planning-verify-spring`, 별도
+포트 15432/18080) curl 검증으로 확정됨(base 7개는 PR #15 세션, 드릴다운 상세 2개는
+2026-08-03 세션 — 존재하는 id/없는 id 양쪽 응답 코드까지 확인). 전부 `RequireAuth`
+필요(JWT `Authorization: Bearer` 헤더).
+
+**기본 7개**(응답 필드 스키마는 변경 없이 그대로 — 상세는 `docs/mock-schemas.md` "1.
+2계층 — 경영기획팀 대시보드" 1~1-6 참고):
+
+| 탭 | 엔드포인트 |
+|---|---|
+| 전략 대시보드 | `GET /api/v1/planning/strategy-dashboard` |
+| 자재 위험 | `GET /api/v1/planning/material-risk` |
+| 수입 의존도 | `GET /api/v1/planning/import-dependency` |
+| 공급사 분석 | `GET /api/v1/planning/supplier-analysis` |
+| 계약 현황 | `GET /api/v1/planning/contracts` |
+| AI 브리핑 | `GET /api/v1/planning/ai-briefing` |
+| 데이터 품질 | `GET /api/v1/planning/data-quality` |
+
+**드릴다운 상세 2개**(2026-08-03 신규 — 목록 캐시 재활용이 아니라 백엔드 단건 상세를 새로
+조회):
+
+`GET /api/v1/planning/ai-briefing/{analysisId}`
+```json
+{
+  "analysis_id": "RISK-2026-0721-001",
+  "material": "니켈",
+  "business_unit": "배터리셀사업부",
+  "grade": "심각",
+  "headline": "...",
+  "event_content": "...",
+  "briefing": "LLM이 생성한 브리핑 본문",
+  "recommended_actions": ["대체 공급사 컨택 검토", "..."],
+  "contract_findings": [{ "...": "procurement_risk_assessments.contract_findings JSONB 원본, 구조 고정 아님" }],
+  "warnings": [],
+  "assessed_at": "2026-07-21T10:00:00+09:00"
+}
+```
+- `analyses` LEFT JOIN `procurement_risk_assessments`(`ON analysis_id`) LEFT JOIN
+  `material_category_business_units`/`business_units` — 아직 평가되지 않은 분석 대비 LEFT
+  JOIN. 여러 평가 이력이 있으면 `created_at DESC` 최신 1건. 존재하지 않는 `analysisId`
+  (UUID 파싱 실패 포함) → 404 `ANALYSIS_BRIEFING_NOT_FOUND`.
+
+`GET /api/v1/planning/contracts/{contractNumber}`
+```json
+{
+  "contract_number": "BA-2025-0014",
+  "contract_name": "...",
+  "supplier_name": "...",
+  "material_name": "...",
+  "business_unit": "양극재사업부",
+  "status": "ACTIVE",
+  "start_date": "2025-01-01",
+  "end_date": "2026-08-15",
+  "documents": [
+    { "document_id": "DOC-0001", "original_file_name": "contract.pdf", "processing_status": "INDEXED", "chunk_count": 12 }
+  ]
+}
+```
+- `contracts` ⨝ `suppliers`/`materials` LEFT JOIN `business_units` + 별도 쿼리로
+  `contract_documents WHERE contract_id=:id`. 존재하지 않는 `contractNumber` → 404
+  `CONTRACT_NOT_FOUND`.
+- FE 연동: `src/api/planning.api.ts`의 `fetchAiBriefingDetail()`/`fetchContractDetail()` —
+  경로 파라미터는 프론트가 목록 응답(`recent[].risk_event_id`/`expiring[].id`)에서 이미
+  갖고 있는 값을 그대로 재사용, 별도 id 포맷 변환 없음.
 
 ## 아직 이동하지 않은 것들 (참고)
 

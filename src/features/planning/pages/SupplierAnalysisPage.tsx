@@ -1,10 +1,11 @@
-import { fetchSupplierAnalysisDashboard } from '../../../api/planning.api'
 import { Header } from '../../../components/layout/Header'
 import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { KpiSummaryCards } from '../components/KpiSummaryCards'
 import { RankedBarChart } from '../components/RankedBarChart'
 import { EntityBadgeList } from '../components/EntityBadgeList'
+import { QueryState } from '../components/QueryState'
+import { useSupplierAnalysis } from '../hooks/usePlanningQueries'
 import { PLANNING_SIDE_NAV_ITEMS } from '../../../lib/planningNav'
 import styles from './SupplierAnalysisPage.module.css'
 
@@ -13,21 +14,7 @@ import styles from './SupplierAnalysisPage.module.css'
  * "협력사별 리스크 이력 추이" 요구사항에 직접 대응).
  */
 export function SupplierAnalysisPage() {
-  const dashboard = fetchSupplierAnalysisDashboard()
-
-  const rankingItems = dashboard.ranking.map((item) => ({
-    name: item.vendor_name,
-    value: item.risk_count_90d,
-    value_suffix: '건',
-    tone: item.approved_status === 'REVIEW' ? ('warning' as const) : ('normal' as const),
-  }))
-  const topVendor = dashboard.ranking[0]
-  const linkedUnitItems = (topVendor?.linked_units ?? []).map((unit) => ({
-    name: unit,
-    value: topVendor?.risk_count_90d ?? 0,
-    value_suffix: '건',
-    tone: 'neutral' as const,
-  }))
+  const query = useSupplierAnalysis()
 
   return (
     <div className={styles.page}>
@@ -40,12 +27,53 @@ export function SupplierAnalysisPage() {
             <h1 className={styles.heading}>공급사 리스크 분석</h1>
             <p className={styles.subheading}>협력사별 리스크 이력과 사업부 연결 현황을 비교합니다</p>
           </div>
-          <KpiSummaryCards items={dashboard.kpi_summary} />
-          <div className={styles.grid2}>
-            <RankedBarChart title="리스크 이력 랭킹" caption="최근 90일 이벤트 건수" items={rankingItems} />
-            <RankedBarChart title="사업부 연결 현황" caption={`${topVendor?.vendor_name ?? ''} 기준`} items={linkedUnitItems} />
-          </div>
-          <EntityBadgeList title="적격 공급사 추천" items={dashboard.recommended} />
+          <QueryState query={query}>
+            {(dashboard) => {
+              const rankingItems = dashboard.ranking.map((item) => ({
+                name: item.vendor_name,
+                value: item.risk_count_90d,
+                value_suffix: '건',
+                tone: item.approved_status === 'REVIEW' ? ('warning' as const) : ('normal' as const),
+              }))
+              // 사업부 연결 현황 — 공급사 개별(14곳)로 보면 항목이 너무 많아지므로, 연결된
+              // 사업부 단위로 리스크 이력 건수를 합산해 보여준다(1위 공급사만 보여주던 것에서 확장).
+              const riskByUnit = new Map<string, number>()
+              for (const vendor of dashboard.ranking) {
+                for (const unit of vendor.linked_units) {
+                  riskByUnit.set(unit, (riskByUnit.get(unit) ?? 0) + vendor.risk_count_90d)
+                }
+              }
+              const linkedUnitItems = Array.from(riskByUnit.entries()).map(([unit, riskCount]) => ({
+                name: unit,
+                value: riskCount,
+                value_suffix: '건',
+                tone: 'neutral' as const,
+              }))
+
+              return (
+                <>
+                  <KpiSummaryCards items={dashboard.kpi_summary} />
+                  <div className={styles.grid2}>
+                    <RankedBarChart
+                      title="리스크 이력 랭킹"
+                      caption="최근 90일 이벤트 건수"
+                      items={rankingItems}
+                      legend={[
+                        { tone: 'warning', label: 'REVIEW' },
+                        { tone: 'normal', label: 'APPROVED' },
+                      ]}
+                    />
+                    <RankedBarChart
+                      title="사업부 연결 현황"
+                      caption="연결 공급사 리스크 이력 합계"
+                      items={linkedUnitItems}
+                    />
+                  </div>
+                  <EntityBadgeList title="적격 공급사 추천" items={dashboard.recommended} />
+                </>
+              )
+            }}
+          </QueryState>
         </main>
       </div>
     </div>

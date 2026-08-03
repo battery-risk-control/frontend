@@ -1,4 +1,5 @@
 import type { KpiSummaryItem } from '../../../api/types'
+import { formatScore } from '../../../lib/formatScore'
 import styles from './KpiSummaryCards.module.css'
 
 interface KpiSummaryCardsProps {
@@ -23,7 +24,7 @@ export function KpiSummaryCards({ items }: KpiSummaryCardsProps) {
           <div key={item.label} className={styles.card}>
             <span className={styles.label}>{item.label}</span>
             <span className={styles.value}>
-              {item.value}
+              {formatScore(item.value)}
               <span className={styles.unit}>{item.unit}</span>
             </span>
           </div>

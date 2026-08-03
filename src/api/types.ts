@@ -232,7 +232,7 @@ export interface RankedBarItem {
   name: string
   value: number
   value_suffix?: string
-  tone?: 'critical' | 'warning' | 'normal' | 'neutral'
+  tone?: 'critical' | 'warning' | 'normal' | 'neutral' | 'reference'
 }
 
 /** EntityBadgeList 공용 입력 항목 — 공급사/계약/브리핑 리스트에 재사용(VendorRiskHistory 패턴 일반화). */
@@ -327,6 +327,47 @@ export interface DataQualityStatus {
   material_coverage_total: number
   last_updated_label: string
   confidence_distribution: { label: ConfidenceLabel; ratio: number }[]
+}
+
+/**
+ * AI 브리핑 드릴다운 상세(`/planning/briefing/:analysisId`). `analysis_id`는 1계층
+ * risk_event_id("RISK-YYYY-MMDD-NNN")와 형식이 다르다 — 실 백엔드에서는
+ * `analyses.analysis_id`(UUID) 문자열이 그대로 온다(parseRiskEventDate로 파싱 불가,
+ * 이 화면에서는 날짜 파싱을 쓰지 않는다).
+ */
+export interface AiBriefingDetailResponse {
+  analysis_id: string
+  material: string
+  business_unit: string | null
+  grade: RiskGrade
+  headline: string
+  event_content: string
+  briefing: string | null
+  recommended_actions: string[] | null
+  /** 백엔드 procurement_risk_assessments.contract_findings 그대로 — 구조가 고정돼 있지 않아 임의 객체 배열. */
+  contract_findings: Record<string, unknown>[] | null
+  warnings: string[] | null
+  assessed_at: string | null
+}
+
+export interface ContractDocumentItem {
+  document_id: string
+  original_file_name: string
+  processing_status: string
+  chunk_count: number
+}
+
+/** 계약 현황 드릴다운 상세(`/planning/contract/:contractNumber`). */
+export interface ContractDetailResponse {
+  contract_number: string
+  contract_name: string
+  supplier_name: string
+  material_name: string | null
+  business_unit: string | null
+  status: string
+  start_date: string | null
+  end_date: string | null
+  documents: ContractDocumentItem[]
 }
 
 /**

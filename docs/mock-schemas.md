@@ -9,6 +9,13 @@
 
 ## 1. 2계층 — 경영기획팀 대시보드
 
+> **2026-08-03부터**: 이 절의 7개 엔드포인트(전략 대시보드/자재 위험/수입 의존도/공급사
+> 분석/계약 현황/AI 브리핑/데이터 품질) + 드릴다운 상세 2개(AI 브리핑/계약, 아래 1-7/1-8)
+> 총 9개가 실 백엔드(`PlanningDashboardController`)에 연결됐다 — 연결 검증 상세는
+> `docs/backend-api-contracts.md` "3. 2계층 경영기획팀 대시보드" 참고. 응답 필드 스키마
+> 자체는 이 문서에 있는 그대로 변경 없이 유지된다. 아래 mock 파생 로직 설명은
+> `VITE_API_BASE_URL` 미설정 시(①단계) 폴백 동작으로 계속 유효하다.
+
 `GET /api/planning/dashboard?business_unit={id}&period={yyyyQn}`
 
 ```json
@@ -162,6 +169,58 @@
 }
 ```
 - **전 필드 mock 임시값** — 실제 파이프라인 모니터링 연동 전. 아래 "임시 mock 값" 표에 등재.
+
+### 1-7. AI 브리핑 드릴다운 상세 (`fetchAiBriefingDetail()`, 2026-08-03 신규)
+
+`GET /api/v1/planning/ai-briefing/{analysisId}`
+
+```json
+{
+  "analysis_id": "RISK-2026-0721-001",
+  "material": "니켈",
+  "business_unit": "배터리셀사업부",
+  "grade": "심각",
+  "headline": "인도네시아 니켈 수출 관세 인상 발표로 현물가 18% 급등",
+  "event_content": "인도네시아 니켈 수출 관세 인상 발표로 현물가 18% 급등",
+  "briefing": "LLM이 생성한 브리핑 본문",
+  "recommended_actions": ["대체 공급사 컨택 검토", "안전재고 확대 검토"],
+  "contract_findings": [],
+  "warnings": [],
+  "assessed_at": null
+}
+```
+
+- 실 백엔드는 `procurement_risk_assessments`의 LLM 브리핑 본문·근거를 반환하지만(1-5 §AI
+  브리핑 탭 `recent` 목록엔 없는 상세 필드), mock은 그런 상세 필드가 없어 화면 확인용으로
+  1-5의 `recent` 목록에서 `risk_event_id`로 찾아 `briefing`/`recommended_actions`(고정
+  문구)를 합성한다 — 목록에 없는 id는 "찾을 수 없음" 오류로 처리(§5 `BriefingDetailPage`와
+  동일 관례). `contract_findings`/`warnings`는 항상 빈 배열 — mock 임시값, 아래 "임시 mock
+  값" 표에 등재.
+
+### 1-8. 계약 상세 드릴다운 (`fetchContractDetail()`, 2026-08-03 신규)
+
+`GET /api/v1/planning/contracts/{contractNumber}`
+
+```json
+{
+  "contract_number": "BA-2025-0014",
+  "contract_name": "BA-2025-0014 공급 계약",
+  "supplier_name": "공급사A",
+  "material_name": null,
+  "business_unit": "양극재사업부",
+  "status": "ACTIVE",
+  "start_date": null,
+  "end_date": null,
+  "documents": []
+}
+```
+
+- 실 백엔드는 `contracts`⨝`suppliers`⨝`materials`⨝`business_units` 조인 + 별도 문서 목록
+  조회(`contract_documents`)로 실제 공급사·자재·적재 문서를 반환하지만, mock은 1-4의
+  `expiring` 목록에서 `id`로 찾아 `contract_name`/`supplier_name`(고정값 "공급사A")을
+  합성한다 — 목록에 없는 id는 "찾을 수 없음" 오류로 처리. `material_name`/`start_date`/
+  `end_date`/`documents`는 1-4 목록에 대응 필드가 없어 항상 `null`/빈 배열 — mock 임시값,
+  아래 "임시 mock 값" 표에 등재.
 
 ## 2. 3계층 — 경영진 대시보드
 
@@ -331,6 +390,8 @@ Phase 9.3(원자재 가격 추이 "상세보기", surin `RiskMonitoring.tsx` 시
 | `ContractStatusDashboardResponse`(전체 필드) | `api/types.ts`, `api/planning.api.ts`의 `fetchContractStatusDashboard()`(2계층 계약 현황 탭 신규) | `features/planning/pages/ContractStatusPage.tsx` | risk_event/ERP 어느 쪽에도 계약-사업부 매핑이 없어 전 필드를 고정값으로 하드코딩했다. |
 | `AiBriefingSummaryDashboardResponse.이번 분기 브리핑`/`임원 보고 지정` | `api/types.ts`, `api/planning.api.ts`의 `fetchAiBriefingSummaryDashboard()`(2계층 AI 브리핑 탭 신규) | `features/planning/pages/AiBriefingSummaryPage.tsx` | `risk_event` 표본(7건)은 "이번 분기" 규모를 대표하기엔 작아 예시값을 사용했다. `by_unit`/`recent`는 `risk_event`를 사업부·최신순으로 취합한 실제 파생값이라 임시값이 아니다. |
 | `DataQualityStatus`(전체 필드) | `api/types.ts`, `api/planning.api.ts`의 `fetchDataQualityStatus()`(2계층 데이터 품질 탭 신규) | `features/planning/pages/DataQualityPage.tsx` | 실제 파이프라인 모니터링(ERP 연동 상태/RAG 인덱스 상태/자재 커버리지/신뢰도 라벨 분포) 연동 전이라 전 필드가 고정값이다. |
+| `AiBriefingDetailResponse.briefing`/`recommended_actions`/`contract_findings`/`warnings` | `api/types.ts`, `api/planning.api.ts`의 `fetchAiBriefingDetail()`(드릴다운 상세, 2026-08-03 신규) | `features/planning/pages/AiBriefingDetailPage.tsx` | mock은 1-5의 `recent` 목록에 없는 LLM 브리핑 본문·근거 필드를 화면 확인용으로 고정 문구/빈 배열로 합성한다 — 실제 백엔드는 `procurement_risk_assessments`의 실제 값을 반환. |
+| `ContractDetailResponse.material_name`/`start_date`/`end_date`/`documents` | `api/types.ts`, `api/planning.api.ts`의 `fetchContractDetail()`(드릴다운 상세, 2026-08-03 신규) | `features/planning/pages/ContractDetailPage.tsx` | mock은 1-4의 `expiring` 목록에 없는 자재/기간/문서 필드를 `null`/빈 배열로 채운다 — 실제 백엔드는 `contracts`⨝`materials`⨝`contract_documents` 조인으로 실측값을 반환. |
 
 ## 확장 원칙
 - 새 화면·지표가 추가되면 기존 필드를 변경하지 말고 옆에 새 필드를 추가한다 (breaking change 최소화).

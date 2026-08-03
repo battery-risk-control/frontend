@@ -14,6 +14,8 @@ import { SupplierAnalysisPage } from '../features/planning/pages/SupplierAnalysi
 import { ContractStatusPage } from '../features/planning/pages/ContractStatusPage'
 import { AiBriefingSummaryPage } from '../features/planning/pages/AiBriefingSummaryPage'
 import { DataQualityPage } from '../features/planning/pages/DataQualityPage'
+import { AiBriefingDetailPage } from '../features/planning/pages/AiBriefingDetailPage'
+import { ContractDetailPage } from '../features/planning/pages/ContractDetailPage'
 import { ExecutiveDashboardPage } from '../features/executive/pages/ExecutiveDashboardPage'
 import { useAuthState } from '../lib/useAuthState'
 import { DASHBOARD_PATH_BY_TIER } from '../lib/dashboardPaths'
@@ -150,6 +152,22 @@ export function AppRoutes() {
         element={
           <RequireAuth tier="planning">
             <DataQualityPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/planning/briefing/:analysisId"
+        element={
+          <RequireAuth tier="planning">
+            <AiBriefingDetailPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/planning/contract/:contractNumber"
+        element={
+          <RequireAuth tier="planning">
+            <ContractDetailPage />
           </RequireAuth>
         }
       />

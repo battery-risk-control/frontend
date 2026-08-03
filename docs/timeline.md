@@ -881,3 +881,55 @@ MaterialRiskStatusPanel`이 base 브랜치에서도 이미 0건이었다. Phase 
   기존 3개는 해시 placeholder 그대로) 확인, ERP 영향 페이지 실제 데이터 렌더링 확인.
 - `docs/roadmap-candidates.md` C3를 "부분 해결(2026-08-02)"로 갱신(완전 해결 아님 — 표제에
   명시).
+
+## Phase 13 — 2계층 실 백엔드 연동 + TanStack Query + 로딩 UI + 필터 + 드릴다운 (2026-08-03)
+
+사용자가 2계층 고도화 항목 6개 중 "설정 탭"을 제외한 5개(실 백엔드 연동/TanStack Query
+도입/로딩·스켈레톤 UI/사업부 필터 실기능화/AI 브리핑·계약 현황 드릴다운)를 승인. 조사
+중 로그인 성공 시 백엔드가 내려주는 JWT(`access_token`)를 프론트가 아예 버리고 있던
+선행 결함(`AuthPage.tsx`가 `signIn()`에 토큰을 안 넘김)을 발견해 먼저 수정 — 이것 없이는
+인증이 필요한 API를 하나도 실제로 호출할 수 없었다.
+
+- **JWT 보존**: `AuthContext`/`AuthProvider`에 `accessToken` 필드 추가, `AuthPage.tsx`가
+  `signIn(org_tier, email, access_token)`로 3번째 인자 전달하도록 수정.
+- **백엔드**: `PlanningDashboardController`에 상세 드릴다운 2개 신규 —
+  `GET /api/v1/planning/ai-briefing/{analysisId}`/`GET /api/v1/planning/contracts/{contractNumber}`.
+  `ErrorCode`에 `ANALYSIS_BRIEFING_NOT_FOUND`/`CONTRACT_NOT_FOUND`(404) 추가. 도중
+  `AiBriefingDetail.contract_findings`를 처음엔 `List<String>`로 잘못 선언했다가
+  `ProcurementRiskRepository`의 실제 JSONB 파싱 패턴(`List<Map<String,Object>>`)과
+  대조해 발견·수정. 격리 Docker(`planning-verify-*`, 별도 포트)로 존재/미존재 id 양쪽
+  응답 코드 확인. 상세는 `docs/backend-api-contracts.md` "3. 2계층 경영기획팀 대시보드".
+- **`App.tsx`**: `QueryClientProvider` 최상위 도입(`retry:false`,
+  `refetchOnWindowFocus:false` — 실패를 값으로 반환/예외로 던지는 기존 `fetchWithAuth`
+  모델과 일관, 탭 전환마다 재요청되는 걸 방지).
+- **`planning.api.ts`**: 기존 7개 함수 전부 `fetchWithAuth(path, token)` 기반 async로
+  전환, mock 본문은 `fetchXxxMock()`으로 보존. 신규 2개(`fetchAiBriefingDetail`/
+  `fetchContractDetail`)와 그 mock 합성 로직 추가. `executive.api.ts`가 옛 동기 시그니처를
+  직접 호출하던 것도 함께 발견해 `fetchPlanningDashboardMock()` 참조로 수정(3계층은 이번
+  라운드 범위 밖이라 mock 유지).
+- **`features/planning/hooks/usePlanningQueries.ts`** 신규 — 쿼리키 팩토리 `planningKeys`
+  + 탭당 훅 9개(`useAuthState()`의 `accessToken`으로 `enabled` 가드).
+  **`features/planning/components/QueryState.tsx`** 신규 — `isPending`이면 CSS pulse
+  스켈레톤, `isError`면 안내 텍스트, 성공 시 `children(data)`. 7탭 페이지 전부 기존 동기
+  `fetchXxx()` 호출을 훅+`QueryState`로 교체.
+- **사업부 필터**: `PlanningDashboardPage`의 정적 "사업부 전체" 텍스트를 실제 `<select>`로
+  교체, `risk_exposure_by_unit`만 클라이언트 측 필터(`vendor_risk_history`엔 사업부 필드가
+  없어 필터 대상에서 제외 — 억지로 안 맞는 필터링 흉내 안 냄). 기간/달력/알림 pill은
+  배경/테두리를 빼 인터랙티브한 드롭다운과 시각적으로 구분.
+- **드릴다운**: `AiBriefingDetailPage`/`ContractDetailPage` 신규(`BriefingDetailPage`와
+  동일 골격), 라우트 `/planning/briefing/:analysisId`·`/planning/contract/:contractNumber`
+  추가. `EntityBadgeList`에 선택적 `linkTo?: (item) => string` prop 추가(제공 시에만
+  `<li>` 내용을 `<Link>`로 감쌈 — 기존 소비처는 prop 미전달로 동작 불변),
+  `ContractStatusPage`의 `expiring` 목록에 전달. `AiBriefingSummaryPage`의 `recent`
+  목록도 `<Link>`로 감쌈.
+- **`e2e/planning-drilldown.spec.ts`** 신규(3개: AI 브리핑 드릴다운, 계약 드릴다운,
+  미로그인 직접 접속 리다이렉트).
+- **검증**: `tsc -b`/`eslint` 클린, `vite build` 통과, Playwright e2e 27/27 통과(기존 24 +
+  신규 3). `npm run dev`(mock)로 로그인 후 7탭 전부 실제 렌더링·콘솔 에러 없음을 Browser
+  자동화로 확인, 사업부 드롭다운 선택 시 전략 대시보드 차트가 실제로 필터링되는 것과
+  AI 브리핑/계약 현황 드릴다운 클릭이 실제로 상세 페이지로 이동하는 것도 확인.
+  `docs/mock-schemas.md`(1절 상단 안내 + 1-7/1-8 신규 절 + "임시 mock 값" 표 2행 추가)와
+  `docs/backend-api-contracts.md`(3절 신규) 갱신.
+- QA A~H: F(신규 드릴다운 페이지는 기존 `BriefingDetailPage` 셸 패턴 재사용, 자체 `.panel`
+  스타일 신규 작성 안 함)/G(임시 스크립트 없음) 확인. B/C/D/E/H는 이번 변경 범위에 직접
+  해당 없음(공용 컴포넌트 변경은 `EntityBadgeList`의 하위 호환 prop 추가뿐).

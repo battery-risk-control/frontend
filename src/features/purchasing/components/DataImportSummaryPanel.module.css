@@ -186,3 +186,110 @@
   font-size: var(--font-size-xs);
   color: var(--color-risk-critical);
 }
+
+/* 최종 판정 — 점수 카드 맨 아래에서 "그래서 반영해도 되는가"에 한 줄로 답한다. */
+.verdictOk,
+.verdictBlocked {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+  border-radius: var(--radius-sm);
+}
+
+.verdictOk {
+  color: var(--color-risk-normal);
+  background: rgb(42 174 138 / 12%);
+}
+
+.verdictBlocked {
+  color: var(--color-risk-critical);
+  background: rgb(217 58 63 / 12%);
+}
+
+.secondaryButton {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.secondaryButton:hover:not(:disabled) {
+  background: var(--color-bg);
+}
+
+.secondaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* 거부는 파괴적이지 않다(DB를 건드리지 않는다). 그래서 빨간 채움 대신 테두리로만 구분한다 —
+   꽉 찬 빨강은 "데이터가 지워진다"는 신호로 읽힌다. */
+.rejectButton {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-risk-critical);
+  background: var(--color-surface);
+  border: 1px solid var(--color-risk-critical);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.rejectButton:hover:not(:disabled) {
+  background: rgb(217 58 63 / 8%);
+}
+
+.rejectButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* KG 경고는 반영 성공 안에 들어가는 부분 실패다. 카드 전체를 빨갛게 만들지 않는다. */
+.kgWarning {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: rgb(240 147 63 / 10%);
+  border-left: 3px solid var(--color-risk-warning);
+  border-radius: var(--radius-sm);
+}
+
+.kgWarningTitle {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-risk-warning);
+}
+
+.kgWarningBody {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+.kgWarningReason {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  word-break: break-all;
+}
+
+.kgOk {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-risk-normal);
+}

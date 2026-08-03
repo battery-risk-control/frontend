@@ -90,3 +90,69 @@ export async function uploadWithAuth<T>(
   }
   return payload.data
 }
+
+/** 서버가 내려준 파일 한 개. 파일명은 `Content-Disposition`에서 뽑는다. */
+export interface DownloadedFile {
+  blob: Blob
+  fileName: string
+}
+
+/**
+ * 파일(PDF·CSV)을 받아오는 multipart 업로드. `uploadWithAuth`와 갈라놓은 이유는 응답이
+ * JSON 봉투가 아니라 바이너리라서다 — 그쪽 코드는 무조건 `res.json()`을 부르기 때문에
+ * PDF를 받으면 파싱 단계에서 터진다.
+ *
+ * **성공과 실패의 형식이 다르다.** 성공하면 PDF/CSV가 오고, 실패하면 평소의 JSON 오류 봉투가
+ * 온다. 그래서 응답 Content-Type을 보고 갈라야 한다. 이걸 안 하면 서버가 "권한 없음"을
+ * 돌려줬을 때 그 JSON을 그대로 `report.pdf`로 저장해, 사용자는 열리지 않는 파일만 손에 쥔다.
+ *
+ * 사용 예:
+ *   const file = await downloadWithAuth('/api/v1/erp/imports/report', token, form)
+ *   if ('error' in file) { ... } else { saveAs(file.blob, file.fileName) }
+ */
+export async function downloadWithAuth(
+  path: string,
+  token: string,
+  body: FormData,
+  fallbackFileName: string,
+): Promise<DownloadedFile | FetchJsonError> {
+  const res = await fetch(`${API_BASE_URL ?? ''}${path}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body,
+  })
+
+  const contentType = res.headers.get('Content-Type') ?? ''
+  if (!res.ok || contentType.includes('application/json')) {
+    try {
+      const payload = (await res.json()) as ApiErrorEnvelope
+      return { error: payload.error.code, message: payload.error.message }
+    } catch {
+      // 서버가 죽었거나 프록시가 HTML 오류 페이지를 돌려준 경우 — 본문이 JSON이 아니다.
+      return { error: 'DOWNLOAD_FAILED', message: `보고서를 받지 못했습니다 (HTTP ${res.status}).` }
+    }
+  }
+
+  return {
+    blob: await res.blob(),
+    fileName: fileNameFromDisposition(res.headers.get('Content-Disposition')) ?? fallbackFileName,
+  }
+}
+
+/**
+ * `Content-Disposition`에서 파일명을 꺼낸다. RFC 5987의 `filename*`(UTF-8)이 있으면 그쪽을
+ * 먼저 본다 — 한글 파일명을 쓰게 되면 `filename=`은 깨진 값이 들어 있기 때문이다.
+ */
+function fileNameFromDisposition(header: string | null): string | null {
+  if (!header) return null
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header)
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded[1])
+    } catch {
+      // 서버가 잘못 인코딩한 경우 아래 quoted 형식으로 넘어간다.
+    }
+  }
+  const quoted = /filename="([^"]+)"/i.exec(header)
+  return quoted ? quoted[1] : null
+}

@@ -1188,6 +1188,28 @@ export interface ErpImportCommitResult {
   total_inserted: number
   total_updated: number
   results: ErpImportTableResult[]
+
+  /**
+   * KG 동기화 실패 사유. **null이 아니어도 DB 반영은 성공한 것이다** — 재고·소비량이
+   * kg_service로 흘러가지 못했을 뿐이다. 화면은 이걸 "반영 실패"로 보여주면 안 된다.
+   * 실패로 읽히면 사용자가 같은 파일을 다시 올려 중복 갱신을 시도한다.
+   */
+  kg_sync_warning: string | null
+
+  /**
+   * 최종 반영 보고서(PDF)를 받을 때 서버에 그대로 돌려줄 서명 문자열. 화면에 표시하지 않는다.
+   * 서버가 "누가 언제 몇 건" 을 서명해둔 것이라, 이게 없으면 최종 보고서를 만들 수 없다.
+   */
+  receipt: string
+}
+
+/**
+ * 업로드 제약. 서버의 `app.upload.max-file-size`가 진실이고 화면은 받아서 표시만 한다 —
+ * 프론트에 숫자를 적어두면 서버 설정을 바꿨을 때 "화면은 통과인데 서버가 거부하는" 상태가 된다.
+ */
+export interface ErpImportConstraints {
+  max_file_size_bytes: number
+  allowed_extensions: string[]
 }
 
 /**

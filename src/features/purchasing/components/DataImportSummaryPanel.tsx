@@ -7,23 +7,37 @@ import type {
 } from '../../../api/types'
 import styles from './DataImportSummaryPanel.module.css'
 
+/** 오류가 이보다 많으면 PDF가 다 담지 못한다(서버가 상위 100건에서 자른다). */
+const PDF_ISSUE_LIMIT = 100
+
 interface DataImportSummaryPanelProps {
   mode: DataImportMode
   erpPreview: ErpImportPreview | null
   ragPreview: ContractDocumentPreview | null
   erpResult: ErpImportCommitResult | null
   ragResult: ContractDocumentConfirmResult | null
-  onCommit: () => void
+  /** 승인. 경고가 있으면 페이지가 확인 창을 먼저 띄운다. */
+  onRequestCommit: () => void
+  /** 거부. 페이지가 확인 창을 띄운 뒤 상태를 폐기한다. */
+  onRequestReject: () => void
+  onDownloadReport: () => void
+  onDownloadErrorCsv: () => void
   isCommitting: boolean
+  isDownloading: boolean
+  /** 승인 버튼을 열어도 되는지. 판단은 페이지가 한다(파일 동일성까지 봐야 하기 때문). */
+  canCommit: boolean
+  /** 승인할 수 없는 이유. 버튼만 잠그고 이유를 안 쓰면 사용자는 무엇을 고쳐야 할지 모른다. */
+  blockedReason: string | null
   error: string | null
 }
 
 /**
- * 우측 요약 컬럼. 반영 전에는 "무엇이 얼마나 들어가는지"를, 반영 후에는 "무엇이 들어갔는지"를
- * 같은 자리에서 보여준다.
+ * 우측 결정 패널. 반영 전에는 "무엇이 얼마나 들어가는지와 승인·거부"를, 반영 후에는 "무엇이
+ * 들어갔는지"를 같은 자리에서 보여준다.
  *
- * 반영 버튼은 분석 결과가 있고 오류가 0일 때만 열린다. 백엔드도 같은 조건으로 거부하지만,
- * 눌리는 버튼을 두고 서버에서 막으면 사용자는 "왜 안 되는지"를 오류 메시지로만 알게 된다.
+ * 승인 버튼은 페이지가 계산한 {@link DataImportSummaryPanelProps.canCommit}만 따른다. 여기서
+ * 조건을 다시 판단하지 않는 이유는, 조건 하나(예: 분석 후 파일이 바뀌었는지)를 한쪽에만 넣으면
+ * 두 곳의 판단이 갈라지기 때문이다 — 그 상태로 열린 버튼은 다른 파일의 검증 결과로 반영을 건다.
  */
 export function DataImportSummaryPanel({
   mode,
@@ -31,20 +45,25 @@ export function DataImportSummaryPanel({
   ragPreview,
   erpResult,
   ragResult,
-  onCommit,
+  onRequestCommit,
+  onRequestReject,
+  onDownloadReport,
+  onDownloadErrorCsv,
   isCommitting,
+  isDownloading,
+  canCommit,
+  blockedReason,
   error,
 }: DataImportSummaryPanelProps) {
   const committed = erpResult !== null || ragResult !== null
-  const canCommit = mode === 'ERP' ? Boolean(erpPreview?.committable) : ragPreview !== null
 
   return (
     <aside className={styles.column} aria-label="반영 요약">
-      {mode === 'ERP' && erpPreview && (
+      {mode === 'ERP' && erpPreview && !committed && (
         <>
           <section className={styles.card}>
-            <h2 className={styles.cardHeading}>4. 반영 요약</h2>
-            <p className={styles.totalLabel}>반영 예정 건수</p>
+            <h2 className={styles.cardHeading}>4. 승인 또는 거부</h2>
+            <p className={styles.totalLabel}>예상 DB 반영 건수</p>
             <p className={styles.totalValue}>
               {erpPreview.total_rows.toLocaleString()}
               <span className={styles.totalUnit}> 건</span>
@@ -69,36 +88,36 @@ export function DataImportSummaryPanel({
               <span className={styles.scoreMax}>/100</span>
             </p>
             <div className={styles.scoreBar}>
-              <div
-                className={styles.scoreFill}
-                style={{ width: `${erpPreview.quality_score}%` }}
-              />
+              <div className={styles.scoreFill} style={{ width: `${erpPreview.quality_score}%` }} />
             </div>
             <ul className={styles.issueSummary}>
               <li className={styles.issueSummaryRow}>
                 <span>오류</span>
                 <span className={erpPreview.total_errors > 0 ? styles.critical : undefined}>
-                  {erpPreview.total_errors}건
+                  {erpPreview.total_errors.toLocaleString()}건
                 </span>
               </li>
               <li className={styles.issueSummaryRow}>
                 <span>경고</span>
                 <span className={erpPreview.total_warnings > 0 ? styles.warning : undefined}>
-                  {erpPreview.total_warnings}건
+                  {erpPreview.total_warnings.toLocaleString()}건
                 </span>
               </li>
               <li className={styles.issueSummaryRow}>
                 <span>중복</span>
-                <span>{erpPreview.total_duplicates}건</span>
+                <span>{erpPreview.total_duplicates.toLocaleString()}건</span>
               </li>
             </ul>
+            <p className={erpPreview.committable ? styles.verdictOk : styles.verdictBlocked}>
+              최종 판정 · {erpPreview.committable ? 'DB 반영 가능' : 'DB 반영 불가'}
+            </p>
           </section>
         </>
       )}
 
-      {mode === 'RAG' && ragPreview && (
+      {mode === 'RAG' && ragPreview && !committed && (
         <section className={styles.card}>
-          <h2 className={styles.cardHeading}>4. 반영 요약</h2>
+          <h2 className={styles.cardHeading}>4. 승인 또는 거부</h2>
           <ul className={styles.summaryList}>
             <li className={styles.summaryItem}>
               <span className={styles.summaryLabel}>계약</span>
@@ -118,56 +137,121 @@ export function DataImportSummaryPanel({
         </section>
       )}
 
-      <section className={styles.card}>
-        <h2 className={styles.cardHeading}>5. DB 반영</h2>
-        {!committed ? (
-          <>
-            <p className={styles.note}>
-              {mode === 'ERP'
-                ? '반영은 한 트랜잭션으로 실행되어, 한 행이라도 실패하면 전부 되돌아갑니다.'
-                : '계약 정보를 저장하고 문서를 RAG 검색 색인에 적재합니다.'}
-            </p>
-            <button
-              type="button"
-              className={styles.commitButton}
-              onClick={onCommit}
-              disabled={!canCommit || isCommitting}
-            >
-              {isCommitting ? '반영 중…' : 'DB에 반영'}
-            </button>
-            {!canCommit && (
-              <p className={styles.blockedNote}>
-                {erpPreview && !erpPreview.committable
-                  ? '오류가 남아 있어 반영할 수 없습니다. 파일을 수정하고 다시 분석해 주세요.'
-                  : '먼저 내용 분석을 실행해 주세요.'}
-              </p>
-            )}
-            <p className={styles.warnNote}>
-              반영된 데이터는 화면에서 되돌릴 수 없습니다.
-            </p>
-          </>
-        ) : (
-          <div className={styles.result}>
-            <p className={styles.resultHeading}>반영 완료</p>
-            {erpResult && (
-              <>
-                <p className={styles.note}>
-                  신규 {erpResult.total_inserted.toLocaleString()}건 · 갱신{' '}
-                  {erpResult.total_updated.toLocaleString()}건
-                </p>
-                <ul className={styles.summaryList}>
-                  {erpResult.results.map((entry) => (
-                    <li key={entry.target_table} className={styles.summaryItem}>
-                      <span className={styles.summaryLabel}>{entry.label}</span>
-                      <span className={styles.summaryCount}>
-                        +{entry.inserted.toLocaleString()} / ~{entry.updated.toLocaleString()}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-            {ragResult && (
+      {!committed ? (
+        <section className={styles.card}>
+          <h2 className={styles.cardHeading}>{mode === 'ERP' ? 'DB 반영 결정' : '5. DB 반영'}</h2>
+          <p className={styles.note}>
+            {mode === 'ERP'
+              ? '반영은 한 트랜잭션으로 실행되어, 한 행이라도 실패하면 전부 되돌아갑니다.'
+              : '계약 정보를 저장하고 문서를 RAG 검색 색인에 적재합니다.'}
+          </p>
+
+          <button
+            type="button"
+            className={styles.commitButton}
+            onClick={onRequestCommit}
+            disabled={!canCommit || isCommitting}
+          >
+            {isCommitting ? '반영 중…' : 'DB 반영 승인'}
+          </button>
+
+          {blockedReason && <p className={styles.blockedNote}>{blockedReason}</p>}
+
+          {mode === 'ERP' && erpPreview && (
+            <>
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={onDownloadReport}
+                disabled={isDownloading}
+              >
+                {isDownloading ? '보고서 생성 중…' : '검증 보고서 PDF'}
+              </button>
+              {/* PDF가 다 담지 못할 때만 띄운다 — 늘 보이면 어느 쪽이 공식 보고서인지 흐려진다. */}
+              {erpPreview.total_errors > PDF_ISSUE_LIMIT && (
+                <button
+                  type="button"
+                  className={styles.secondaryButton}
+                  onClick={onDownloadErrorCsv}
+                  disabled={isDownloading}
+                >
+                  전체 오류 CSV ({erpPreview.total_errors.toLocaleString()}건)
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.rejectButton}
+                onClick={onRequestReject}
+                disabled={isCommitting}
+              >
+                업로드 거부
+              </button>
+            </>
+          )}
+
+          <p className={styles.warnNote}>반영된 데이터는 화면에서 되돌릴 수 없습니다.</p>
+        </section>
+      ) : (
+        <section className={styles.card}>
+          <h2 className={styles.cardHeading}>5. 반영 완료</h2>
+
+          {erpResult && (
+            <>
+              <p className={styles.resultHeading}>DB 반영 완료</p>
+              <p className={styles.note}>{formatDateTime(erpResult.committed_at)}</p>
+              <ul className={styles.issueSummary}>
+                <li className={styles.issueSummaryRow}>
+                  <span>신규 삽입</span>
+                  <span>{erpResult.total_inserted.toLocaleString()}건</span>
+                </li>
+                <li className={styles.issueSummaryRow}>
+                  <span>갱신</span>
+                  <span>{erpResult.total_updated.toLocaleString()}건</span>
+                </li>
+              </ul>
+              <ul className={styles.summaryList}>
+                {erpResult.results.map((entry) => (
+                  <li key={entry.target_table} className={styles.summaryItem}>
+                    <span className={styles.summaryLabel}>{entry.label}</span>
+                    <span className={styles.summaryCount}>
+                      +{entry.inserted.toLocaleString()} / ~{entry.updated.toLocaleString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              {/*
+                DB는 들어갔는데 지식그래프만 옛 값으로 남은 상태다. 이걸 실패처럼 보여주면
+                사용자가 같은 파일을 다시 올려 중복 갱신을 시도한다. 성공과 붙여서, 그러나
+                구분해서 적는다.
+              */}
+              {erpResult.kg_sync_warning ? (
+                <div className={styles.kgWarning}>
+                  <p className={styles.kgWarningTitle}>KG 동기화 실패</p>
+                  <p className={styles.kgWarningBody}>
+                    ERP 데이터는 정상 반영됐지만 KG 동기화에 실패했습니다. 지식그래프에는 이전
+                    데이터가 남아 있을 수 있습니다.
+                  </p>
+                  <p className={styles.kgWarningReason}>{erpResult.kg_sync_warning}</p>
+                </div>
+              ) : (
+                <p className={styles.kgOk}>KG 동기화 정상</p>
+              )}
+
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={onDownloadReport}
+                disabled={isDownloading}
+              >
+                {isDownloading ? '보고서 생성 중…' : '최종 반영 보고서 PDF'}
+              </button>
+            </>
+          )}
+
+          {ragResult && (
+            <>
+              <p className={styles.resultHeading}>반영 완료</p>
               <ul className={styles.summaryList}>
                 <li className={styles.summaryItem}>
                   <span className={styles.summaryLabel}>계약</span>
@@ -185,11 +269,12 @@ export function DataImportSummaryPanel({
                   <span className={styles.summaryCount}>{ragResult.processing_status}</span>
                 </li>
               </ul>
-            )}
-          </div>
-        )}
-        {error && <p className={styles.error}>{error}</p>}
-      </section>
+            </>
+          )}
+        </section>
+      )}
+
+      {error && <p className={styles.error}>{error}</p>}
     </aside>
   )
 }
@@ -199,4 +284,10 @@ function scoreToneClass(score: number): string {
   if (score >= 80) return styles.scoreNormal
   if (score >= 60) return styles.scoreWarning
   return styles.scoreCritical
+}
+
+function formatDateTime(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return date.toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'medium' })
 }

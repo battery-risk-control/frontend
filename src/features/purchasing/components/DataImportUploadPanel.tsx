@@ -12,14 +12,19 @@ const ACCEPTED: Record<DataImportMode, string[]> = {
   RAG: ['.csv', '.txt', '.pdf'],
 }
 
-/** Spring `spring.servlet.multipart.max-file-size`와 같은 값. */
-const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024
+/**
+ * 서버에서 제약을 못 받아왔을 때만 쓰는 값. 서버 설정을 못 읽었다고 업로드를 막을 수는 없으니
+ * 현재 기본값과 같은 수를 두되, 실제 판단은 언제나 서버가 다시 한다.
+ */
+const FALLBACK_MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024
 
 interface DataImportUploadPanelProps {
   mode: DataImportMode
   onModeChange: (mode: DataImportMode) => void
   files: File[]
   onFilesChange: (files: File[]) => void
+  /** 서버가 알려준 최대 파일 크기. 아직 못 받았으면 null. */
+  maxFileSizeBytes: number | null
   /** RAG 모드에서 문서를 붙일 계약 목록. ERP 모드에서는 쓰지 않는다. */
   contracts: ContractSummary[]
   selectedContractId: number | null
@@ -34,6 +39,7 @@ export function DataImportUploadPanel({
   onModeChange,
   files,
   onFilesChange,
+  maxFileSizeBytes,
   contracts,
   selectedContractId,
   onSelectContract,
@@ -54,15 +60,27 @@ export function DataImportUploadPanel({
    */
   function accept(incoming: File[]) {
     const allowed = ACCEPTED[mode]
+    const maxBytes = maxFileSizeBytes ?? FALLBACK_MAX_FILE_SIZE_BYTES
     const reasons: string[] = []
+    const already = new Set(files.map((file) => `${file.name}-${file.size}`))
     const passed = incoming.filter((file) => {
       const name = file.name.toLowerCase()
       if (!allowed.some((extension) => name.endsWith(extension))) {
         reasons.push(`${file.name} — ${allowed.join(', ')} 형식만 올릴 수 있습니다`)
         return false
       }
-      if (file.size > MAX_FILE_SIZE_BYTES) {
-        reasons.push(`${file.name} — 50MB를 넘습니다`)
+      // 빈 파일은 서버에서 "빈 파일입니다" 오류로 돌아온다. 여기서 먼저 알려주면 왕복을 아낀다.
+      if (file.size === 0) {
+        reasons.push(`${file.name} — 빈 파일입니다`)
+        return false
+      }
+      if (file.size > maxBytes) {
+        reasons.push(`${file.name} — ${formatBytes(maxBytes)}를 넘습니다`)
+        return false
+      }
+      // 같은 파일을 두 번 고르면 조용히 하나로 합쳐지는데, 사용자는 두 개를 올렸다고 믿는다.
+      if (mode === 'ERP' && already.has(`${file.name}-${file.size}`)) {
+        reasons.push(`${file.name} — 이미 선택된 파일입니다`)
         return false
       }
       return true
@@ -150,7 +168,9 @@ export function DataImportUploadPanel({
       >
         <p className={styles.dropTitle}>파일을 드래그하거나 클릭하여 업로드</p>
         <p className={styles.dropHint}>
-          {ACCEPTED[mode].join(', ')} 지원 (최대 50MB{mode === 'ERP' ? ', 여러 개 가능' : ', 한 번에 한 건'})
+          {ACCEPTED[mode].join(', ')} 지원 (최대{' '}
+          {formatBytes(maxFileSizeBytes ?? FALLBACK_MAX_FILE_SIZE_BYTES)}
+          {mode === 'ERP' ? ', 여러 개 가능' : ', 한 번에 한 건'})
         </p>
         <input
           ref={inputRef}
@@ -172,6 +192,17 @@ export function DataImportUploadPanel({
             <li key={reason}>{reason}</li>
           ))}
         </ul>
+      )}
+
+      {files.length > 0 && (
+        <div className={styles.fileListHeader}>
+          <span className={styles.fileListCount}>
+            선택한 파일 {files.length}개 · {formatBytes(files.reduce((sum, file) => sum + file.size, 0))}
+          </span>
+          <button type="button" className={styles.clearAllButton} onClick={() => onFilesChange([])}>
+            전체 초기화
+          </button>
+        </div>
       )}
 
       {files.length > 0 && (
@@ -210,7 +241,7 @@ export function DataImportUploadPanel({
           onClick={onAnalyze}
           disabled={!canAnalyze || isAnalyzing}
         >
-          {isAnalyzing ? '분석 중…' : '내용 분석'}
+          {isAnalyzing ? '검사 중…' : mode === 'ERP' ? '품질검사 시작' : '내용 분석'}
         </button>
       </div>
       <p className={styles.reloadNote}>

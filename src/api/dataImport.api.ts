@@ -1,8 +1,10 @@
-import { uploadWithAuth } from './http'
+import { downloadWithAuth, fetchWithAuth, uploadWithAuth } from './http'
+import type { DownloadedFile } from './http'
 import type {
   ContractDocumentConfirmResult,
   ContractDocumentPreview,
   ErpImportCommitResult,
+  ErpImportConstraints,
   ErpImportPreview,
 } from './types'
 
@@ -70,6 +72,63 @@ export async function commitErpCsv(accessToken: string, files: File[]): Promise<
     '/api/v1/erp/imports/commit',
     accessToken,
     erpForm(files),
+  ))
+}
+
+/**
+ * 업로드 제약(최대 크기·허용 확장자) 조회. 화면이 파일을 고르기 전에 걸러주기 위한 값이고,
+ * 최종 판단은 언제나 서버가 다시 한다.
+ *
+ * 사용 예:
+ *   const { max_file_size_bytes } = await fetchErpImportConstraints(accessToken)
+ */
+export async function fetchErpImportConstraints(accessToken: string): Promise<ErpImportConstraints> {
+  return unwrap(await fetchWithAuth<ErpImportConstraints>('/api/v1/erp/imports/constraints', accessToken))
+}
+
+/**
+ * 검증 보고서 PDF. 서버가 같은 검증을 다시 돌려 문서를 만든다 — 화면이 들고 있는 숫자를 그리는
+ * 게 아니다. 그래서 보고서와 화면의 수치가 어긋날 수 없다.
+ *
+ * `reportType`이 `POST_COMMIT`이면 반영 때 받은 `receipt`가 필요하다. 승인자·반영 건수는 그
+ * 서명된 값에서만 나오므로, 화면이 숫자를 지어내 보고서에 실을 방법이 없다.
+ *
+ * 사용 예:
+ *   const file = await downloadErpValidationReport(accessToken, files, 'PRE_COMMIT')
+ */
+export async function downloadErpValidationReport(
+  accessToken: string,
+  files: File[],
+  reportType: 'PRE_COMMIT' | 'POST_COMMIT',
+  receipt?: string,
+): Promise<DownloadedFile> {
+  const form = erpForm(files)
+  form.append('reportType', reportType)
+  if (receipt) form.append('receipt', receipt)
+  return unwrap(await downloadWithAuth(
+    '/api/v1/erp/imports/report',
+    accessToken,
+    form,
+    reportType === 'POST_COMMIT' ? 'erp-import-final-report.pdf' : 'erp-validation-report.pdf',
+  ))
+}
+
+/**
+ * 전체 오류 목록 CSV. PDF는 상위 100건만 싣기 때문에, 오류가 많을 때 나머지를 확인하려면
+ * 이쪽을 쓴다. 공식 보고서는 어디까지나 PDF이고 이건 고치기 위한 작업용 파일이다.
+ *
+ * 사용 예:
+ *   const file = await downloadErpErrorCsv(accessToken, files)
+ */
+export async function downloadErpErrorCsv(
+  accessToken: string,
+  files: File[],
+): Promise<DownloadedFile> {
+  return unwrap(await downloadWithAuth(
+    '/api/v1/erp/imports/errors.csv',
+    accessToken,
+    erpForm(files),
+    'erp-validation-errors.csv',
   ))
 }
 

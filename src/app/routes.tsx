@@ -1,62 +1,163 @@
-import type { ReactNode } from 'react'
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
-import { PublicDashboardPage } from '../features/public/pages/PublicDashboardPage'
-import { AuthPage } from '../features/auth/pages/AuthPage'
-import { PurchasingDashboardPage } from '../features/purchasing/pages/PurchasingDashboardPage'
-import { BriefingDetailPage } from '../features/purchasing/pages/BriefingDetailPage'
-import { MaterialRiskStatusPage } from '../features/purchasing/pages/MaterialRiskStatusPage'
-import { ErpImpactPage } from '../features/purchasing/pages/ErpImpactPage'
-import { PurchasePriorityPage } from '../features/purchasing/pages/PurchasePriorityPage'
-import { PlanningDashboardPage } from '../features/planning/pages/PlanningDashboardPage'
-import { MaterialRiskPage } from '../features/planning/pages/MaterialRiskPage'
-import { ImportDependencyPage } from '../features/planning/pages/ImportDependencyPage'
-import { SupplierAnalysisPage } from '../features/planning/pages/SupplierAnalysisPage'
-import { ContractStatusPage } from '../features/planning/pages/ContractStatusPage'
-import { AiBriefingSummaryPage } from '../features/planning/pages/AiBriefingSummaryPage'
-import { DataQualityPage } from '../features/planning/pages/DataQualityPage'
-import { ExecutiveDashboardPage } from '../features/executive/pages/ExecutiveDashboardPage'
-import { useAuthState } from '../lib/useAuthState'
-import { DASHBOARD_PATH_BY_TIER } from '../lib/dashboardPaths'
-import { TIER_LABEL } from '../lib/tierLabels'
-import { ConfirmModal } from '../components/ui/ConfirmModal'
-import type { OrgTier } from '../api/types'
+import type {
+  ReactNode,
+} from 'react'
+import {
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+} from 'react-router-dom'
+import type {
+  OrgTier,
+} from '../api/types'
+import {
+  ConfirmModal,
+} from '../components/ui/ConfirmModal'
+import {
+  AuthPage,
+} from '../features/auth/pages/AuthPage'
+import {
+  ExecutiveBriefingsPage,
+} from '../features/executive/pages/ExecutiveBriefingsPage'
+import {
+  ExecutiveDashboardPage,
+} from '../features/executive/pages/ExecutiveDashboardPage'
+import {
+  ExecutiveRisksPage,
+} from '../features/executive/pages/ExecutiveRisksPage'
+import {
+  ExecutiveSupplyChainPage,
+} from '../features/executive/pages/ExecutiveSupplyChainPage'
+import {
+  ExecutiveVerificationPage,
+} from '../features/executive/pages/ExecutiveVerificationPage'
+import {
+  AiBriefingSummaryPage,
+} from '../features/planning/pages/AiBriefingSummaryPage'
+import {
+  ContractStatusPage,
+} from '../features/planning/pages/ContractStatusPage'
+import {
+  DataQualityPage,
+} from '../features/planning/pages/DataQualityPage'
+import {
+  ImportDependencyPage,
+} from '../features/planning/pages/ImportDependencyPage'
+import {
+  MaterialRiskPage,
+} from '../features/planning/pages/MaterialRiskPage'
+import {
+  PlanningDashboardPage,
+} from '../features/planning/pages/PlanningDashboardPage'
+import {
+  SupplierAnalysisPage,
+} from '../features/planning/pages/SupplierAnalysisPage'
+import {
+  PublicDashboardPage,
+} from '../features/public/pages/PublicDashboardPage'
+import {
+  BriefingDetailPage,
+} from '../features/purchasing/pages/BriefingDetailPage'
+import {
+  ErpImpactPage,
+} from '../features/purchasing/pages/ErpImpactPage'
+import {
+  MaterialRiskStatusPage,
+} from '../features/purchasing/pages/MaterialRiskStatusPage'
+import {
+  PurchasePriorityPage,
+} from '../features/purchasing/pages/PurchasePriorityPage'
+import {
+  PurchasingDashboardPage,
+} from '../features/purchasing/pages/PurchasingDashboardPage'
+import {
+  DASHBOARD_PATH_BY_TIER,
+} from '../lib/dashboardPaths'
+import {
+  TIER_LABEL,
+} from '../lib/tierLabels'
+import {
+  useAuthState,
+} from '../lib/useAuthState'
 
-/**
- * 로그인 상태(orgTier)와 계층(tier)이 모두 일치해야 통과하는 라우트 가드.
- * 클라이언트 UX 수준 가드일 뿐 실제 보안 경계가 아니다 — 진짜 접근 통제는 백엔드 토큰 검증이 맡는다(CLAUDE.md 참고).
- * 미로그인이면 /auth로 무음 리다이렉트하지만, 계층이 다르면(로그인은 되어 있음) 무음 리다이렉트 대신
- * 확인 모달을 띄운다(qa-checklist.md C) — "취소"가 기본 포커스 + 주 버튼이며 홈으로 돌아가고,
- * "내 화면으로 이동"을 선택해야만 실제 자기 대시보드로 이동한다.
- */
-function RequireAuth({ tier, children }: { tier: OrgTier; children: ReactNode }) {
-  const { orgTier } = useAuthState()
-  const navigate = useNavigate()
-
-  if (!orgTier) {
-    return <Navigate to="/auth" replace />
-  }
-  if (orgTier !== tier) {
-    return (
-      <ConfirmModal
-        message={`이 화면은 회원님의 권한(${TIER_LABEL[orgTier]})으로 접근할 수 없습니다.`}
-        confirmLabel="내 화면으로 이동"
-        cancelLabel="취소"
-        onConfirm={() => navigate(DASHBOARD_PATH_BY_TIER[orgTier], { replace: true })}
-        onCancel={() => navigate('/', { replace: true })}
-      />
-    )
-  }
-  return children
+interface RequireAuthProps {
+  tier: OrgTier
+  children: ReactNode
 }
 
 /**
- * 최상위 라우트 정의 (roadmap.md Phase 8). "/"는 비로그인 공개 대시보드(Seq 23)로 연결한다.
+ * 로그인 상태와 사용자 계층을 확인하는 라우트 가드.
+ *
+ * 실제 보안 검증은 백엔드에서도 수행하며,
+ * 프론트에서는 잘못된 계층 화면 접근을 안내한다.
  */
+function RequireAuth({
+  tier,
+  children,
+}: RequireAuthProps) {
+  const {
+    orgTier,
+  } = useAuthState()
+
+  const navigate = useNavigate()
+
+  if (!orgTier) {
+    return (
+      <Navigate
+        to="/auth"
+        replace
+      />
+    )
+  }
+
+  if (orgTier !== tier) {
+    return (
+      <ConfirmModal
+        message={
+          `이 화면은 현재 계정 권한(${TIER_LABEL[orgTier]})으로 접근할 수 없습니다.`
+        }
+        confirmLabel="내 대시보드로 이동"
+        cancelLabel="취소"
+        onConfirm={() => {
+          navigate(
+            DASHBOARD_PATH_BY_TIER[orgTier],
+            {
+              replace: true,
+            },
+          )
+        }}
+        onCancel={() => {
+          navigate(
+            '/',
+            {
+              replace: true,
+            },
+          )
+        }}
+      />
+    )
+  }
+
+  return children
+}
+
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<PublicDashboardPage />} />
-      <Route path="/auth" element={<AuthPage />} />
+      <Route
+        path="/"
+        element={
+          <PublicDashboardPage />
+        }
+      />
+
+      <Route
+        path="/auth"
+        element={
+          <AuthPage />
+        }
+      />
+
       <Route
         path="/purchasing"
         element={
@@ -65,6 +166,7 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
+
       <Route
         path="/purchasing/briefing/:riskEventId"
         element={
@@ -73,6 +175,7 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
+
       <Route
         path="/purchasing/material-risk"
         element={
@@ -81,6 +184,7 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
+
       <Route
         path="/purchasing/erp-impact"
         element={
@@ -89,6 +193,7 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
+
       <Route
         path="/purchasing/priority"
         element={
@@ -97,6 +202,7 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
+
       <Route
         path="/planning"
         element={
@@ -105,6 +211,7 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
+
       <Route
         path="/planning/materials"
         element={
@@ -113,6 +220,7 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
+
       <Route
         path="/planning/import-dependency"
         element={
@@ -121,6 +229,7 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
+
       <Route
         path="/planning/suppliers"
         element={
@@ -129,6 +238,7 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
+
       <Route
         path="/planning/contracts"
         element={
@@ -137,6 +247,7 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
+
       <Route
         path="/planning/briefings"
         element={
@@ -145,6 +256,7 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
+
       <Route
         path="/planning/data-quality"
         element={
@@ -153,11 +265,48 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
+
       <Route
         path="/executive"
         element={
           <RequireAuth tier="executive">
             <ExecutiveDashboardPage />
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/executive/risks"
+        element={
+          <RequireAuth tier="executive">
+            <ExecutiveRisksPage />
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/executive/supply-chain"
+        element={
+          <RequireAuth tier="executive">
+            <ExecutiveSupplyChainPage />
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/executive/briefings"
+        element={
+          <RequireAuth tier="executive">
+            <ExecutiveBriefingsPage />
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/executive/verification"
+        element={
+          <RequireAuth tier="executive">
+            <ExecutiveVerificationPage />
           </RequireAuth>
         }
       />

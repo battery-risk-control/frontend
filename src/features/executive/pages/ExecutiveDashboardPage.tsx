@@ -1,27 +1,134 @@
-import { fetchExecutiveDashboard } from '../../../api/executive.api'
-import { Header } from '../../../components/layout/Header'
-import { CumulativeRiskKpi } from '../components/CumulativeRiskKpi'
-import { SavingsSimulation } from '../components/SavingsSimulation'
-import { EnterpriseRiskSummary } from '../components/EnterpriseRiskSummary'
+import {
+  useState,
+} from 'react'
+import {
+  GlobalRiskBoard,
+  type SelectedDetail,
+} from '../../../components/widgets/GlobalRiskBoard'
+import {
+  ExecutiveKpiPanel,
+} from '../components/ExecutiveKpiPanel'
+import {
+  ExecutivePageLayout,
+} from '../components/ExecutivePageLayout'
+import {
+  ExecutiveRiskDetailPanel,
+} from '../components/ExecutiveRiskDetailPanel'
+import {
+  useExecutiveDashboard,
+} from '../useExecutiveDashboard'
 import styles from './ExecutiveDashboardPage.module.css'
 
-/**
- * 3계층 경영진 대시보드 (Seq 26). Figma "경영진 대시보드" 프레임 레이아웃 그대로 —
- * 상단 누적 리스크 탐지 KPI(3박스 가로) → 하단 좌우 분할(예산 절감 시뮬레이션 / 전사 리스크 요약).
- */
+const MAP_HEIGHT = 500
+
 export function ExecutiveDashboardPage() {
-  const dashboard = fetchExecutiveDashboard()
+  const {
+    dashboard,
+    loading,
+    errorMessage,
+  } = useExecutiveDashboard()
+
+  const [
+    selectedDetail,
+    setSelectedDetail,
+  ] = useState<SelectedDetail | null>(
+    null,
+  )
 
   return (
-    <div className={styles.wrapper}>
-      <Header />
-      <main id="main-content" className={styles.page}>
-        <CumulativeRiskKpi kpi={dashboard.cumulative_risk_kpi} />
-        <div className={styles.bottomRow}>
-          <SavingsSimulation simulation={dashboard.savings_simulation} />
-          <EnterpriseRiskSummary items={dashboard.enterprise_risk_summary} />
-        </div>
-      </main>
-    </div>
+    <ExecutivePageLayout
+      eyebrow="Executive Risk Control"
+      title="경영진 공급망 위험 대시보드"
+      description={
+        'ERP·RAG·멀티에이전트 분석 결과를 경영진 관점으로 요약합니다.'
+      }
+      aside={
+        <ExecutiveRiskDetailPanel
+          selectedDetail={
+            selectedDetail
+          }
+          onClear={() => {
+            setSelectedDetail(null)
+          }}
+        />
+      }
+    >
+      {loading && (
+        <PageMessage
+          title="대시보드 불러오는 중"
+          message={
+            '최신 공급망 위험 정보를 조회하고 있습니다.'
+          }
+        />
+      )}
+
+      {!loading &&
+        errorMessage && (
+          <PageMessage
+            title={
+              '대시보드를 불러오지 못했습니다'
+            }
+            message={errorMessage}
+            tone="error"
+          />
+        )}
+
+      {!loading &&
+        !errorMessage &&
+        dashboard && (
+          <>
+            <ExecutiveKpiPanel
+              kpi={dashboard.kpi}
+            />
+
+            <section
+              className={
+                styles.mapSection
+              }
+              aria-label={
+                '글로벌 위험 지도'
+              }
+            >
+              <GlobalRiskBoard
+                items={
+                  dashboard.risk_map
+                }
+                mapHeight={MAP_HEIGHT}
+                onSelect={
+                  setSelectedDetail
+                }
+              />
+            </section>
+          </>
+        )}
+    </ExecutivePageLayout>
+  )
+}
+
+function PageMessage({
+  title,
+  message,
+  tone = 'neutral',
+}: {
+  title: string
+  message: string
+  tone?: 'neutral' | 'error'
+}) {
+  return (
+    <section
+      className={`${styles.message} ${
+        tone === 'error'
+          ? styles.errorMessage
+          : ''
+      }`}
+    >
+      <strong>
+        {title}
+      </strong>
+
+      <p>
+        {message}
+      </p>
+    </section>
   )
 }

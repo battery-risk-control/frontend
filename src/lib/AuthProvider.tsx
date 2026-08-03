@@ -1,34 +1,66 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import {
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
 import type { OrgTier } from '../api/types'
-import { AuthContext, type AuthContextValue } from './AuthContext'
+import {
+  AuthContext,
+  type AuthContextValue,
+} from './AuthContext'
 
 /**
- * 로그인 성공 시 org_tier와 email을 메모리에만 저장하는 간단한 전역 상태(React Context).
- * 의도적으로 localStorage를 쓰지 않는다 — 새로고침 시 상태가 사라지고 라우트 가드가
- * 다시 /auth로 돌려보내는 것이 이번 범위의 의도된 동작이다.
+ * 로그인 성공 정보를 메모리에 저장하는 인증 Provider.
  *
- * 사용 예:
- *   <AuthProvider><AppRoutes /></AuthProvider>
+ * localStorage는 사용하지 않으므로 새로고침하면
+ * 인증 상태와 토큰이 사라지고 다시 로그인해야 한다.
  */
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [orgTier, setOrgTier] = useState<OrgTier | null>(null)
-  const [email, setEmail] = useState<string | null>(null)
+export function AuthProvider({
+  children,
+}: {
+  children: ReactNode
+}) {
+  const [orgTier, setOrgTier] =
+    useState<OrgTier | null>(null)
+
+  const [email, setEmail] =
+    useState<string | null>(null)
+
+  const [accessToken, setAccessToken] =
+    useState<string | null>(null)
 
   const value = useMemo<AuthContextValue>(
     () => ({
       orgTier,
       email,
-      signIn: (tier: OrgTier, userEmail: string) => {
+      accessToken,
+
+      signIn: (
+        tier: OrgTier,
+        userEmail: string,
+        token: string,
+      ) => {
         setOrgTier(tier)
         setEmail(userEmail)
+        setAccessToken(token)
       },
+
       signOut: () => {
         setOrgTier(null)
         setEmail(null)
+        setAccessToken(null)
       },
     }),
-    [orgTier, email],
+    [
+      orgTier,
+      email,
+      accessToken,
+    ],
   )
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  )
 }

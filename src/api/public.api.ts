@@ -116,19 +116,52 @@ export function fetchAiRecommendations(): AiRecommendation[] {
  * **엔드포인트는 하나다** — 마퀴용 API를 따로 두면 상단 자막과 아래 목록이 서로 다른 기사를
  * 가리키게 된다. 한 화면에서 둘 다 쓸 때는 크게 한 번 받아 앞부분을 잘라 쓰면 요청이 1회로 끝난다.
  *
+ * `offset`으로 과거 기사까지 페이지를 넘길 수 있다. 자재 필터와 제목 중복 제거를 백엔드가
+ * SQL에서 하므로 offset이 실제 노출 순서와 일치한다.
+ *
  * 사용 예:
  *   const feed = await fetchPublicNewsFeed()
  *   const top5 = await fetchPublicNewsFeed(5)
+ *   const page2 = await fetchPublicNewsFeed(5, 5)
  */
-export async function fetchPublicNewsFeed(limit?: number): Promise<NewsFeedItem[]> {
+export async function fetchPublicNewsFeed(
+  limit?: number,
+  offset?: number,
+): Promise<NewsFeedItem[]> {
   if (!API_BASE_URL) {
     return fetchNewsFeed()
   }
+  const params = new URLSearchParams()
+  if (limit !== undefined) params.set('limit', String(limit))
+  // offset=0은 백엔드 기본값이라 붙이지 않는다 — 페이지를 넘기지 않는 호출(마퀴 등)의 URL을
+  // 그대로 둬야 기존 캐시·로그와 갈리지 않는다.
+  if (offset) params.set('offset', String(offset))
+  const query = params.toString()
   const result = await fetchJson<NewsFeedItem[]>(
-    limit === undefined ? '/api/v1/public/news-feed' : `/api/v1/public/news-feed?limit=${limit}`,
+    query ? `/api/v1/public/news-feed?${query}` : '/api/v1/public/news-feed',
   )
   if ('error' in result) {
     throw new Error(result.message)
+  }
+  return result
+}
+
+/**
+ * 공급망 뉴스 속보 전체 건수. 목록이 마지막 페이지에서 "다음"을 잠그는 데 쓴다.
+ *
+ * mock 모드(`VITE_API_BASE_URL` 없음)에서는 넘길 페이지 자체가 없으므로 0을 돌려주고,
+ * 화면은 화살표를 숨긴다.
+ *
+ * 사용 예:
+ *   const total = await fetchPublicNewsFeedCount()
+ */
+export async function fetchPublicNewsFeedCount(): Promise<number> {
+  if (!API_BASE_URL) {
+    return 0
+  }
+  const result = await fetchJson<number>('/api/v1/public/news-feed/count')
+  if (typeof result !== 'number') {
+    throw new Error('뉴스 건수 조회에 실패했습니다.')
   }
   return result
 }

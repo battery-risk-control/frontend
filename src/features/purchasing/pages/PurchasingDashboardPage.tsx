@@ -3,6 +3,7 @@ import {
   fetchPublicExchangeRates,
   fetchPublicImportDependency,
   fetchPublicNewsFeed,
+  fetchPublicNewsFeedCount,
   fetchPublicPriceSummaries,
   fetchPublicPriceTrends,
   fetchPublicRiskBoard,
@@ -65,11 +66,19 @@ import styles from './PurchasingDashboardPage.module.css'
  * 호버 중이면 유지하고 둘 다 벗어난 뒤 이 시간만큼 지나야 닫는 디바운스 방식을 쓴다. */
 const PREVIEW_CLOSE_DELAY_MS = 150
 
-/** 마퀴에 흘릴 헤드라인 수. 목업 기준이며 아래 "최신 뉴스" 목록과 같은 응답을 잘라 쓴다. */
+/**
+ * 마퀴에 흘릴 헤드라인 수. 목업 기준이며 "최신 뉴스" **1페이지** 응답을 잘라 쓴다 —
+ * 목록이 과거 페이지로 넘어가도 마퀴는 최신에 머문다(`marqueeItems` 참고).
+ */
 const MARQUEE_COUNT = 5
 
-/** "최신 뉴스" 목록에 요청할 건수. 백엔드가 1~100으로 강제로 자른다. */
-const NEWS_FEED_LIMIT = 20
+/**
+ * "최신 뉴스" 한 페이지 건수. 목업이 5줄이고, 화살표로 과거 기사까지 넘겨 본다.
+ *
+ * 마퀴가 1페이지 응답을 잘라 쓰므로 이 값이 `MARQUEE_COUNT` 이상이어야 한다 —
+ * 작아지면 마퀴에 흘릴 헤드라인이 모자란다.
+ */
+const NEWS_FEED_PAGE_SIZE = 5
 
 /** 우측 "브리핑" 탭에 띄울 최근 브리핑 수. */
 const RECENT_BRIEFING_LIMIT = 5
@@ -135,6 +144,16 @@ export function PurchasingDashboardPage() {
   const [riskBoardItems, setRiskBoardItems] = useState<GlobalRiskBoardItem[]>([])
   const [riskBoardLoading, setRiskBoardLoading] = useState(true)
   const [newsItems, setNewsItems] = useState<NewsFeedItem[]>([])
+  /** "최신 뉴스" 현재 페이지(0부터). 화살표로만 바뀐다. */
+  const [newsPage, setNewsPage] = useState(0)
+  /** 자재 필터를 통과한 뉴스 전체 건수. 마지막 페이지에서 화살표를 잠근다. */
+  const [newsTotal, setNewsTotal] = useState(0)
+  /**
+   * 상단 마퀴에 흘릴 헤드라인. **목록과 분리해서 들고 있는다** — 같은 배열을 쓰면 사용자가
+   * 목록에서 과거 페이지로 넘기는 순간 "실시간 헤드라인" 자막까지 과거 기사로 바뀐다.
+   * 1페이지를 받을 때 함께 채우므로 추가 요청은 없다.
+   */
+  const [marqueeItems, setMarqueeItems] = useState<NewsFeedItem[]>([])
   const [priceSeries, setPriceSeries] = useState<MaterialPriceSeries[]>([])
   const [priceSummaries, setPriceSummaries] = useState<MaterialPriceSummary[]>([])
   const [importDependency, setImportDependency] = useState<ImportDependencyData>({
@@ -191,16 +210,12 @@ export function PurchasingDashboardPage() {
       .finally(() => {
         if (!cancelled) setRiskBoardLoading(false)
       })
-    fetchPublicNewsFeed(NEWS_FEED_LIMIT)
-      .then((items) => {
-        if (cancelled) return
-        setNewsItems(items)
-        // 목업처럼 첫 기사를 미리 띄워 우측 패널이 빈 채로 시작하지 않게 한다.
-        // 이미 사용자가 지도 마커를 눌러 골랐다면 덮어쓰지 않는다.
-        setSelectedNews((current) => current ?? (items[0] ? fromNewsFeedItem(items[0]) : null))
+    fetchPublicNewsFeedCount()
+      .then((total) => {
+        if (!cancelled) setNewsTotal(total)
       })
       .catch((err) => {
-        console.error('뉴스 속보 조회 실패', err)
+        console.error('뉴스 건수 조회 실패', err)
       })
     fetchPublicImportDependency()
       .then((data) => {
@@ -244,6 +259,29 @@ export function PurchasingDashboardPage() {
       cancelled = true
     }
   }, [period])
+
+  // 뉴스 목록은 페이지가 바뀔 때마다 다시 부른다. 위 공개 API 묶음에서 떼어낸 이유는 그쪽이
+  // 마운트 1회용인데 여기만 newsPage에 의존하기 때문이다 — 같이 두면 화살표를 누를 때마다
+  // 환율·지도·가격까지 전부 다시 불린다.
+  useEffect(() => {
+    let cancelled = false
+    fetchPublicNewsFeed(NEWS_FEED_PAGE_SIZE, newsPage * NEWS_FEED_PAGE_SIZE)
+      .then((items) => {
+        if (cancelled) return
+        setNewsItems(items)
+        if (newsPage === 0) setMarqueeItems(items)
+        // 목업처럼 첫 기사를 미리 띄워 우측 패널이 빈 채로 시작하지 않게 한다.
+        // 이미 골라 둔 기사가 있으면 덮어쓰지 않는다 — 페이지를 넘겼다고 우측 상세가
+        // 제멋대로 바뀌면 "읽던 기사를 잃어버리는" 동작이 된다.
+        setSelectedNews((current) => current ?? (items[0] ? fromNewsFeedItem(items[0]) : null))
+      })
+      .catch((err) => {
+        console.error('뉴스 속보 조회 실패', err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [newsPage])
 
   // 인증 API — 토큰이 준비된 뒤에만 부른다. RequireAuth가 이 화면을 지키므로 실제로는 항상
   // 값이 있지만, 없을 때 401을 만들지 않도록 가드를 둔다.
@@ -379,7 +417,7 @@ export function PurchasingDashboardPage() {
           <PurchasingKpiRow kpi={kpi} />
           {/* 환율은 한 종을 골라 넘기지 않는다 — 어느 통화를 보여줄지는 마퀴가 순환으로 정한다.
               USD만 넘기던 예전 방식에서는 수집해 둔 28종 중 27종이 화면에 안 나왔다. */}
-          <LiveNewsMarquee items={newsItems.slice(0, MARQUEE_COUNT)} rates={exchangeRates.rates} />
+          <LiveNewsMarquee items={marqueeItems.slice(0, MARQUEE_COUNT)} rates={exchangeRates.rates} />
           {riskBoardLoading ? (
             <div className={styles.riskBoardLoading}>지도 데이터를 불러오는 중입니다…</div>
           ) : (
@@ -394,6 +432,10 @@ export function PurchasingDashboardPage() {
             items={newsItems}
             selectedId={selectedNews?.id}
             onSelect={(item) => setSelectedNews(fromNewsFeedItem(item))}
+            page={newsPage}
+            pageSize={NEWS_FEED_PAGE_SIZE}
+            total={newsTotal}
+            onPageChange={setNewsPage}
           />
           <ImportDependencyRow
             importDependency={importDependency}

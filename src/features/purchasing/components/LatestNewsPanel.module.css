@@ -81,3 +81,42 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
+
+/* 페이지 이동 컨트롤. ScrollCard의 actions 슬롯(제목 옆)에 들어간다 —
+   목록 아래에 두면 5건이 스크롤 영역 안에 있어 버튼이 화면 밖으로 밀린다. */
+.pager {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pageLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.pageButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: var(--font-size-base);
+  line-height: 1;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.pageButton:hover:not(:disabled) {
+  background: var(--color-bg);
+}
+
+.pageButton:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+  opacity: 0.5;
+}

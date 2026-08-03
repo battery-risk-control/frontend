@@ -726,7 +726,11 @@ export interface MaterialRiskSummary {
   unavailable_count: number
   /** 평가된 자재의 재고일수 평균. 평가된 자재가 하나도 없으면 null */
   average_inventory_days: number | null
-  /** 자재별 품질 중 가장 나쁜 값(VALID < STALE < INCOMPLETE < INVALID) */
+  /**
+   * 위 KPI 숫자를 만든 데이터의 품질 — **점수가 나온 자재**의 품질 중 가장 나쁜 값
+   * (VALID < STALE < INCOMPLETE < INVALID). 평가하지 못한 자재는 여기 섞이지 않는다
+   * (`unavailable_count`와 자재별 `unavailable_reason`이 맡는다).
+   */
   data_quality_status: string
   as_of: string
 }
@@ -837,6 +841,13 @@ export interface ContractEvidenceItem {
   document_type: string
   chunk_index: number
   page_number: number
+  /** "제4조". 조항이 아닌 청크(표지·서문)면 null */
+  clause_no: string | null
+  /**
+   * "제4조 · 납기 및 지연 위약금". 청크 본문 머리에서 백엔드가 뽑는다(LLM 아님).
+   * 청크 하나가 4.01·4.02·4.03을 통째로 담고 있어서, 제목이 없으면 어느 조항이 답인지 알 수 없다.
+   */
+  clause_title: string
   content: string
   similarity_score: number
   mock_embedding: boolean

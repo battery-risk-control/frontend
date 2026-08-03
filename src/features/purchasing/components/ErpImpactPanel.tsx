@@ -1,5 +1,6 @@
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import type { MaterialRiskItem } from '../../../api/types'
+import { dataQualityLabel, dataQualityTone } from '../../../lib/dataQuality'
 import styles from './ErpImpactPanel.module.css'
 
 interface ErpImpactPanelProps {
@@ -7,24 +8,22 @@ interface ErpImpactPanelProps {
 }
 
 /**
- * 데이터 품질 코드 → 화면 표기. 백엔드가 `VALID < STALE < INCOMPLETE < INVALID` 순으로 매긴다.
+ * 데이터 품질 색 등급 → 이 패널의 CSS 클래스. 코드→라벨·색 등급은 원자재 위험 화면과
+ * 공유한다({@link dataQualityLabel}) — 같은 코드를 두 화면이 다르게 부르지 않게 하려는 것이다.
  *
  * 예전 이 자리에 있던 "품질 검증 통과/미통과"(mock `quality_check`)와는 **다른 것**이다.
  * 그쪽은 공급사의 IATF16949·PPAP 인증 여부였고, 이건 계산에 쓴 ERP 데이터가 쓸 만한지다.
  * 실 API에 공급사 인증 필드가 없어 같은 자리를 데이터 품질이 대신한다 — 라벨도 그에 맞게 바꿨다.
  */
-const QUALITY_LABEL: Record<string, string> = {
-  VALID: '정상',
-  STALE: '오래된 스냅샷',
-  INCOMPLETE: '일부 누락',
-  INVALID: '사용 불가',
+const TONE_CLASS: Record<ReturnType<typeof dataQualityTone>, string> = {
+  normal: styles.pass,
+  warning: styles.stale,
+  critical: styles.fail,
+  neutral: styles.stale,
 }
 
-/** VALID만 정상 색, 나머지는 주의를 끌어야 하므로 경고 색. INVALID는 심각 색. */
 function qualityClassName(status: string): string {
-  if (status === 'VALID') return `${styles.qcStatus} ${styles.pass}`
-  if (status === 'INVALID') return `${styles.qcStatus} ${styles.fail}`
-  return `${styles.qcStatus} ${styles.stale}`
+  return `${styles.qcStatus} ${TONE_CLASS[dataQualityTone(status)]}`
 }
 
 /**
@@ -77,7 +76,7 @@ export function ErpImpactPanel({ materials }: ErpImpactPanelProps) {
                       : '재고 데이터 없음'}
                   </span>
                   <span className={qualityClassName(material.data_quality_status)}>
-                    데이터 품질 {QUALITY_LABEL[material.data_quality_status] ?? material.data_quality_status}
+                    데이터 품질 {dataQualityLabel(material.data_quality_status)}
                   </span>
                 </div>
                 <p className={styles.reason}>

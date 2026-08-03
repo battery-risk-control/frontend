@@ -4,6 +4,7 @@ import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { useScrollOverflowHint } from '../../../lib/useScrollOverflowHint'
+import { Skeleton, SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
 import { toNewsEventRef } from '../../../lib/newsEventRef'
 import { formatCollectedAt } from '../../../lib/formatCollectedAt'
 import type { AiBriefingListItem, DashboardAlert, SelectedArticle } from '../../../api/types'
@@ -36,6 +37,13 @@ interface DashboardSidePanelProps {
   /** 이미 `buildDashboardAlerts`로 걸러지고 정렬된 목록 — 이 컴포넌트는 순서를 바꾸지 않는다. */
   alerts: DashboardAlert[]
   briefings: AiBriefingListItem[]
+  /**
+   * 탭별 로딩. 세 탭의 원천이 달라 각각 다른 시점에 도착하므로 하나로 묶지 않는다 —
+   * 묶으면 이미 온 탭까지 가장 느린 응답을 기다린다.
+   */
+  isNewsLoading?: boolean
+  isAlertsLoading?: boolean
+  isBriefingsLoading?: boolean
   expanded: boolean
   isPreviewing: boolean
   onPreviewMouseEnter: () => void
@@ -244,6 +252,9 @@ export function DashboardSidePanel({
   selectedNews,
   alerts,
   briefings,
+  isNewsLoading = false,
+  isAlertsLoading = false,
+  isBriefingsLoading = false,
   expanded,
   isPreviewing,
   onPreviewMouseEnter,
@@ -308,7 +319,16 @@ export function DashboardSidePanel({
               aria-labelledby={`side-panel-tab-${activeTab}`}
               className={styles.tabPanel}
             >
-              {activeTab === 'news' && <NewsDetail news={selectedNews} />}
+              {activeTab === 'news' &&
+                (isNewsLoading && !selectedNews ? (
+                  <div className={styles.newsDetail} aria-busy="true">
+                    <Skeleton width="7em" />
+                    <SkeletonText lines={2} lastLineWidth="65%" />
+                    <Skeleton width="45%" />
+                  </div>
+                ) : (
+                  <NewsDetail news={selectedNews} />
+                ))}
               {activeTab === 'alerts' && (
                 <>
                   <div className={styles.panelHead}>
@@ -319,10 +339,23 @@ export function DashboardSidePanel({
                       전체 보기
                     </Link>
                   </div>
-                  <AlertList alerts={alerts} />
+                  {isAlertsLoading ? (
+                    <div aria-busy="true">
+                      <SkeletonText lines={5} lastLineWidth="50%" />
+                    </div>
+                  ) : (
+                    <AlertList alerts={alerts} />
+                  )}
                 </>
               )}
-              {activeTab === 'briefings' && <BriefingList briefings={briefings} />}
+              {activeTab === 'briefings' &&
+                (isBriefingsLoading ? (
+                  <div aria-busy="true">
+                    <SkeletonText lines={6} lastLineWidth="40%" />
+                  </div>
+                ) : (
+                  <BriefingList briefings={briefings} />
+                ))}
             </div>
 
             <UploadCard />

@@ -179,6 +179,21 @@ export function PurchasingDashboardPage() {
   const [monitoringEvents, setMonitoringEvents] = useState<RiskMonitoringEvent[]>([])
   const [briefings, setBriefings] = useState<AiBriefingListItem[]>([])
 
+  /*
+   * 패널별 로딩 상태. 하나로 묶지 않는 이유는 조회가 **서로 다른 시점에 끝나기** 때문이다 —
+   * 전역 플래그 하나로 두면 가장 느린 응답이 올 때까지 이미 도착한 패널까지 자리표시자로
+   * 붙잡아 둔다. 실패해도 로딩은 끝난 것이므로 `.finally`에서 내린다(그때는 각 패널의
+   * "데이터 없음" 문구가 맞는 표시다).
+   */
+  const [newsLoading, setNewsLoading] = useState(true)
+  const [priceLoading, setPriceLoading] = useState(true)
+  const [kpiLoading, setKpiLoading] = useState(true)
+  const [materialRiskLoading, setMaterialRiskLoading] = useState(true)
+  const [supplierLoading, setSupplierLoading] = useState(true)
+  const [materialsLoading, setMaterialsLoading] = useState(true)
+  const [alertsLoading, setAlertsLoading] = useState(true)
+  const [briefingsLoading, setBriefingsLoading] = useState(true)
+
   // 기간 탭은 페이지가 소유한다 — 탭이 바뀌면 차트와 요약 카드를 **같은 days로** 함께 다시
   // 불러야 하고(백엔드가 "같은 구간에서 파생"을 전제로 만들어져 있다), 그 조회는 페이지 책임이다.
   const [period, setPeriod] = useState(DEFAULT_PERIOD)
@@ -248,6 +263,9 @@ export function PurchasingDashboardPage() {
       .catch((err) => {
         console.error('원자재 가격 추이 조회 실패', err)
       })
+      .finally(() => {
+        if (!cancelled) setPriceLoading(false)
+      })
     fetchPublicPriceSummaries(days)
       .then((summaries) => {
         if (!cancelled) setPriceSummaries(summaries)
@@ -278,6 +296,9 @@ export function PurchasingDashboardPage() {
       .catch((err) => {
         console.error('뉴스 속보 조회 실패', err)
       })
+      .finally(() => {
+        if (!cancelled) setNewsLoading(false)
+      })
     return () => {
       cancelled = true
     }
@@ -299,12 +320,18 @@ export function PurchasingDashboardPage() {
       .catch((err) => {
         console.error('KPI 요약 조회 실패', err)
       })
+      .finally(() => {
+        if (!cancelled) setKpiLoading(false)
+      })
     fetchMaterialRiskSummary(accessToken)
       .then((summary) => {
         if (!cancelled) setMaterialRiskSummary(summary)
       })
       .catch((err) => {
-        console.error('원자재 리스크 요약 조회 실패', err)
+        console.error('원자재별 리스크 점수 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setMaterialRiskLoading(false)
       })
     fetchSupplierOverview(accessToken)
       .then((overview) => {
@@ -313,12 +340,18 @@ export function PurchasingDashboardPage() {
       .catch((err) => {
         console.error('공급사 현황 조회 실패', err)
       })
+      .finally(() => {
+        if (!cancelled) setSupplierLoading(false)
+      })
     fetchMaterialRiskOverview(accessToken)
       .then((overview) => {
         if (!cancelled) setMaterials(overview.materials)
       })
       .catch((err) => {
         console.error('자재별 위험 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setMaterialsLoading(false)
       })
     fetchRiskMonitoringEvents(accessToken, { days: ALERT_EVENT_DAYS, limit: ALERT_EVENT_LIMIT })
       .then((events) => {
@@ -327,12 +360,18 @@ export function PurchasingDashboardPage() {
       .catch((err) => {
         console.error('리스크 이벤트 조회 실패', err)
       })
+      .finally(() => {
+        if (!cancelled) setAlertsLoading(false)
+      })
     fetchRecentAiBriefings(accessToken, RECENT_BRIEFING_LIMIT)
       .then((items) => {
         if (!cancelled) setBriefings(items)
       })
       .catch((err) => {
         console.error('최근 브리핑 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setBriefingsLoading(false)
       })
     return () => {
       cancelled = true
@@ -414,7 +453,7 @@ export function PurchasingDashboardPage() {
         <main id="main-content" className={styles.main}>
           {/* ── 목업에 있는 구성 (위) ─────────────────────────────── */}
           <PurchasingDashboardHeader asOfDate={exchangeRates.rate_date} />
-          <PurchasingKpiRow kpi={kpi} />
+          <PurchasingKpiRow kpi={kpi} isLoading={kpiLoading} />
           {/* 환율은 한 종을 골라 넘기지 않는다 — 어느 통화를 보여줄지는 마퀴가 순환으로 정한다.
               USD만 넘기던 예전 방식에서는 수집해 둔 28종 중 27종이 화면에 안 나왔다. */}
           <LiveNewsMarquee items={marqueeItems.slice(0, MARQUEE_COUNT)} rates={exchangeRates.rates} />
@@ -430,6 +469,7 @@ export function PurchasingDashboardPage() {
           )}
           <LatestNewsPanel
             items={newsItems}
+            isLoading={newsLoading}
             selectedId={selectedNews?.id}
             onSelect={(item) => setSelectedNews(fromNewsFeedItem(item))}
             page={newsPage}
@@ -441,6 +481,7 @@ export function PurchasingDashboardPage() {
             importDependency={importDependency}
             priceSeries={priceSeries}
             priceSummaries={priceSummaries}
+            isPriceLoading={priceLoading}
             period={period}
             onPeriodChange={setPeriod}
           />
@@ -449,6 +490,7 @@ export function PurchasingDashboardPage() {
               붙어 있지만 **점수의 뜻이 다르다** — 게이지는 ERP 노출도 단독 점수다. */}
           <MaterialRiskSummaryTable
             items={materialRiskSummary}
+            isLoading={materialRiskLoading}
             pendingAssessmentId={pendingAssessmentId}
             onAcknowledge={handleAcknowledge}
           />
@@ -458,12 +500,15 @@ export function PurchasingDashboardPage() {
           <MaterialRiskOverviewSection gauges={gauges} scoreCards={scoreCards} />
           <MaterialRiskStatusPanel materials={materials} />
           <ErpImpactPanel materials={materials} />
-          <PurchasePriorityPanel materials={materials} />
-          <SupplierOverviewPanel overview={supplierOverview} />
+          <PurchasePriorityPanel materials={materials} isLoading={materialsLoading} />
+          <SupplierOverviewPanel overview={supplierOverview} isLoading={supplierLoading} />
         </main>
         <PageSectionDots variant="withAside" sections={SECTION_DOTS_SECTIONS} />
         <DashboardSidePanel
           selectedNews={selectedNews}
+          isNewsLoading={newsLoading}
+          isAlertsLoading={alertsLoading}
+          isBriefingsLoading={briefingsLoading}
           alerts={alerts}
           briefings={briefings}
           expanded={alertsExpanded}

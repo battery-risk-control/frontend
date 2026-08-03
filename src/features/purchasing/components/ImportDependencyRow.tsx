@@ -7,6 +7,8 @@ interface ImportDependencyRowProps {
   importDependency: ImportDependencyData
   priceSeries: MaterialPriceSeries[]
   priceSummaries: MaterialPriceSummary[]
+  /** 가격 조회가 아직 끝나지 않았는지. 차트 자리에 자리표시자를 띄운다. */
+  isPriceLoading?: boolean
   /** 선택된 기간 라벨. 조회는 페이지가 소유하므로 여기서는 내려주고 통지만 한다. */
   period: string
   onPeriodChange: (period: string) => void
@@ -30,6 +32,7 @@ export function ImportDependencyRow({
   importDependency,
   priceSeries,
   priceSummaries,
+  isPriceLoading = false,
   period,
   onPeriodChange,
 }: ImportDependencyRowProps) {
@@ -39,6 +42,7 @@ export function ImportDependencyRow({
       <MaterialPriceDetail
         series={priceSeries}
         summaries={priceSummaries}
+        isLoading={isPriceLoading}
         period={period}
         onPeriodChange={onPeriodChange}
       />

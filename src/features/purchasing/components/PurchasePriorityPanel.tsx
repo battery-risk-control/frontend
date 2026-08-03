@@ -1,12 +1,18 @@
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
+import { Skeleton } from '../../../components/ui/Skeleton/Skeleton'
 import { toPurchasePriority } from '../../../api/purchasingDashboard.api'
 import type { MaterialRiskItem } from '../../../api/types'
 import styles from './PurchasePriorityPanel.module.css'
 
 interface PurchasePriorityPanelProps {
   materials: MaterialRiskItem[]
+  /** 아직 조회가 끝나지 않았는지. "표시할 자재가 없습니다"와 구분해야 한다. */
+  isLoading?: boolean
 }
+
+/** 로딩 중 잡아둘 줄 수. 카드가 4개 넘으면 스크롤되므로 그 언저리로 맞춘다. */
+const PRIORITY_SKELETON_ROWS = 4
 
 /**
  * 구매 대응 우선순위. 별도 우선순위 스키마가 없으므로 자재별 위험 목록
@@ -23,7 +29,10 @@ interface PurchasePriorityPanelProps {
  * 사용 예:
  *   <PurchasePriorityPanel materials={overview.materials} />
  */
-export function PurchasePriorityPanel({ materials }: PurchasePriorityPanelProps) {
+export function PurchasePriorityPanel({
+  materials,
+  isLoading = false,
+}: PurchasePriorityPanelProps) {
   const ranked = toPurchasePriority(materials)
 
   return (
@@ -33,7 +42,25 @@ export function PurchasePriorityPanel({ materials }: PurchasePriorityPanelProps)
       // 리스트 항목 4개 초과 시 스크롤 트리거용 높이(design-tokens.md "카드 레이아웃·스크롤 규칙" d).
       maxBodyHeight={368}
     >
-      {ranked.length === 0 ? (
+      {isLoading ? (
+        <ol className={styles.list} aria-busy="true" aria-label="구매 대응 우선순위 불러오는 중">
+          {Array.from({ length: PRIORITY_SKELETON_ROWS }, (_, index) => (
+            <li key={index} className={styles.item}>
+              <span className={styles.rank}>
+                <Skeleton width="1.2em" />
+              </span>
+              <div className={styles.body}>
+                <span className={styles.material}>
+                  <Skeleton width="8em" />
+                </span>
+                <span className={styles.stockDays}>
+                  <Skeleton width="60%" />
+                </span>
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : ranked.length === 0 ? (
         <p className={styles.empty}>표시할 자재가 없습니다.</p>
       ) : (
         <ol className={styles.list}>

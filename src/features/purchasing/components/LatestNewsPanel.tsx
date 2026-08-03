@@ -1,11 +1,23 @@
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
+import { Skeleton } from '../../../components/ui/Skeleton/Skeleton'
 import type { NewsFeedItem } from '../../../api/types'
 import styles from './LatestNewsPanel.module.css'
 
+/**
+ * 로딩 자리표시자의 제목 길이. 목업 노출이 5건이라 5줄이고, 길이를 일부러 들쭉날쭉하게 둔다 —
+ * 같은 길이 막대가 반복되면 표처럼 보여서 오히려 눈에 걸린다.
+ */
+const NEWS_SKELETON_WIDTHS = ['82%', '64%', '90%', '71%', '58%']
+
 interface LatestNewsPanelProps {
   items: NewsFeedItem[]
+  /**
+   * 아직 조회가 끝나지 않았는지. "수집된 뉴스가 없습니다"와 구분해야 한다 —
+   * 로딩 중에 빈 문구를 띄우면 사용자가 없는 것으로 읽고 떠난다.
+   */
+  isLoading?: boolean
   /** 우측 "뉴스 상세" 탭에 떠 있는 기사. 목록에서 선택 상태를 표시한다. */
   selectedId?: string | null
   onSelect: (item: NewsFeedItem) => void
@@ -37,6 +49,7 @@ interface LatestNewsPanelProps {
  */
 export function LatestNewsPanel({
   items,
+  isLoading = false,
   selectedId,
   onSelect,
   page,
@@ -82,7 +95,25 @@ export function LatestNewsPanel({
       // (design-tokens.md "카드 레이아웃·스크롤 규칙" d와 같은 취지).
       maxBodyHeight={320}
     >
-      {items.length === 0 ? (
+      {isLoading ? (
+        /* 들어올 목록과 같은 모양(순번·제목·배지)으로 자리를 잡아둔다 — 도착하는 순간
+           레이아웃이 튀지 않는다. 줄마다 제목 길이를 다르게 줘서 실제 목록처럼 보이게 한다. */
+        <ol className={styles.list} aria-busy="true" aria-label="최신 뉴스 불러오는 중">
+          {NEWS_SKELETON_WIDTHS.map((width, index) => (
+            <li key={index} className={styles.item}>
+              <span className={styles.rank}>
+                <Skeleton width="1.2em" />
+              </span>
+              <span className={styles.headlineButton}>
+                <Skeleton width={width} />
+              </span>
+              <span className={styles.badges}>
+                <Skeleton variant="circle" width="52px" height="20px" />
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : items.length === 0 ? (
         <p className={styles.empty}>
           {page > 0 ? '마지막 페이지입니다.' : '수집된 뉴스가 없습니다.'}
         </p>

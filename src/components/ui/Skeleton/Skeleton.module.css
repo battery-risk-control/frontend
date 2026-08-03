@@ -1,0 +1,85 @@
+/*
+ * 로딩 자리표시자. 값이 아직 없을 때 "비어 있음"과 구분되도록, 들어올 내용의 모양을 미리 그린다.
+ *
+ * 색은 토큰에서 가져온다 — 배경은 --color-border보다 한 단계 옅게, 광택은 흰색이다.
+ * 하드코딩하면 나중에 팔레트를 바꿀 때 여기만 남는다.
+ */
+.base {
+  position: relative;
+  overflow: hidden;
+  background-color: color-mix(in srgb, var(--color-border) 62%, var(--color-surface));
+  border-radius: var(--radius-sm);
+}
+
+/*
+ * 광택이 왼쪽에서 오른쪽으로 지나간다. background-position이 아니라 ::after를 translate하는
+ * 이유는 후자가 합성(compositing)만 일으켜 메인 스레드를 잡지 않기 때문이다 — 목록 10줄이
+ * 동시에 반짝여도 스크롤이 끊기지 않는다.
+ */
+.base::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-surface) 85%, transparent) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/*
+ * 움직임에 민감한 사용자에게는 흐르는 광택 대신 은은한 명암 변화만 준다.
+ * 자리표시자라는 사실은 여전히 전달되면서 화면이 흐르지는 않는다.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .base::after {
+    animation: none;
+  }
+  .base {
+    animation: pulse 2s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/** 한 줄짜리 텍스트 자리. 높이는 본문 줄높이에 맞춘다. */
+.line {
+  height: 0.9em;
+  border-radius: var(--radius-sm);
+}
+
+/** 제목처럼 굵은 줄. */
+.title {
+  height: 1.25em;
+  border-radius: var(--radius-sm);
+}
+
+/** 카드·차트처럼 면적을 차지하는 자리. */
+.block {
+  border-radius: var(--radius-md);
+}
+
+/** 배지·아바타처럼 둥근 자리. */
+.circle {
+  border-radius: 999px;
+}
+
+/** 여러 줄을 쌓을 때의 간격. 마지막 줄은 짧게 만들어 문단처럼 보이게 한다. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

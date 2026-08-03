@@ -1,9 +1,12 @@
+import { Skeleton } from '../../../components/ui/Skeleton/Skeleton'
 import type { PurchasingKpiSummary } from '../../../api/types'
 import styles from './PurchasingKpiRow.module.css'
 
 interface PurchasingKpiRowProps {
   /** 조회 전이거나 실패했으면 null — 모든 칸이 "—"가 된다. */
   kpi: PurchasingKpiSummary | null
+  /** 아직 조회가 끝나지 않았는지. "—"(값 없음)와 구분해 자리표시자를 보여준다. */
+  isLoading?: boolean
 }
 
 type Tone = 'critical' | 'warning' | 'erp' | 'external' | 'briefing'
@@ -100,11 +103,15 @@ function round(score: number | null | undefined): number | null {
  * 사용 예:
  *   <PurchasingKpiRow kpi={kpi} />
  */
-export function PurchasingKpiRow({ kpi }: PurchasingKpiRowProps) {
+export function PurchasingKpiRow({ kpi, isLoading = false }: PurchasingKpiRowProps) {
   return (
-    <section className={styles.section} aria-labelledby="kpi-summary-heading">
+    <section
+      className={styles.section}
+      aria-labelledby="kpi-summary-heading"
+      aria-busy={isLoading || undefined}
+    >
       <h2 id="kpi-summary-heading" className={styles.srOnly}>
-        상단 KPI 요약
+        상단 KPI 요약{isLoading ? ' 불러오는 중' : ''}
       </h2>
       <dl className={styles.grid}>
         {toCells(kpi).map((cell) => (
@@ -112,8 +119,16 @@ export function PurchasingKpiRow({ kpi }: PurchasingKpiRowProps) {
             <dt className={styles.label}>{cell.label}</dt>
             <dd className={styles.valueBlock}>
               <span className={`${styles.value} ${TONE_CLASS[cell.tone]}`}>
-                {cell.value === null ? '—' : cell.value}
-                {cell.value !== null && <span className={styles.unit}>{cell.unit}</span>}
+                {/* 로딩 중에는 '—'를 쓰지 않는다. 그건 "조회했는데 값이 없다"는 뜻이라
+                    아직 오는 중인 것과 구분돼야 한다. */}
+                {isLoading ? (
+                  <Skeleton variant="title" width="2.2em" />
+                ) : (
+                  <>
+                    {cell.value === null ? '—' : cell.value}
+                    {cell.value !== null && <span className={styles.unit}>{cell.unit}</span>}
+                  </>
+                )}
               </span>
               {cell.value24h !== undefined && (
                 <span className={styles.subValue}>

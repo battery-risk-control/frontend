@@ -2,7 +2,9 @@
   position: sticky;
   top: var(--header-height); /* sticky Header(56px)와 겹치지 않도록 그 아래에서부터 고정 */
   height: calc(100vh - var(--header-height));
-  width: 320px;
+  /* 토글 버튼(SidePanelToggleButton)이 이 폭만큼 왼쪽으로 밀려 패널 가장자리에 붙는다 —
+     여기만 바꾸면 버튼이 떨어지므로 값을 토큰으로 공유한다. */
+  width: var(--side-panel-width);
   flex-shrink: 0;
   overflow: hidden; /* SideNav 접기와 동일한 width 트랜지션 패턴 */
   transition: width var(--transition-fast) ease;
@@ -22,7 +24,7 @@
   position: absolute;
   top: 0;
   right: 0;
-  width: 320px;
+  width: var(--side-panel-width);
   z-index: 20;
   opacity: 0;
   pointer-events: none;

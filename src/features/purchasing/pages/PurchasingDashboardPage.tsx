@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   fetchPublicExchangeRates,
   fetchPublicImportDependency,
@@ -39,6 +39,7 @@ import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
+import { SidePanelToggleButton } from '../../../components/layout/SidePanelToggleButton'
 import { AlertsBellButton } from '../../../components/layout/AlertsBellButton'
 import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
 import { PageSectionDots } from '../../../components/ui/PageSectionDots/PageSectionDots'
@@ -221,9 +222,44 @@ export function PurchasingDashboardPage() {
   // 가격 쪽은 기간 탭(period)에 따라 함께 바뀐다. 같은 구간에서 파생한 값이라 그게 맞다.
   const alerts = buildDashboardAlerts(monitoringEvents, priceSeries, priceSummaries)
 
-  const { expanded: alertsExpanded, toggle: toggleAlertsExpanded } = useAlertsPanelState()
+  const { expanded: alertsExpanded, open: openAlertsPanel } = useAlertsPanelState()
   const [isPreviewing, setIsPreviewing] = useState(false)
+  /** 알림 벨을 누른 횟수. 우측 패널이 "주요 알림" 탭으로 옮겨야 할 때를 알린다. */
+  const [alertsFocusToken, setAlertsFocusToken] = useState(0)
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  /**
+   * 헤더 알림 벨 클릭 — 패널을 열고 "주요 알림" 탭으로 옮긴다.
+   *
+   * 토글이 아니라 열기다. 브리핑 탭을 보다가 알림을 보려고 눌렀는데 패널이 닫히면 안 된다.
+   * 열고 닫기는 패널 가장자리의 `SidePanelToggleButton`이 맡는다.
+   *
+   * 미리보기도 함께 내린다 — 패널이 열리면 그 안에 같은 내용이 있어서, 오버레이가 남아 있으면
+   * 같은 목록이 두 겹으로 보인다.
+   */
+  const handleOpenAlerts = useCallback(() => {
+    openAlertsPanel()
+    setAlertsFocusToken((previous) => previous + 1)
+    setIsPreviewing(false)
+  }, [openAlertsPanel])
+
+  /**
+   * 지도 마커·최신 뉴스에서 기사를 고르면 우측 패널을 함께 연다.
+   *
+   * 패널이 접혀 있을 때 제목을 눌러도 화면이 아무 반응도 하지 않아, 클릭이 먹지 않은 것처럼
+   * 보였다 — 선택은 바뀌었는데 그걸 보여줄 자리가 닫혀 있었다. "뉴스 상세" 탭으로 옮기는 것은
+   * `DashboardSidePanel`이 `selectedNews` 참조 변경을 보고 이미 하고 있다.
+   *
+   * 목록이 처음 도착할 때의 자동 선택(첫 기사)에는 쓰지 않는다 — 사용자가 누른 것이 아닌데
+   * 패널이 열리면, 접어 둔 사람에게는 화면이 제멋대로 움직이는 것으로 보인다.
+   */
+  const handleSelectArticle = useCallback(
+    (article: SelectedArticle) => {
+      setSelectedNews(article)
+      openAlertsPanel()
+    },
+    [openAlertsPanel],
+  )
 
   // 공개 API — 토큰이 필요 없으므로 마운트 시 한 번만 부른다(기간 탭에 반응하는 가격 2종 제외).
   useEffect(() => {
@@ -520,8 +556,7 @@ export function PurchasingDashboardPage() {
         accountExtra={
           <AlertsBellButton
             count={alerts.length}
-            expanded={alertsExpanded}
-            onToggle={toggleAlertsExpanded}
+            onOpenAlerts={handleOpenAlerts}
             onMouseEnter={handlePreviewMouseEnter}
             onMouseLeave={handlePreviewMouseLeave}
           />
@@ -544,14 +579,14 @@ export function PurchasingDashboardPage() {
                카드 안쪽 상세 패널은 자동으로 펼쳐지지 않는다(같은 내용이 두 군데 뜨는 것 방지). */
             <GlobalRiskBoard
               items={riskBoardItems}
-              onSelectItem={(item) => setSelectedNews(fromRiskBoardItem(item))}
+              onSelectItem={(item) => handleSelectArticle(fromRiskBoardItem(item))}
             />
           )}
           <LatestNewsPanel
             items={newsItems}
             isLoading={newsLoading}
             selectedId={selectedNews?.id}
-            onSelect={(item) => setSelectedNews(fromNewsFeedItem(item))}
+            onSelect={(item) => handleSelectArticle(fromNewsFeedItem(item))}
             page={newsPage}
             pageSize={NEWS_FEED_PAGE_SIZE}
             total={newsTotal}
@@ -602,6 +637,9 @@ export function PurchasingDashboardPage() {
           <SupplierOverviewPanel overview={supplierOverview} isLoading={supplierLoading} />
         </main>
         <PageSectionDots variant="withAside" sections={SECTION_DOTS_SECTIONS} />
+        {/* 패널이 접히면 폭이 0이 되어 안쪽에 토글을 둘 수 없다 — 좌측 SideNavToggleButton과
+            같은 이유로 패널 바깥에 따로 세운다. */}
+        <SidePanelToggleButton />
         <DashboardSidePanel
           selectedNews={selectedNews}
           isNewsLoading={newsLoading}
@@ -610,6 +648,7 @@ export function PurchasingDashboardPage() {
           alerts={alerts}
           briefings={briefings}
           expanded={alertsExpanded}
+          focusAlertsToken={alertsFocusToken}
           isPreviewing={isPreviewing}
           onPreviewMouseEnter={handlePreviewMouseEnter}
           onPreviewMouseLeave={handlePreviewMouseLeave}

@@ -45,6 +45,16 @@ interface DashboardSidePanelProps {
   isAlertsLoading?: boolean
   isBriefingsLoading?: boolean
   expanded: boolean
+  /**
+   * 헤더 알림 벨을 누를 때마다 1씩 오르는 값. 오르면 "주요 알림" 탭으로 옮긴다.
+   *
+   * boolean이 아니라 카운터인 이유: 이미 알림 탭에 있다가 브리핑 탭으로 옮긴 뒤 벨을 다시
+   * 눌러도 알림으로 돌아와야 하는데, boolean은 값이 그대로라 effect가 다시 돌지 않는다.
+   * `selectedNews`가 참조 변경으로 같은 일을 하는 것과 같은 방식이다.
+   *
+   * 0은 "아직 누른 적 없음"이라 첫 렌더에서는 기본 탭(뉴스 상세)을 밀어내지 않는다.
+   */
+  focusAlertsToken?: number
   isPreviewing: boolean
   onPreviewMouseEnter: () => void
   onPreviewMouseLeave: () => void
@@ -256,6 +266,7 @@ export function DashboardSidePanel({
   isAlertsLoading = false,
   isBriefingsLoading = false,
   expanded,
+  focusAlertsToken = 0,
   isPreviewing,
   onPreviewMouseEnter,
   onPreviewMouseLeave,
@@ -277,6 +288,19 @@ export function DashboardSidePanel({
       setActiveTab('news')
     }
   }, [selectedNews])
+
+  /*
+   * 헤더 알림 벨을 누르면 "주요 알림" 탭으로 옮긴다.
+   *
+   * 벨을 눌렀는데 뉴스 상세 탭이 열리면 트리거와 결과가 어긋난다 — 호버 미리보기에 알림 탭
+   * 내용만 띄우는 것과 같은 이유다. 위 selectedNews effect보다 <b>뒤에</b> 선언해야 한다.
+   * 두 effect가 같은 렌더에서 함께 돌 때 나중 것이 이기는데, 벨을 누른 의도가 더 최근이다.
+   */
+  useEffect(() => {
+    if (focusAlertsToken > 0) {
+      setActiveTab('alerts')
+    }
+  }, [focusAlertsToken])
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const { hasOverflowTop, hasOverflowBottom } = useScrollOverflowHint(scrollRef, expanded)

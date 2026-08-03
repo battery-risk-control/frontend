@@ -363,10 +363,10 @@ export function RiskMonitoringPage() {
                         ) : (
                           <span className={styles.unanalyzed}>미분석</span>
                         )}
-                        {/* 확정이 아니면 잠정임을 알리는 신뢰도 배지를 함께 띄운다. */}
-                        {!event.multi_agent_completed && (
-                          <ConfidenceBadge label={event.confidence_label} />
-                        )}
+                        {/* 확정일 때도 띄운다. 예전에는 잠정일 때만 배지를 달았는데, 다른 화면이
+                            전부 확정 여부를 명시하는 마당에 여기만 숨기니 "주의 확정"이어야 할
+                            자리가 "주의"로만 보였다 — 판정이 안 끝난 것으로 읽힌다. */}
+                        <ConfidenceBadge label={event.confidence_label} />
                       </span>
                       <span className={styles.eventTitle}>{event.headline}</span>
                       <span className={styles.eventMeta}>
@@ -416,7 +416,8 @@ function EventDetailView({
 
       <p className={styles.detailBadges}>
         {detail.grade ? <RiskGradeBadge grade={detail.grade} /> : <span className={styles.unanalyzed}>미분석</span>}
-        {!detail.multi_agent_completed && <ConfidenceBadge label={detail.confidence_label} />}
+        {/* 목록과 같은 규칙이다 — 한쪽만 숨기면 "목록은 참고, 상세는 확정"처럼 보인다. */}
+        <ConfidenceBadge label={detail.confidence_label} />
         <span className={styles.detailTags}>
           {detail.country_name ?? '국가 미상'}
           {detail.impact_domain ? ` · ${detail.impact_domain}` : ''}

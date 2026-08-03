@@ -28,7 +28,6 @@
 | `components/ui/ConfidenceBadge.tsx` | 리스크 판단 신뢰도 라벨 배지 |
 | `components/ui/ConfirmModal.tsx` | 확인/취소 모달 |
 | `components/ui/DonutChart.tsx` | 도넛 차트(Phase 9.4 신규, surin DonutChart 이식) |
-| `components/ui/HorizontalScrollHint.tsx` | 가로 스크롤 좌우 오버플로 힌트(2026-07-27 신규 — `MaterialRiskOverviewRow`/`MaterialRiskOverviewSection`에 중복돼 있던 CSS/JSX를 공용 컴포넌트로 추출; 같은 날 후속으로 `onClickLeft`/`onClickRight` 선택적 prop 추가돼 두 소비처 모두에서 클릭 가능한 페이징 버튼으로도 쓰임) |
 | `components/ui/PageSectionDots/PageSectionDots.tsx` | 페이지 섹션 이동 도트 인디케이터(Phase 10.7 신규, `rootMargin` 헤더 높이 보정 2026-07-27) |
 | `components/ui/RiskGauge.tsx` | 3단계 리스크 게이지(Phase 9.4 신규, surin RiskStepGauge 이식) |
 | `components/ui/RiskGradeBadge.tsx` | 리스크 등급 배지 |
@@ -57,12 +56,8 @@
 | `features/purchasing/components/ImportDependencyPanel.tsx` | 수입 의존도 도넛차트 패널(Phase 9.4 신규) |
 | `features/purchasing/components/ImportDependencyRow.tsx` | 수입 의존도+원자재 가격 추이 2컬럼 행(Phase 9.4 신규). 2026-07-27 — `940px` 이하 1컬럼 전환 미디어 쿼리 추가(신설 이후 처음, 미구현 상태였음) |
 | `features/purchasing/components/KpiSummaryPanel.tsx` | 상단 KPI 요약 패널 |
-| `features/purchasing/components/MaterialRiskOverviewRow.tsx` | 원자재 리스크 상세 그리드(게이지 카드+placeholder 자재 카드, Phase 9.4 신규 — 더보기 구조 재정의 후 점수 카드는 `ScoreCardPanel`로 분리, 9장으로 늘어나며 세로 줄바꿈 대신 가로 스크롤로 전환) |
-| `features/purchasing/components/MaterialRiskOverviewSection.tsx` | 원자재 리스크 개요 요약 행 — 더보기(Disclosure) 컨테이너, 형제 카드 캐러셀형(가로 스크롤+드래그) |
 | `features/purchasing/components/MaterialRiskStatusPanel.tsx` | 원자재 공급사 리스크 현황 패널 |
-| `features/purchasing/components/MaterialRiskSummaryCard.tsx` | 원자재 리스크 요약 카드(더보기 토글 보유) |
 | `features/purchasing/components/PurchasePriorityPanel.tsx` | 구매 대응 우선순위 패널 |
-| `features/purchasing/components/ScoreCardPanel.tsx` | 점수 카드(외부 리스크 종합/ERP 영향) — 더보기 구조 재정의로 신규 분리 |
 | `features/purchasing/pages/BriefingDetailPage.tsx` | 1계층 브리핑 자료 열람 페이지 |
 | `features/purchasing/pages/PurchasingDashboardPage.tsx` | 1계층 구매팀 대시보드 페이지 |
 | `lib/AuthContext.ts` | 인증 상태 Context 객체 정의 |
@@ -77,8 +72,6 @@
 | `lib/tierLabels.ts` | org_tier별 한글 라벨 매핑 |
 | `lib/useAlertsPanelState.ts` | AlertsPanel 펼침/접힘 상태 접근 훅(2026-07-27 신규) |
 | `lib/useAuthState.ts` | 인증 상태 접근 훅 |
-| `lib/scrollHorizontalByPage.ts` | 형제 카드 캐러셀형 "카드 1장 겹치는" 페이징 스크롤 유틸(2026-07-27 신규, `MaterialRiskOverviewRow`/`MaterialRiskOverviewSection` `HorizontalScrollHint` 클릭 핸들러에서 사용) |
-| `lib/useHorizontalDragScroll.ts` | 가로 스크롤 grab-to-scroll 드래그 훅(2026-07-27 신규, `MaterialRiskOverviewRow`에서 추출해 공용화) |
 | `lib/useHoverDisclosure.ts` | 2단계 hover 디스클로저 상태 훅(2026-07-27 신규, `PageSectionDots`에서 처음 사용 — WCAG 1.4.13 hoverable/dismissible/persistent 충족용). **소급 정정**: GlobalRiskBoard 마커 hover(#3)에서는 실제로 재사용하지 않기로 확정됨(근거는 `docs/roadmap-candidates.md` C9), AlertsPanel hover 프리뷰(#7)에서도 "벗어나면 항상 초기화" 모델이 pin 요구사항과 안 맞아 재사용하지 않음(`design-tokens.md` "카드 레이아웃·스크롤 규칙" e항 참고) — 지금까지 실사용처는 `PageSectionDots` 한 곳뿐 |
 | `lib/useScrollOverflowHint.ts` | 스크롤 오버플로 힌트 감지 훅(Phase 9.4/10.7, `axis` 파라미터로 세로/가로 축 지원) |
 | `lib/useSideNavState.ts` | SideNav 접기/펼치기 상태 접근 훅(Phase 9.4 신규) |
@@ -225,11 +218,6 @@
 | physical | logical | 역할 |
 |---|---|---|
 | `DonutChart` | 도넛 차트 컴포넌트 | Phase 9.4 신규, surin `DonutChart` 이식(recharts `Pie`/`Cell`). 고정 180x180px 컨테이너라 `ScrollCard` 기본 `scrollable`(true) 상태에서도 `ResponsiveContainer` 되먹임 리사이즈가 재현되지 않는다(사전 실측 확인) |
-
-### `components/ui/HorizontalScrollHint.tsx`
-| physical | logical | 역할 |
-|---|---|---|
-| `HorizontalScrollHint` | 가로 스크롤 좌우 오버플로 힌트 컴포넌트 | 2026-07-27 신규. `showLeft`/`showRight`만 props로 받는 최소 인터페이스 — 대개 `useScrollOverflowHint(axis:'horizontal')`의 반환값을 그대로 연결. `MaterialRiskOverviewRow`(자재 상세 그리드)와 `MaterialRiskOverviewSection`(요약 행)에 각각 중복돼 있던 동일한 그라데이션+화살표 CSS/JSX(26줄)를 공용화하며 추출 — 코드 정리 조사에서 두 파일 간 설명 주석 불일치(한쪽에만 SideNav/AlertsPanel 유래 설명이 있음)를 발견한 것이 계기. 같은 날 후속(오류 및 기능 미흡 발견 #6-1) — 선택적 `onClickLeft`/`onClickRight` prop 추가, 전달되면 `<button aria-label>`로(클릭 시 `scrollHorizontalByPage`로 "카드 1장 겹치는" 페이징 이동), 안 주면 기존과 동일하게 `<div aria-hidden>` 순수 시각 힌트로 렌더링(하위 호환). 두 소비처 모두 이 클릭 기능을 연결해 씀 |
 
 ### `components/ui/PageSectionDots/PageSectionDots.tsx`
 | physical | logical | 역할 |
@@ -382,35 +370,15 @@
 |---|---|---|
 | `KpiSummaryPanel` | 상단 KPI 요약 패널 컴포넌트 | 전체/심각/주의/정상 건수 집계. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
 
-### `features/purchasing/components/MaterialRiskOverviewRow.tsx`
-| physical | logical | 역할 |
-|---|---|---|
-| `MaterialRiskOverviewRow` | 원자재 리스크 상세 그리드 컴포넌트 | Phase 9.4 신규(데모 화면ID UX-01-DB, surin 이식), 더보기 구조 재정의(2026-07-27) 후 게이지 카드만 렌더링(`RiskGauge`+`RiskGradeBadge`) — 점수 카드는 `ScoreCardPanel`로 분리돼 더 이상 이 컴포넌트에 없음. 같은 날 실제 데이터가 없는 자재 6종(코발트/망간/구리/알루미늄/철광석/희토류, `PLACEHOLDER_MATERIALS`)을 제목만 있는 "준비 중" placeholder 카드로 추가(CLAUDE.md 부분 placeholder UI 원칙). 9장(3+6)으로 카드가 늘며 `grid-template-columns` 대신 `display:flex`+`overflow-x:auto`로 전환(design-tokens.md "스크롤 UI 노출 원칙" — 형제 카드 캐러셀형), 네이티브 스크롤바 노출 + 마우스 드래그(grab-to-scroll, `useHorizontalDragScroll` 공용 훅) 지원, 폭은 섹션의 실제 폭(100%)에 맞춤(고정 카드 수 계산 없음). `useScrollOverflowHint`를 `axis:'horizontal'`로 적용하고 `HorizontalScrollHint` 공용 컴포넌트로 좌우 힌트 표시(2026-07-27 — 개별 CSS/JSX 대신 공용화). 같은 날 후속 — 힌트에 `onClickLeft`/`onClickRight`(`scrollHorizontalByPage`) 연결해 클릭으로도 페이징 이동 가능(#6-1) |
-
-### `features/purchasing/components/MaterialRiskOverviewSection.tsx`
-| physical | logical | 역할 |
-|---|---|---|
-| `MaterialRiskOverviewSection` | 원자재 리스크 개요 요약 행 컴포넌트 | 더보기 구조 재정의(2026-07-27) — 형제 카드 3장(원자재 `MaterialRiskSummaryCard` + 점수 카드 2장 `ScoreCardPanel`)을 한 row에 배치. "원자재" 카드의 더보기만 그 아래 `MaterialRiskOverviewRow`(자재 상세 그리드)의 펼침 상태(`expanded`)를 제어하고, 점수 카드는 더보기 대상에서 제외돼 항상 노출. 같은 날 후속 수정 — 카드 3장뿐이라도 SideNav 펼침 등으로 부모 폭이 좁아지면 줄바꿈되던 auto-fit grid를 `MaterialRiskOverviewRow`와 동일한 형제 카드 캐러셀형(flex+nowrap+overflow-x, `useHorizontalDragScroll`+`useScrollOverflowHint(axis:'horizontal')`+`HorizontalScrollHint` 공용 컴포넌트)으로 전환. 같은 날 후속 — 힌트에 `onClickLeft`/`onClickRight`(`scrollHorizontalByPage`) 연결해 클릭으로도 페이징 이동 가능(#6-1) |
-
 ### `features/purchasing/components/MaterialRiskStatusPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
 | `MaterialRiskStatusPanel` | 원자재 공급사 리스크 현황 패널 컴포넌트 | risk_event 리스트, 등급/신뢰도 배지 포함. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
 
-### `features/purchasing/components/MaterialRiskSummaryCard.tsx`
-| physical | logical | 역할 |
-|---|---|---|
-| `MaterialRiskSummaryCard` | 원자재 리스크 요약 카드 컴포넌트 | 자재별 grade+changeLabel 미니 리스트 + 더보기/접기 토글 버튼. `expanded`/`onToggle`은 부모(`MaterialRiskOverviewSection`)로부터 props로 받는다(자체 state 없음) |
-
 ### `features/purchasing/components/PurchasePriorityPanel.tsx`
 | physical | logical | 역할 |
 |---|---|---|
 | `PurchasePriorityPanel` | 구매 대응 우선순위 패널 컴포넌트 | 등급·재고 소진일 기준 파생 정렬 순위 리스트. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
-
-### `features/purchasing/components/ScoreCardPanel.tsx`
-| physical | logical | 역할 |
-|---|---|---|
-| `ScoreCardPanel` | 점수 카드 컴포넌트 | 더보기 구조 재정의(2026-07-27)로 `MaterialRiskOverviewRow` 내부 비export 헬퍼(`ScoreCard`)에서 분리 — "원자재" 카드와 형제 관계로 `MaterialRiskOverviewSection`의 요약 행에 항상 노출되며 더보기 대상이 아니다 |
 
 ### `features/purchasing/pages/BriefingDetailPage.tsx`
 | physical | logical | 역할 |
@@ -420,7 +388,7 @@
 ### `features/purchasing/pages/PurchasingDashboardPage.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바(+`SideNavToggleButton`) + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역 3종(`MaterialRiskOverviewSection` → 승격된 `GlobalRiskBoard` → `ImportDependencyRow`)을 기존 4단 패널 위에 추가. 2026-07-27 — `selectAlertEvents`로 알림 필터링 후 `Header`의 `accountExtra`(`AlertsBellButton`)와 `AlertsPanel` 양쪽에 전달, hover 미리보기 디바운스(`PREVIEW_CLOSE_DELAY_MS`=150ms)+ESC 닫기 로컬 상태 관리 |
+| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바(+`SideNavToggleButton`) + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역을 기존 4단 패널 위에 추가(`GlobalRiskBoard` → `ImportDependencyRow`). 2026-08-03 — `MaterialRiskOverviewSection`은 제거하고 게이지만 `MaterialRiskGaugeGrid`(원자재별 리스크 점수 표 아래 접기)로 옮김. 2026-07-27 — `selectAlertEvents`로 알림 필터링 후 `Header`의 `accountExtra`(`AlertsBellButton`)와 `AlertsPanel` 양쪽에 전달, hover 미리보기 디바운스(`PREVIEW_CLOSE_DELAY_MS`=150ms)+ESC 닫기 로컬 상태 관리 |
 | `PREVIEW_CLOSE_DELAY_MS` | 알림 미리보기 닫힘 디바운스(150ms) | 트리거(헤더 벨)·콘텐츠(AlertsPanel)가 화면상 떨어져 있어 둘 다 벗어난 뒤 이 시간만큼 지나야 닫힘 |
 
 ### `lib/AuthContext.ts`
@@ -492,18 +460,7 @@
 |---|---|---|
 | `ScrollOverflowHint` | 스크롤 오버플로 힌트 타입 | `hasOverflowTop`/`hasOverflowBottom` — 필드명은 축과 무관하게 고정, 세로축은 위/아래, 가로축은 왼쪽/오른쪽으로 의미 해석 |
 | `ScrollOverflowAxis` | 스크롤 오버플로 판단 축 타입 | `'vertical'`(기본) \| `'horizontal'`(자재 카드 가로 스크롤, 2026-07-27 신규) |
-| `useScrollOverflowHint` | 스크롤 오버플로 힌트 감지 훅 | scroll 이벤트+`ResizeObserver`로 실제 오버플로·스크롤 위치 감지(`ScrollCard`/`SideNav`/`AlertsPanel`이 세로축으로, `MaterialRiskOverviewRow`/`MaterialRiskOverviewSection`이 가로축으로 재사용) |
-
-### `lib/scrollHorizontalByPage.ts`
-| physical | logical | 역할 |
-|---|---|---|
-| `scrollHorizontalByPage` | "카드 1장 겹치는" 페이징 스크롤 함수 | `container.clientWidth - 첫 번째 자식 카드의 실제 렌더링 폭`을 매번 계산해 그만큼 `scrollBy({behavior:'smooth'})` — 카드 폭을 하드코딩하지 않아 `MaterialRiskOverviewRow`(고정 180px)와 `MaterialRiskOverviewSection`(가변 240px+flex-grow)처럼 소비처별로 카드 폭이 달라도 그대로 맞는다. 실측 확인: 스크롤 가능 범위가 계산된 스텝보다 작은 경우(예: 카드 3장뿐이라 오버플로가 몇 px밖에 안 되는 행)는 `scrollBy`가 자연히 최대치로 클램프되어 "끝까지 스크롤"로 동작함(별도 처리 불필요) |
-
-### `lib/useHorizontalDragScroll.ts`
-| physical | logical | 역할 |
-|---|---|---|
-| `HorizontalDragScrollHandlers` | 가로 드래그 스크롤 핸들러 타입 | `isDragging`+`onMouseDown`/`onMouseMove`/`onMouseUp`/`onMouseLeave` |
-| `useHorizontalDragScroll` | 가로 스크롤 grab-to-scroll 드래그 훅 | mousedown 시작 좌표/scrollLeft 기록 → mousemove로 scrollLeft 갱신 → mouseup/mouseleave 종료. `MaterialRiskOverviewRow`에서 처음 구현 후 `MaterialRiskOverviewSection`도 쓰게 되며 공용 훅으로 추출(2026-07-27) |
+| `useScrollOverflowHint` | 스크롤 오버플로 힌트 감지 훅 | scroll 이벤트+`ResizeObserver`로 실제 오버플로·스크롤 위치 감지(`ScrollCard`/`SideNav`/`DashboardSidePanel`이 세로축으로 재사용. 가로축 소비처였던 `MaterialRiskOverviewRow`/`MaterialRiskOverviewSection`은 2026-08-03에 제거됐다) |
 
 ### `lib/useHoverDisclosure.ts`
 | physical | logical | 역할 |

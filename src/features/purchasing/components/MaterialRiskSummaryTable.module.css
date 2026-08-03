@@ -80,16 +80,22 @@
   min-width: 220px;
 }
 
+/* 이슈가 최대 3건 들어오는데 마커 없이 줄만 쌓이면 어디까지가 한 건인지 읽히지 않는다.
+   flex를 쓰지 않는 이유: 부모가 flex면 자식이 flex item이 되어 브라우저가 목록 마커를
+   아예 그리지 않는다(불릿이 안 보이던 원인). 블록 목록으로 두고 간격은 margin으로 준다. */
 .issueList {
   margin: 0;
   padding-left: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  list-style: disc outside;
+}
+
+.issueList > li + li {
+  margin-top: 2px;
 }
 
 .issue {
-  /* 제목이 길어도 한 줄로 자른다 — 표에서 한 칸만 3줄이 되면 행 높이가 들쭉날쭉해진다. */
+  /* 제목이 길어도 한 줄로 자른다 — 표에서 한 칸만 3줄이 되면 행 높이가 들쭉날쭉해진다.
+     마커는 list-style: outside라 이 상자 바깥에 그려지므로 말줄임 계산에 끼지 않는다. */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

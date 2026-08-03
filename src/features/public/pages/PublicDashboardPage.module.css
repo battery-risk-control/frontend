@@ -4,6 +4,29 @@
   min-height: 100vh;
 }
 
+/* 상단 3계층 탭(Seq 23) — Header의 children 슬롯에 들어간다. 2026-08-03, tier1 12섹션 구조
+   이식 시 함께 빠졌던 것을 복원(이전 PublicDashboardPage.tsx에서 그대로 가져옴). */
+.tierTabs {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.tierTab {
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-surface);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.tierTab:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .body {
   display: flex;
   flex: 1;

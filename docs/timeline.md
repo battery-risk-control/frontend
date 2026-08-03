@@ -746,3 +746,78 @@ H(보고/회귀 점검) — 위 검증 절차에 항목별 결과 기재, DonutC
 `src/lib/AuthContext.ts`/`AuthProvider.tsx`/`publicNav.ts`/`materialPricePeriods.ts`,
 `src/app/routes.tsx`, `src/features/auth/pages/AuthPage.tsx`. 커밋은 아직 하지 않음(diff
 확인 후 분리 여부를 사용자에게 재확인 예정).
+
+## Phase 12 — 구매팀 대시보드(tier1) 비로그인 전면 이식 (`youngjin/demo-layout-v3`, 2026-08-03)
+
+### 배경 — Phase 11(`5bfd7db`) 정정
+
+이전 Phase 11에서 "비로그인 4패널+`/public/*` 4화면 이식"을 완료 처리했으나, 그 작업의
+원본이 `origin/minji`(구버전)였음이 이번 Phase 착수 시 조사에서 밝혀졌다. 실제 최신
+구매팀 대시보드는 `origin/minji-tier1-dashboard`에 있었고, 본문 구조(4패널 2x2 그리드가
+아니라 12섹션 단일 컬럼)와 하위 4화면의 세부 기능이 크게 달랐다. `5bfd7db`는 "중간
+산출물 백업" 목적의 스냅샷 커밋으로 이미 명시돼 있었고, 이번 Phase가 그 전면 재작업이다.
+
+### 사용자 확정 사항 (AskUserQuestion, 2026-08-03)
+
+1. 기존 `/public/*` 4화면의 tier1 격차 해소도 이번 Phase 범위에 포함한다.
+2. KPI 요약/원자재 리스크 요약/공급사 현황 인증 API 3종은 tier1 원저자의 "mock 금지"
+   원칙 대신, `/public/*` 공통 원칙("완전 공개 + mock 폴백")을 그대로 적용한다.
+3. 이름이 겹치는 컴포넌트(`MaterialRiskStatusPanel`/`ErpImpactPanel`/`PurchasePriorityPanel`)
+   는 `Public` 접두 신규 컴포넌트로 분리한다(기존 `/purchasing` 쪽·`PurchasingDashboardPage.tsx`
+   무수정).
+
+### 이식 작업
+
+- **1단계(본문 12섹션)**: 이전 산출물(`ExchangeRateBand`/`MaterialPriceTrendCard`) 삭제,
+  `publicPurchasingDashboard.api.ts` 신규(3단계 mock 분기), `public.api.ts`(`fetchPublicNewsFeed`
+  limit/offset 확장+`fetchPublicNewsFeedCount` 신규)/`publicMaterialRisk.api.ts`(`refresh`
+  파라미터) 확장, `api/types.ts`에 `PurchasingKpiSummary`/`MaterialRiskSummaryItem`/
+  `SupplierOverview`/`SelectedArticle`/`DashboardAlert`/`MaterialAssessment` 등 신규, lib
+  헬퍼 4종(`dashboardAlerts`/`selectedArticle`/`newsEventRef`/`formatCollectedAt`) 이식,
+  신규 컴포넌트 6개+`Public` 접두 3종 이식, `PublicDashboardPage.tsx` 12섹션 재구성.
+- **2단계(`DashboardSidePanel`)**: 탭 3개(뉴스 상세/주요 알림/브리핑)+`UploadCard` 이식,
+  기존 `AlertsBellButton` 배선 재사용.
+- **3~4단계(기존 4화면 tier1 동기화, 같은 파일이라 묶어 진행)**: `PublicRiskMonitoringPage`
+  (`?eventId=` URL 복원+`returnTo` 왕복, `resolveAction`, `hasSignalInputs`, 자재별
+  breakdown), `PublicMaterialRiskPage`(`forceRefresh`, `hasErpContext()`, ERP 경고 목록,
+  계약 검토 강조), `PublicContractRagPage`(계약 선택 드롭다운 직접 오픈, `stageFile` 검증,
+  evidence 기능 제거, 업로드 UI `accessToken` 있을 때만 노출 — 3단계 로그인 게이트),
+  `PublicAiBriefingPage`(`?briefing=` URL-as-source-of-truth, `safeReturnTo`+복귀 링크,
+  `handleOpen` URL 동기화, `analysis_id` 고정 전달).
+
+### 계획에 없던 추가 수정 (구현 중 발견)
+
+- `ImportDependencyRow.tsx` — `period`/`onPeriodChange`를 선택적 prop으로 추가. 0단계
+  조사 당시 "이미 tier1과 같은 방식으로 prop을 지원해 수정 불필요"로 판단했으나, 실제로는
+  이 브랜치의 기존 파일이 `period`를 내부 `useState`로만 관리하고 있었다(외부 노출 없음) —
+  `PublicDashboardPage.tsx` 작성 후 typecheck에서 발견. 넘기지 않으면 기존처럼 비제어형으로
+  동작해 `PurchasingDashboardPage.tsx`(기존 `/purchasing` 호출부)는 무수정.
+- `GlobalRiskBoard.tsx` — `onSelectItem?` 선택적 prop 추가(마커 클릭 시 카드 내부 상세
+  패널 자동 확장을 억제하고 콜백만 호출, 우측 `DashboardSidePanel`의 "뉴스 상세" 탭용).
+  tier1 자체는 지도 마커 클러스터링 등을 포함한 더 큰 리뉴얼(359→451줄)을 거쳤으나 이번
+  범위는 `onSelectItem` 배선만 최소 반영.
+- `ScoreCardItem.grade`를 선택 필드로 완화(tier1의 `toScoreCards`가 채우지 않음)하고
+  `ScoreCardPanel.tsx`가 `grade` 없을 때 배지를 생략하도록 조건부 렌더로 변경.
+- **상단 3계층 탭(Seq 23) 복원** — `PublicDashboardPage.tsx`를 tier1 `PurchasingDashboardPage.tsx`
+  (인증된 단일 계층 화면이라 탭이 없음) 구조로 통째로 교체하면서, 기존 파일에 있던 상단
+  3계층 탭(구매팀/경영기획팀/경영진, `Header`의 children 슬롯)이 함께 빠졌다 — CLAUDE.md
+  Seq 23 요구사항("상단 탭(구매팀/경영기획팀/경영진)")을 위반하는 회귀였다. 사용자에게
+  즉시 보고 후 승인받아, 이전 `PublicDashboardPage.tsx`(5bfd7db 이전)의 `TIER_TABS`/
+  `handleTierTabClick`/탭 JSX 블록을 그대로 복원했다(`useAuthState()`의 `orgTier` 추가
+  추출, `useNavigate` 신규 import). 4개 서브페이지(`Public*Page.tsx`)+`DashboardSidePanel`도
+  같은 문제가 있는지 전수 확인했으나, 이 4개는 이번 Phase 재작성 전(5bfd7db 시점)부터도
+  탭이 없었던 상태(`git show 5bfd7db:...`로 대조 확인)라 회귀가 아니었다 — minji/tier1
+  원본 자체가 인증된 단일 계층 화면 설계라 탭이 없고, 요구사항도 Seq 23(`/`)에만 탭을
+  요구할 뿐 Seq 24 확장 화면(서브페이지)에는 요구하지 않는다.
+
+### 상위 브랜치 변동 확인
+
+작업 중 `origin/minji-tier1-dashboard`가 실제로 계속 갱신되고 있음을 재확인했다(조사
+시작 시점 이후 `event_id`/`source_ref`(`AiBriefingListItem`)/`latest_briefing_id`
+(`AiBriefingContext`) 등 필드가 추가된 새 커밋 2건이 들어옴, 패널 이름 라벨 정리 포함).
+작업 중반에 `git fetch origin`으로 재확인해 최신 상태로 다시 맞췄다.
+
+### 검증
+
+- `npm run typecheck`/`lint`/`build` 통과.
+- Playwright + 회귀 확인, `docs/qa-checklist.md` A~H — 아래 이어서 기록.

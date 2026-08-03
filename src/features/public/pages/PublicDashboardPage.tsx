@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   fetchPublicExchangeRates,
   fetchPublicImportDependency,
@@ -60,6 +61,19 @@ import { PublicErpImpactPanel } from '../components/PublicErpImpactPanel'
 import { PublicPurchasePriorityPanel } from '../components/PublicPurchasePriorityPanel'
 import { DashboardSidePanel } from '../components/DashboardSidePanel'
 import styles from './PublicDashboardPage.module.css'
+
+/**
+ * 상단 3계층 탭(Seq 23 필수 요구사항 — "상단 탭(구매팀/경영기획팀/경영진)"). tier1
+ * `PurchasingDashboardPage.tsx`(인증된 단일 계층 화면이라 탭이 없음)를 그대로 이식하며
+ * 이 화면 고유의 탭이 함께 빠졌던 것을 복원했다(2026-08-03, 계획에 없던 추가 수정 —
+ * `docs/timeline.md` Phase 12 항목 참고). 이전 `PublicDashboardPage.tsx`(5bfd7db 이전)의
+ * `TIER_TABS`/`handleTierTabClick`를 그대로 가져왔다.
+ */
+const TIER_TABS = [
+  { label: '구매팀', path: '/purchasing' },
+  { label: '경영기획팀', path: '/planning' },
+  { label: '경영진', path: '/executive' },
+]
 
 /** 미리보기 표시/숨김 디바운스 — 트리거(헤더 벨)와 콘텐츠(우측 패널 미리보기)가 화면상
  * 떨어져 있어(도트 인디케이터처럼 인접하지 않음) DOM 포함 관계 트릭 대신, 둘 중 하나라도
@@ -137,7 +151,8 @@ const SECTION_DOTS_SECTIONS = [
  * `PREVIEW_CLOSE_DELAY_MS`만큼 지나야 닫히는 디바운스 방식을 쓴다. `Escape`로도 닫힌다.
  */
 export function PublicDashboardPage() {
-  const { accessToken } = useAuthState()
+  const { accessToken, orgTier } = useAuthState()
+  const navigate = useNavigate()
 
   // --- 공개 API 6종 ---
   const [riskBoardItems, setRiskBoardItems] = useState<GlobalRiskBoardItem[]>([])
@@ -343,6 +358,10 @@ export function PublicDashboardPage() {
     }
   }
 
+  function handleTierTabClick(path: string) {
+    navigate(orgTier ? path : '/auth')
+  }
+
   function handlePreviewMouseEnter() {
     if (closeTimeoutRef.current) {
       clearTimeout(closeTimeoutRef.current)
@@ -391,7 +410,20 @@ export function PublicDashboardPage() {
             onMouseLeave={handlePreviewMouseLeave}
           />
         }
-      />
+      >
+        <div className={styles.tierTabs}>
+          {TIER_TABS.map((tab) => (
+            <button
+              key={tab.label}
+              type="button"
+              className={styles.tierTab}
+              onClick={() => handleTierTabClick(tab.path)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </Header>
       <div className={styles.body}>
         <SideNavToggleButton />
         <SideNav items={PUBLIC_SIDE_NAV_ITEMS} />

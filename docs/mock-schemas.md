@@ -209,6 +209,14 @@
   요소가 없다. 표시 자재는 `TREND_CARD_MATERIAL`(코발트) 고정, 데이터에 없으면 첫 자재로
   대체한다.
 
+> **정정(2026-08-03, 9번 섹션 작업 중 발견)**: 위 `MaterialPriceTrendCard`와 `ExchangeRateBand`
+> 컴포넌트는 **삭제됐다**(잘못된 브랜치 `origin/minji` 기준으로 만들어진 산출물 — 아래 9번
+> 섹션 참고). `ExchangeRateItem`/`ExchangeRateBoard` 타입과 `fetchExchangeRates()`/
+> `fetchPublicExchangeRates()` 함수 자체는 계속 쓰인다(tier1 `PurchasingDashboardHeader`의
+> 기준일 표시, `LiveNewsMarquee`의 환율 칩이 대신 소비). `ImportDependencyPanel`의
+> `blurred?`/`base_date?` 확장, `ImportDependencyBreakdownItem.color` 선택화는 그대로 유효하다
+> (9번 섹션의 `ImportDependencyRow`가 여전히 재사용).
+
 ## 8. 비로그인 — 구매팀 1계층 사이드바 하위 화면 4개 이식 (minji 이식, 2026-08-03)
 
 `origin/minji`의 `RiskMonitoringPage`/`MaterialRiskPage`/`ContractRagPage`/`AiBriefingPage`
@@ -267,6 +275,110 @@ minji 원본은 로그인이 없으면 화면이 비어 있었지만(의도적 �
   대시보드) 확장 화면이 비로그인에도 반영된 것이라, Seq 23(비로그인 공개 대시보드)의 직접
   대응 항목은 아니다 — `docs/requirements-frontend.md`에 각주로 남겨둔다.
 
+> **정정 및 갱신(2026-08-03, 9번 섹션 작업)**: 위 4개 화면의 origin이 `origin/minji`(구버전)
+> 였음이 밝혀져 `origin/minji-tier1-dashboard`(최신) 기준으로 다시 동기화했다. 추가 반영된
+> 기능: `PublicRiskMonitoringPage`는 `?eventId=` URL 상태 복원 + `returnTo` 왕복 + 동적 버튼
+> 라벨(`resolveAction`, 4가지 상태) + `hasSignalInputs` 예외 처리 + 자재별 세부 breakdown
+> (`material_assessments`, 신규 타입 `MaterialAssessment`). `PublicMaterialRiskPage`는
+> `forceRefresh` 새로고침 + `hasErpContext()` 정밀 판정 + ERP 경고 목록 + 계약 검토 필요 강조
+> 스타일. `PublicContractRagPage`는 계약 선택 드롭다운이 상세 패널을 직접 여는 동작 +
+> 파일 확장자/크기 검증(`stageFile`) — 그리고 tier1이 의도적으로 제거한 "근거로 사용하기"
+> (evidence 담기, 판정에 반영되지 않는 오도 소지 기능)를 이 화면에서도 함께 뺐다. 이 화면의
+> 업로드 UI(드롭존+"문서 재처리" 버튼)는 이제 `accessToken`이 있을 때만 노출하고, 없으면
+> `LOGIN_REQUIRED_MESSAGE` 안내로 대체한다(검색·조회·상세는 비로그인도 그대로). 4개 화면
+> 전부 `GlobalRiskBoardItem`에 `source_url?`/`collected_at?`, `NewsFeedItem`/`SelectedArticle`에
+> `event_id?`, `AiBriefingListItem`에 `source_ref`, `AiBriefingContext`에 `latest_briefing_id`
+> 필드가 새로 추가됐다(tier1 자체가 이 작업 진행 중에도 계속 갱신되고 있어 발견 시점에 함께
+> 반영). 상세는 9번 섹션 참고.
+
+## 9. 비로그인 대시보드 본문 12섹션 + 우측 DashboardSidePanel (tier1 이식, 2026-08-03)
+
+`origin/minji-tier1-dashboard`의 구매팀 1계층 `PurchasingDashboardPage.tsx`(본문 12섹션 +
+우측 `DashboardSidePanel`)를 비로그인 대시보드(`/`, `PublicDashboardPage.tsx`)에 그대로
+복제했다 — 지난 `5bfd7db`(비로그인 4패널 2x2 그리드 + `ExchangeRateBand`/
+`MaterialPriceTrendCard`)가 잘못된 브랜치(`origin/minji`, 구버전) 기준이었던 것을 대체한다.
+`ExchangeRateBand`/`MaterialPriceTrendCard` 컴포넌트는 삭제했다(위 7번 섹션 정정 참고).
+
+**본문 12섹션(순서 고정)**: `PurchasingDashboardHeader`(기준일) → `PurchasingKpiRow`(KPI
+5칸) → `LiveNewsMarquee`(실시간 헤드라인+환율 칩) → `GlobalRiskBoard`(재사용, `onSelectItem`
+콜백 신규 추가) → `LatestNewsPanel`(최신 뉴스 페이징) → `ImportDependencyRow`(재사용) →
+`MaterialRiskSummaryTable`(원자재 7종 최종 합성 점수) → `MaterialRiskOverviewSection`(재사용,
+게이지 3장+점수 카드 2장) → `PublicMaterialRiskStatusPanel`/`PublicErpImpactPanel`/
+`PublicPurchasePriorityPanel`(신규, 아래 참고) → `SupplierOverviewPanel`(공급사 현황).
+
+**데이터 원천 2갈래**:
+- **공개 API 6종**(`public.api.ts`, 이미 존재) — `fetchPublicNewsFeed()`가 `limit`/`offset`
+  파라미터를 받도록 확장됐고(마퀴 5건 + 페이징 목록 분리), `fetchPublicNewsFeedCount()`가
+  신규 추가됐다(마지막 페이지 판정용).
+- **인증 API**(신규 `src/api/publicPurchasingDashboard.api.ts` + 기존 `publicMaterialRisk`/
+  `publicRiskMonitoring`/`publicAiBriefing.api.ts`) — KPI 요약·원자재별 리스크 점수·공급사
+  현황 3종. tier1 원저자는 "이 화면 숫자는 우리 ERP·평가 결과라서 mock을 지어내면 안 된다"는
+  원칙으로 mock 폴백을 두지 않았으나, 사용자 결정(2026-08-03)에 따라 `/public/*` 전체 원칙인
+  "완전 공개 + mock 폴백"을 그대로 적용했다 — `publicPurchasingDashboard.api.ts`도 다른
+  `/public/*` API와 동일한 3단계 분기(mock/로그인 필요/실 API)를 쓴다.
+
+```json
+// fetchPurchasingKpiSummary() — 완전 공개+mock, mock 임시값
+{
+  "assessed_category_count": 7, "critical_count": 2, "warning_count": 3, "normal_count": 2,
+  "erp_exposure_score_avg": 58, "external_signal_score_avg": 52, "verified_briefing_count": 4,
+  "latest_assessed_at": "2026-08-03T01:20:00Z",
+  "critical_count_24h": 1, "warning_count_24h": 2,
+  "erp_exposure_score_avg_24h": 55, "external_signal_score_avg_24h": 49, "mock": true
+}
+
+// fetchMaterialRiskSummary() — 7종 고정, mock 임시값(요약)
+[
+  { "material_category": "COBALT", "material_name": "코발트", "risk_score": 70, "risk_level": "CRITICAL", "top_news": [] },
+  { "material_category": "GRAPHITE", "material_name": "흑연", "risk_score": null, "risk_level": null, "top_news": [] }
+]
+
+// fetchSupplierOverview() — mock 임시값
+{
+  "current": { "supplier_code": "SUP-0142", "supplier_name": "공급사A", "dependency_ratio": 62.3, "...": "..." },
+  "alternatives": [{ "rank_position": 1, "supplier_code": "SUP-0201", "supplier_name": "공급사B", "...": "..." }]
+}
+```
+
+**신규 컴포넌트(그대로 이식, `features/public/components/`)**: `PurchasingDashboardHeader`/
+`PurchasingKpiRow`/`LiveNewsMarquee`/`LatestNewsPanel`/`MaterialRiskSummaryTable`/
+`SupplierOverviewPanel`/`DashboardSidePanel`.
+
+**Public 접두 신규 컴포넌트 3종**(`PublicMaterialRiskStatusPanel`/`PublicErpImpactPanel`/
+`PublicPurchasePriorityPanel`) — tier1의 `MaterialRiskStatusPanel`/`ErpImpactPanel`/
+`PurchasePriorityPanel`(`materials: MaterialRiskItem[]` prop 기반)을 이식했으나, 이 브랜치의
+`features/purchasing/components/`에 **같은 이름·다른 prop**(`events` 배열 기반, Phase 4 MVP)
+컴포넌트가 이미 있어 이름이 충돌한다 — 사용자 결정(2026-08-03)에 따라 `Public` 접두 신규
+컴포넌트로 분리했다. 기존 `/purchasing` 쪽 컴포넌트·`PurchasingDashboardPage.tsx`는 건드리지
+않았다.
+
+**재사용(수정 없음)**: `MaterialRiskOverviewSection`(tier1의 `toMaterialRiskGauges()`/
+`toScoreCards()` 출력 타입이 기존 `MaterialRiskGaugeItem[]`/`ScoreCardItem[]`과 동일),
+`ImportDependencyRow`(단, 아래 breaking-change 흡수 참고).
+
+**`ImportDependencyRow.tsx`(기존 파일) 수정** — 계획 단계에서는 "수정 불필요"로 잘못 판단했으나
+(0단계 조사 오류), tier1이 `period`/`onPeriodChange`를 필수 외부 prop으로 요구해 구현 중 발견해
+수정했다. 두 prop을 **선택적**으로 바꾸고, 넘기지 않으면 기존처럼 내부 `useState`로 스스로
+채운다(비제어형, 기존 `/purchasing` 호출부 무수정 유지) — 넘기면 페이지가 소유한 상태를
+그대로 쓴다(제어형, 이 화면). `ScoreCardItem.grade`도 tier1 기준으로 필수→선택 완화했고,
+이를 렌더하는 `ScoreCardPanel.tsx`도 `grade`가 없을 때 배지를 생략하도록 조건부 렌더로
+바꿨다(`/planning`·`/executive` 등 다른 소비처에 영향 없음, 기존 mock은 `grade`를 계속 채워
+보낸다).
+
+**`GlobalRiskBoard.tsx`(공유 위젯) 수정** — `onSelectItem?: (item: GlobalRiskBoardItem) => void`
+선택적 prop 신규 추가. 넘기면 마커 클릭 시 카드 내부 상세 패널이 자동으로 펼쳐지지 않고
+콜백만 호출한다(우측 `DashboardSidePanel`의 "뉴스 상세" 탭이 대신 그 이벤트를 보여주기
+위함) — 넘기지 않는 기존 소비처(공개 대시보드가 쓰던 이전 로직, `/purchasing`의 향후 사용
+등)는 카드 내부 패널이 그대로 열린다. tier1 자체는 지도 마커 클러스터링·`detailPlacement`
+등을 포함한 더 큰 폭의 리뉴얼(359→451줄)을 거쳤으나, 이번 작업 범위는 `onSelectItem` 배선만
+최소 반영했다 — 나머지 리뉴얼은 별도 검토 대상(문서화하지 않은 남은 격차).
+
+**lib 헬퍼 4종(신규, tier1 그대로 이식)**: `dashboardAlerts.ts`(`buildDashboardAlerts` — 뉴스
+심각·주의 + 가격 변동성 정보를 우측 "주요 알림"으로 병합), `selectedArticle.ts`
+(`fromNewsFeedItem`/`fromRiskBoardItem` — 뉴스·지도 마커를 공통 `SelectedArticle`로 변환),
+`newsEventRef.ts`(`toNewsEventRef` — `event_id`→`RAW-{id}`→분석 UUID 순으로 브리핑 `ref` 생성),
+`formatCollectedAt.ts`(수집 시각 `MM-DD HH:mm` 24시간 표기).
+
 ## 임시 mock 값 (후속 정리 필요)
 
 Phase 9.3(원자재 가격 추이 "상세보기", surin `RiskMonitoring.tsx` 시각 이식)에서 시각 구성을 우선하기 위해 실제 계산 로직 없이 하드코딩한 필드 목록. 각 필드는 코드에도 `// mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요` 주석이 달려 있다. 앞으로도 실제 계산 로직 없이 mock 값으로 구현하는 필드가 생기면, 이 섹션에 반드시 등재하고 코드에도 `// mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요` 주석을 남긴다.
@@ -286,6 +398,7 @@ Phase 9.3(원자재 가격 추이 "상세보기", surin `RiskMonitoring.tsx` 시
 | `publicMaterialRisk.api.ts`의 `MOCK_MATERIALS`/`MOCK_OVERVIEW`/`MOCK_DETAILS`/`MOCK_CONTRACT_EVIDENCE`(전체 필드) | `api/publicMaterialRisk.api.ts`(신규, 2026-08-03) | `features/public/pages/PublicMaterialRiskPage.tsx` | Figma "05 구매팀 · 원자재 위험" 표 6종을 그대로 옮겼다. `MOCK_OVERVIEW.summary`의 KPI 4개(평가 자재 11/심각 3/평균 재고일수 15.8/VALID)는 Figma 예시 수치이며 실제 mock 배열(6종)과 집계가 맞지 않는다(위 8번 섹션 서술 참고). |
 | `publicContractRag.api.ts`의 `MOCK_CONTRACT`/`MOCK_CONTRACT_DETAIL`/`MOCK_CLAUSE_HITS`(전체 필드) | `api/publicContractRag.api.ts`(신규, 2026-08-03) | `features/public/pages/PublicContractRagPage.tsx` | Figma "06 구매팀 · 계약 RAG" 화면 값을 그대로 옮겼다. 계약 1건(CTR-010)만 존재하는 닫힌 세계라, 검색창에 다른 문장을 넣어도 같은 3개 조항이 그대로 반환된다(실제 임베딩 유사도 계산 없음). |
 | `publicAiBriefing.api.ts`의 `MOCK_DETAIL_BASE`/`MOCK_LIST_ITEM`(전체 필드) | `api/publicAiBriefing.api.ts`(신규, 2026-08-03) | `features/public/pages/PublicAiBriefingPage.tsx` | Figma "07 구매팀 · AI 브리핑" 화면 값을 그대로 옮겼다. `source`/`ref` 쿼리스트링이 달라도(NEWS/MATERIAL/CONTRACT 어느 경로든) 같은 브리핑 본문을 반환한다 — 실제 멀티에이전트 판단이 아니다. |
+| `publicPurchasingDashboard.api.ts`의 `MOCK_KPI_SUMMARY`/`MOCK_MATERIAL_RISK_SUMMARY`/`MOCK_SUPPLIER_OVERVIEW`(전체 필드) | `api/publicPurchasingDashboard.api.ts`(신규, 2026-08-03, 9번 섹션) | `features/public/pages/PublicDashboardPage.tsx`(`PurchasingKpiRow`/`MaterialRiskSummaryTable`/`SupplierOverviewPanel`) | tier1 원저자는 이 3종 API를 "우리 ERP·평가 결과라서 mock 금지" 원칙으로 mock 폴백 없이 설계했으나, 사용자 결정(2026-08-03)에 따라 `/public/*` 공통 원칙("완전 공개 + mock 폴백")을 그대로 적용해 임의 mock 값을 새로 작성했다 — Figma 근거 없이 구성한 값이다. |
 
 ## 확장 원칙
 - 새 화면·지표가 추가되면 기존 필드를 변경하지 말고 옆에 새 필드를 추가한다 (breaking change 최소화).

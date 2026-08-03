@@ -269,15 +269,22 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   text-align: center;
-  border: none;
+  /* 활성 상태에도 같은 두께의 투명 테두리를 둔다 — 비활성에서 테두리가 생길 때 버튼 크기가
+     1px씩 흔들리지 않게. */
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: opacity var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 
+/*
+ * 주 액션 색은 브랜드 네이비다. 예전에는 `--color-risk-normal`(정상 등급의 민트)이었는데,
+ * 같은 화면에서 등급 배지도 그 색을 쓰므로 "정상 등급"과 "실행 버튼"이 같은 색이었다 —
+ * 색이 곧 등급을 뜻하는 화면에서 액션에 등급 색을 쓰면 의미가 섞인다.
+ */
 .primaryAction {
   color: var(--color-surface);
-  background: var(--color-risk-normal);
+  background: var(--color-primary);
 }
 
 .secondaryAction {
@@ -286,15 +293,147 @@
   background: var(--color-text);
 }
 
+/*
+ * 비활성을 `opacity`로 만들지 않는다. opacity는 배경과 글자를 함께 흐리게 해 대비를 깎는데,
+ * 흰 글씨 + 옅어진 배경 조합에서는 글자가 배경에 묻혀 라벨이 읽히지 않았다(2026-08-03).
+ * 배경과 글자색을 각각 지정해 "누를 수 없다"는 것만 알리고 글자는 또렷하게 남긴다.
+ * 못 누르는 이유는 버튼 아래 `.blockedReason` 줄이 문장으로 밝힌다.
+ */
 .primaryAction:disabled,
-.secondaryAction:disabled {
+.secondaryAction:disabled,
+.downloadAction:disabled {
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border-color: var(--color-border);
   cursor: not-allowed;
-  opacity: 0.45;
 }
 
-.primaryAction:not(:disabled):hover,
+.primaryAction:not(:disabled):hover {
+  background: var(--color-primary-alt);
+}
+
 .secondaryAction:not(:disabled):hover {
   opacity: 0.88;
+}
+
+/* --------------------------------------------------- 브리핑 패널 헤더 · PDF 다운로드 */
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+/* 헤더 안에서는 제목이 아래 여백을 갖지 않는다 — 그 여백은 .panelHeader가 낸다. */
+.panelHeader .panelHeading {
+  margin-bottom: 0;
+}
+
+/*
+ * 본문을 내려받는 보조 액션이라 채운 버튼이 아니라 테두리 버튼이다. 이 패널의 주인공은
+ * 브리핑 본문이고, 다운로드가 본문보다 눈에 먼저 들어오면 안 된다.
+ */
+.downloadAction {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-4);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.downloadAction:not(:disabled):hover {
+  color: var(--color-surface);
+  background: var(--color-primary);
+}
+
+/* --------------------------------------------------- 최근 브리핑 · 필터와 페이저 */
+
+/* 최신 뉴스(LatestNewsPanel)와 같은 모양이다 — 두 목록을 같은 조작으로 넘기게 하려는 것이다. */
+.pager {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pageLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.pageButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: var(--font-size-base);
+  line-height: 1;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.pageButton:hover:not(:disabled) {
+  background: var(--color-bg);
+}
+
+.pageButton:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* 네 축이 좁은 사이드 패널에 들어가야 해 2열로 접는다. */
+.recentFilters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.filterLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.filterSelect {
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+/* 본문에 떠 있는 브리핑을 목록에서도 표시한다 — 어느 것을 보고 있는지 알 수 있어야 한다. */
+.recentCardSelected {
+  margin: 0 calc(var(--space-2) * -1);
+  padding-right: var(--space-2);
+  padding-left: var(--space-2);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
 }
 
 .notice {

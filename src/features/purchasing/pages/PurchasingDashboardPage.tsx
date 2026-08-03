@@ -10,6 +10,8 @@ import {
 } from '../../../api/public.api'
 import {
   acknowledgeAssessment,
+  fetchAcknowledgedAssessments,
+  unacknowledgeAssessment,
   fetchMaterialRiskSummary,
   fetchPurchasingKpiSummary,
   fetchSupplierOverview,
@@ -20,6 +22,7 @@ import { fetchMaterialRiskOverview } from '../../../api/materialRisk.api'
 import { fetchRiskMonitoringEvents } from '../../../api/riskMonitoring.api'
 import { fetchRecentAiBriefings } from '../../../api/aiBriefing.api'
 import type {
+  AcknowledgedItem,
   AiBriefingListItem,
   ExchangeRateBoard,
   GlobalRiskBoardItem,
@@ -53,6 +56,7 @@ import { LiveNewsMarquee } from '../components/LiveNewsMarquee'
 import { LatestNewsPanel } from '../components/LatestNewsPanel'
 import { MaterialRiskOverviewSection } from '../components/MaterialRiskOverviewSection'
 import { MaterialRiskSummaryTable } from '../components/MaterialRiskSummaryTable'
+import { AcknowledgedPanel } from '../components/AcknowledgedPanel'
 import { SupplierOverviewPanel } from '../components/SupplierOverviewPanel'
 import { ImportDependencyRow } from '../components/ImportDependencyRow'
 import { MaterialRiskStatusPanel } from '../components/MaterialRiskStatusPanel'
@@ -194,6 +198,10 @@ export function PurchasingDashboardPage() {
   const [alertsLoading, setAlertsLoading] = useState(true)
   const [briefingsLoading, setBriefingsLoading] = useState(true)
 
+  /** 완료 처리 항목 — 되돌리기 목록. 완료/되돌리기 어느 쪽이든 reloadKey로 함께 다시 부른다. */
+  const [acknowledged, setAcknowledged] = useState<AcknowledgedItem[]>([])
+  const [acknowledgedLoading, setAcknowledgedLoading] = useState(true)
+
   // 기간 탭은 페이지가 소유한다 — 탭이 바뀌면 차트와 요약 카드를 **같은 days로** 함께 다시
   // 불러야 하고(백엔드가 "같은 구간에서 파생"을 전제로 만들어져 있다), 그 조회는 페이지 책임이다.
   const [period, setPeriod] = useState(DEFAULT_PERIOD)
@@ -327,6 +335,7 @@ export function PurchasingDashboardPage() {
     setMaterialsLoading(true)
     setAlertsLoading(true)
     setBriefingsLoading(true)
+    setAcknowledgedLoading(true)
     fetchPurchasingKpiSummary(accessToken)
       .then((summary) => {
         if (!cancelled) setKpi(summary)
@@ -387,6 +396,16 @@ export function PurchasingDashboardPage() {
       .finally(() => {
         if (!cancelled) setBriefingsLoading(false)
       })
+    fetchAcknowledgedAssessments(accessToken)
+      .then((items) => {
+        if (!cancelled) setAcknowledged(items)
+      })
+      .catch((err) => {
+        console.error('완료 처리 항목 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setAcknowledgedLoading(false)
+      })
     return () => {
       cancelled = true
     }
@@ -407,6 +426,21 @@ export function PurchasingDashboardPage() {
       setReloadKey((key) => key + 1)
     } catch (err) {
       console.error('완료 처리 실패', err)
+    } finally {
+      setPendingAssessmentId(null)
+    }
+  }
+
+  /** 되돌리기. 완료 처리와 같은 reloadKey를 올려 KPI·표·이 목록을 한꺼번에 맞춘다 —
+      한쪽만 갱신하면 표에는 돌아왔는데 KPI는 그대로인 어긋난 화면이 된다. */
+  async function handleUndoAcknowledge(item: AcknowledgedItem) {
+    if (!accessToken) return
+    setPendingAssessmentId(item.assessment_id)
+    try {
+      await unacknowledgeAssessment(accessToken, item.assessment_id)
+      setReloadKey((key) => key + 1)
+    } catch (err) {
+      console.error('되돌리기 실패', err)
     } finally {
       setPendingAssessmentId(null)
     }
@@ -502,12 +536,21 @@ export function PurchasingDashboardPage() {
 
           {/* 원자재 7종 · 최종 합성 점수(외부신호+ERP노출+계약공백). 아래 게이지 행과 자리가
               붙어 있지만 **점수의 뜻이 다르다** — 게이지는 ERP 노출도 단독 점수다. */}
-          <MaterialRiskSummaryTable
-            items={materialRiskSummary}
-            isLoading={materialRiskLoading}
-            pendingAssessmentId={pendingAssessmentId}
-            onAcknowledge={handleAcknowledge}
-          />
+          <div className={styles.materialRiskRow}>
+            <MaterialRiskSummaryTable
+              items={materialRiskSummary}
+              isLoading={materialRiskLoading}
+              pendingAssessmentId={pendingAssessmentId}
+              onAcknowledge={handleAcknowledge}
+            />
+            {/* 왼쪽 표에서 "대응 완료"로 내려간 항목이 여기로 올라온다. 되돌릴 자리가 여기뿐이다. */}
+            <AcknowledgedPanel
+              items={acknowledged}
+              isLoading={acknowledgedLoading}
+              pendingAssessmentId={pendingAssessmentId}
+              onUndo={handleUndoAcknowledge}
+            />
+          </div>
 
           {/* ── 목업에 없는 기존 구성 (아래) ───────────────────────
               목업이 화면 전체를 반영한 것이 아니라, 지우지 않고 아래로 내렸다. */}

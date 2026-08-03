@@ -421,6 +421,27 @@ export interface ScoreCardItem {
 }
 
 /**
+ * "대응 완료"로 표시된 구매 리스크 평가 한 줄
+ * (`GET /api/v1/purchasing-dashboard/acknowledged`).
+ *
+ * 완료 처리하면 그 평가가 KPI·주요 이슈에서 빠지면서 화면에서도 사라져 되돌릴 자리가 없어진다.
+ * 이 목록이 그 자리를 만든다 — 여기서만 되돌리기를 부를 수 있다.
+ */
+export interface AcknowledgedItem {
+  assessment_id: string
+  material_category: string
+  /** 화면 표기명. 매핑에 없는 대분류는 코드가 그대로 온다. */
+  material_name: string
+  procurement_risk_level: string
+  procurement_risk_score: number
+  /** 이 평가를 만든 뉴스 제목. 분석이 지워졌으면 null이다. */
+  subject_title: string | null
+  /** 완료 처리한 사람. 계정이 지워졌으면 null. */
+  acknowledged_by_name: string | null
+  acknowledged_at: string
+}
+
+/**
  * 원자재별 리스크 점수 한 줄
  * (`GET /api/v1/purchasing-dashboard/material-risk-summary`).
  *

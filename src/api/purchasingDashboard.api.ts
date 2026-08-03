@@ -1,5 +1,6 @@
 import { fetchWithAuth } from './http'
 import type {
+  AcknowledgedItem,
   MaterialRiskGaugeItem,
   MaterialRiskItem,
   MaterialRiskSummaryItem,
@@ -120,6 +121,49 @@ export async function acknowledgeAssessment(
   if (result !== null && typeof result === 'object' && 'error' in result) {
     throw new Error(String((result as { message?: string }).message ?? '완료 처리에 실패했습니다.'))
   }
+}
+
+/**
+ * 완료 처리 되돌리기. 그 평가가 KPI·주요 이슈 집계로 되돌아온다.
+ *
+ * 되돌릴 기록이 없어도 성공이다 — 결과 상태가 같기 때문이고, 백엔드가 200 + not_acknowledged로
+ * 알려준다. 화면은 어느 쪽이든 목록을 다시 불러오면 되므로 응답 본문을 쓰지 않는다.
+ *
+ * 사용 예:
+ *   await unacknowledgeAssessment(accessToken, item.assessment_id)
+ */
+export async function unacknowledgeAssessment(
+  accessToken: string,
+  assessmentId: string,
+): Promise<void> {
+  const result = await fetchWithAuth<unknown>(
+    `/api/v1/multi-agent/assessments/${assessmentId}/acknowledge`,
+    accessToken,
+    { method: 'DELETE' },
+  )
+  if (result !== null && typeof result === 'object' && 'error' in result) {
+    throw new Error(String((result as { message?: string }).message ?? '되돌리기에 실패했습니다.'))
+  }
+}
+
+/**
+ * 완료 처리된 평가 목록. 되돌리기 UI가 이 목록 위에 선다.
+ *
+ * 사용 예:
+ *   const done = await fetchAcknowledgedAssessments(accessToken)
+ */
+export async function fetchAcknowledgedAssessments(
+  accessToken: string,
+  limit = 5,
+): Promise<AcknowledgedItem[]> {
+  const result = await fetchWithAuth<AcknowledgedItem[]>(
+    `/api/v1/purchasing-dashboard/acknowledged?limit=${limit}`,
+    accessToken,
+  )
+  if ('error' in result) {
+    throw new Error(result.message)
+  }
+  return result
 }
 
 /** 심각 → 주의 → 정상 순으로 세울 때 쓰는 순위. 값이 클수록 위험하다. */

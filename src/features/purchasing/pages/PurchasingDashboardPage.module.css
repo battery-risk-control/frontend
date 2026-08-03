@@ -34,3 +34,20 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
+
+/* "원자재별 리스크 점수"(표) + "완료 처리 항목"(되돌리기) 2컬럼.
+   되돌리기 목록은 보조 정보라 오른쪽을 좁게 잡는다 — 표가 5칸이라 폭을 양보하면 주요 이슈
+   칸이 먼저 줄어든다. ImportDependencyRow와 같은 규칙으로, 좁은 폭에서는 1컬럼으로 접는다
+   (고정 폭 컬럼이 안 줄어들어 페이지 전체에 가로 스크롤바가 생기는 것을 막는다). */
+.materialRiskRow {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (max-width: 940px) {
+  .materialRiskRow {
+    grid-template-columns: 1fr;
+  }
+}

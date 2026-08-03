@@ -13,21 +13,25 @@ import { AuthContext, type AuthContextValue } from './AuthContext'
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [orgTier, setOrgTier] = useState<OrgTier | null>(null)
   const [email, setEmail] = useState<string | null>(null)
+  const [accessToken, setAccessToken] = useState<string | null>(null)
 
   const value = useMemo<AuthContextValue>(
     () => ({
       orgTier,
       email,
-      signIn: (tier: OrgTier, userEmail: string) => {
+      accessToken,
+      signIn: (tier: OrgTier, userEmail: string, token: string) => {
         setOrgTier(tier)
         setEmail(userEmail)
+        setAccessToken(token)
       },
       signOut: () => {
         setOrgTier(null)
         setEmail(null)
+        setAccessToken(null)
       },
     }),
-    [orgTier, email],
+    [orgTier, email, accessToken],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

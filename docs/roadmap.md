@@ -70,6 +70,41 @@
     구현했고, 이 상태-분리 원칙(무엇을 Context로 올리고 무엇을 로컬로 둘지)은
     `docs/design-tokens.md` "카드 레이아웃·스크롤 규칙" e항에 일반 원칙으로 남겼다.
 
+- [x] Phase 11 — 비로그인 대시보드: `origin/minji`(구매팀 담당자 별도 진행 브랜치) 이식
+  (`youngjin/demo-layout-v3` 브랜치, `git merge`가 아니라 비로그인 담당 범위만 파일 단위
+  이식, 2026-08-03). 사전 조사(브랜치 diff/의존성 분석) 결과 minji는 이 브랜치가 갈라진
+  시점(`180095f`, Phase 11 이전 — `youngjin/2nd-demo-layout` 계열의 Phase 11과는 이름만
+  같은 별개 작업)보다 먼저 갈라져 (1) 비로그인 대시보드 4패널 실 API 연동 확장 (2) 구매팀
+  1계층 사이드바 하위 화면 4개 신규(리스크 모니터링/원자재 위험/계약·RAG/AI 브리핑,
+  `accessToken` 필수·mock 폴백 없음)를 진행 중이었음을 확인.
+  - 1. 비로그인 4패널: `PublicDashboardPage.tsx` 전면 교체(4패널 전부 비동기 mode 분기) +
+    `ExchangeRateBand`/`MaterialPriceTrendCard`(신규 컴포넌트) + `ImportDependencyPanel`(기존,
+    `blurred?` prop 추가) + `Footer`(환율 출처 표기 의무 추가). 의존 체인으로
+    `MaterialPriceDetail.tsx`의 `period`/`onPeriodChange` 필수 prop 전환(breaking change)이
+    함께 딸려와, 유일한 구매팀 쪽 소비처 `ImportDependencyRow.tsx`도 내부 `useState`로 자체
+    충족시켜 `PurchasingDashboardPage.tsx`는 무수정으로 유지했다.
+  - 2~3. 사이드바 하위 화면 4개: 사용자 결정(AskUserQuestion, 2026-08-03) — 접근 모델
+    "완전 공개 + mock 폴백 신규 작성", 라우트 프리픽스 "`/public/*` 별도 신설". minji 원본은
+    `RequireAuth tier="purchasing"` + `accessToken` 필수(mock 폴백 없음, "지어낸 데이터를
+    못 보여준다"는 설계 원칙)였으나, `/purchasing/*`의 구매팀 담당자 범위(별도 진행)와 완전히
+    분리하기 위해 `features/public/pages/`에 `Public` 접두 컴포넌트(`PublicRiskMonitoringPage`
+    등) + 신규 API 4개(`publicRiskMonitoring.api.ts` 등, `accessToken: string | null` +
+    ①mock/②③비로그인=`LOGIN_REQUIRED_MESSAGE`/②③로그인=`fetchWithAuth` 3단계 분기)로 새로
+    두었다. mock 데이터는 Figma "04~07"(2026-08-02) 화면 예시값을 그대로 옮겼다.
+  - 4. `NewsFeedItem` 스키마 확장(`collected_at`/`grade`/`headline_original`/`translated`/
+    `country_code`/`url`) + `fetchNewsFeed()` 재작성 — 사전 조사에서 `youngjin/2nd-demo-layout`
+    계열(`publisher` 필드 방향)과 다른 방향으로 확장돼 있음을 확인했으나, 이 브랜치엔 그
+    변경이 없는 깨끗한 상태임을 재확인 후 진행해 충돌이 없었다.
+  - 공유 의존성: `AuthContext`/`AuthProvider`/`AuthPage`에 `accessToken` 배선을 이 작업에서
+    처음 추가(minji/`feat/procurement-risk-kpi` 브랜치와 독립적으로 동일한 구현 — 사전
+    조사에서 두 브랜치 diff가 바이트 단위로 동일함을 확인했던 지점).
+  - 검증: `npm run typecheck`/`lint`/`build` 통과, Playwright로 비로그인 `/`·`/public/*` 4개
+    전부 로그인 없이 접근+상호작용(필터/상세선택/검색/브리핑 생성) 확인 + `/purchasing`
+    로그인 후 회귀 없음(기간 탭·도넛차트 정상) 확인, 콘솔 에러 0건.
+  - 승인 조건: DonutChart.tsx의 `isAnimationActive` 버그 수정은 이번 범위에서 제외(사용자
+    지시) — `ImportDependencyPanel`/`MaterialPriceDetail`이 `DonutChartProps` 외 새 prop을
+    쓰지 않아 빌드/런타임 영향 없음을 확인 후 진행.
+
 ## 재사용 규칙 (Phase 3에서 결정되는 인터페이스는 이후 Phase가 그대로 따른다)
 - `ConfidenceBadge`/`RiskGradeBadge`의 props 타입은 이후 모든 화면에서 동일하게 재사용한다 — 화면별로 별도 배지를 새로 만들지 않는다.
 - `Header`/`Footer`/`SideNav`는 `components/layout/`에서 한 번만 구현하고, `features/*`는 이를 import해서 쓰기만 한다.

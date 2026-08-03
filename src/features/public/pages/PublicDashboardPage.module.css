@@ -27,6 +27,14 @@
   background: rgba(255, 255, 255, 0.12);
 }
 
+/* 기획서 ②번 줄(환율 밴드). 그리드와 좌우 여백을 맞추되 위아래는 좁게 잡아 한 줄짜리 띠로
+   읽히게 한다 — .grid의 padding과 겹치지 않도록 아래 padding은 두지 않는다. */
+.band {
+  padding: var(--space-6) var(--space-6) 0;
+  /* 컷오프 기법(.page)의 계산 대상에서 빠지도록 고정 높이를 갖지 않는다. */
+  flex-shrink: 0;
+}
+
 .grid {
   flex: 1;
   display: grid;

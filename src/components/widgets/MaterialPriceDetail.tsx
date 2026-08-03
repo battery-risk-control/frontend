@@ -3,11 +3,15 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { ScrollCard } from '../ui/ScrollCard/ScrollCard'
 import { RiskGradeBadge } from '../ui/RiskGradeBadge'
 import type { MaterialPriceSeries, MaterialPriceSummary } from '../../api/types'
+import { PERIOD_DAYS, PERIOD_OPTIONS } from '../../lib/materialPricePeriods'
 import styles from './MaterialPriceDetail.module.css'
 
 interface MaterialPriceDetailProps {
   series: MaterialPriceSeries[]
   summaries: MaterialPriceSummary[]
+  /** 선택된 기간 라벨. 조회는 페이지가 소유하므로 이 컴포넌트는 표시·통지만 한다. */
+  period: string
+  onPeriodChange: (period: string) => void
 }
 
 interface ChartRow {
@@ -15,11 +19,29 @@ interface ChartRow {
   [material: string]: string | number
 }
 
-const PERIOD_OPTIONS = ['1주', '1개월', '3개월', '6개월', '사용자 설정']
-// GlobalRiskBoard mock에 등장하는 5개국을 그대로 재사용한 표시용 목록 — 국가·지역 필터는
-// 의도적으로 표시 전용이라(사용자 확인 완료) 실제 자재-국가 연결 데이터가 아니어도 무방하다.
-const COUNTRY_FILTER_OPTIONS = ['전체', '인도네시아', '칠레', '콩고민주공화국', '필리핀', '호주']
+const ALL_OPTION = '전체'
 const SERIES_VARS = ['--mpd-series-1', '--mpd-series-2', '--mpd-series-3']
+
+/**
+ * 국가 목록을 응답에서 만든다. 예전에는 GlobalRiskBoard mock의 5개국이 하드코딩돼 있었는데
+ * 실제 조달국(15개국)과 달라 캐나다·독일·일본 등이 목록에 아예 없었다. 응답에서 만들면
+ * 공급사가 늘어도 프론트 수정 없이 항목이 따라온다.
+ */
+function toCountryOptions(series: MaterialPriceSeries[]): string[] {
+  const names = new Set<string>()
+  for (const materialSeries of series) {
+    for (const country of materialSeries.countries ?? []) {
+      names.add(country.country_name)
+    }
+  }
+  return [ALL_OPTION, ...[...names].sort((a, b) => a.localeCompare(b, 'ko'))]
+}
+
+/** 국가를 고르면 그 나라에서 조달하는 자재의 선만 남긴다(가격이 국가별로 나뉘는 게 아니다). */
+function filterByCountry(series: MaterialPriceSeries[], countryName: string): MaterialPriceSeries[] {
+  if (countryName === ALL_OPTION) return series
+  return series.filter((s) => (s.countries ?? []).some((c) => c.country_name === countryName))
+}
 
 function ChevronIcon() {
   return (
@@ -55,8 +77,16 @@ function toChartRows(series: MaterialPriceSeries[]): ChartRow[] {
  * 요약 카드/기간 버튼/멀티라인 차트)을 시각적으로 이식한 컴포넌트. "원자재" 드롭다운은
  * 실제로 차트 계열을 필터링한다(특정 자재 선택 시 그 계열만 표시, "전체"면 전부 표시) —
  * 단 요약 카드 3장은 필터와 무관하게 항상 전체 자재를 보여준다(사용자 확인 완료).
- * "국가·지역" 드롭다운과 기간 버튼은 선택 상태만 바뀔 뿐 의도적으로 미구현 —
- * 표시 전용이며 후속 작업이 아니라 확정된 범위 결정이다(사용자 확인 완료).
+ * "국가·지역" 드롭다운도 **실제로 동작한다**(2026-08-01). 원래는 표시 전용이었고 목록도
+ * GlobalRiskBoard mock의 5개국이 하드코딩돼 있었으나, 백엔드가 자재별 조달국(`countries`)을
+ * 내려주면서 연결했다. 국가를 고르면 **그 나라에서 조달하는 자재의 선만 남는다** —
+ * 국가별 가격을 보여주는 게 아니다(자재당 시계열은 하나뿐이고 그 값도 기업 주가 프록시라
+ * 채굴국과 연결되지 않는다). 자재 필터와는 AND로 걸린다.
+ *
+ * 기간 버튼은 **실제로 동작한다**(2026-08-01). 조회는 페이지가 소유하므로 이 컴포넌트는
+ * 선택된 라벨을 받아 표시하고 클릭을 통지만 한다 — 기간이 바뀌면 페이지가 차트·요약을
+ * **같은 days로 함께** 다시 불러야 둘이 어긋나지 않는다. "사용자 설정"만 날짜 범위 UI가
+ * 없어 비활성이다.
  * 요약 카드의 가격만 MaterialPriceSeries 마지막 포인트에서 직접 유도해 항상 일치시키고,
  * 등락률/리스크 지수/등급은 mock 임시값(fetchMaterialPriceSummaries)이다.
  * 필터行/요약카드는 ScrollCard의 pinnedTop(스크롤 밖 고정)에 배치한다. 차트는
@@ -66,18 +96,27 @@ function toChartRows(series: MaterialPriceSeries[]): ChartRow[] {
  * 자유 높이로 렌더링한다.
  *
  * 사용 예:
- *   <MaterialPriceDetail series={series} summaries={summaries} />
+ *   <MaterialPriceDetail series={series} summaries={summaries} period={period} onPeriodChange={setPeriod} />
  */
-export function MaterialPriceDetail({ series, summaries }: MaterialPriceDetailProps) {
-  const [period, setPeriod] = useState('1개월')
+export function MaterialPriceDetail({
+  series,
+  summaries,
+  period,
+  onPeriodChange,
+}: MaterialPriceDetailProps) {
   const [materialFilterOpen, setMaterialFilterOpen] = useState(false)
   const [materialFilterLabel, setMaterialFilterLabel] = useState('전체')
   const [countryFilterOpen, setCountryFilterOpen] = useState(false)
   const [countryFilterLabel, setCountryFilterLabel] = useState('전체')
 
-  const materialFilterOptions = ['전체', ...series.map((materialSeries) => materialSeries.material)]
-  const filteredSeries =
-    materialFilterLabel === '전체' ? series : series.filter((s) => s.material === materialFilterLabel)
+  const materialFilterOptions = [ALL_OPTION, ...series.map((materialSeries) => materialSeries.material)]
+  const countryFilterOptions = toCountryOptions(series)
+  // 두 필터는 AND로 걸린다 — "칠레 + 니켈"처럼 교집합이 없으면 빈 차트가 되는 것이 맞다.
+  // (칠레에서 니켈을 조달하지 않는다는 사실 자체가 정보다.)
+  const filteredSeries = filterByCountry(
+    materialFilterLabel === ALL_OPTION ? series : series.filter((s) => s.material === materialFilterLabel),
+    countryFilterLabel,
+  )
   const rows = toChartRows(filteredSeries)
   // 자재별 색상은 필터와 무관하게 전체 series 기준 순서로 고정 — 니켈만 필터링해도
   // "전체" 상태에서 보이던 것과 같은 색으로 표시되도록 한다.
@@ -90,7 +129,6 @@ export function MaterialPriceDetail({ series, summaries }: MaterialPriceDetailPr
     setMaterialFilterOpen(false)
   }
 
-  // 표시 전용 — 의도적으로 미구현(사용자 확인 완료). 실제 자재-국가 필터링 로직을 추가하지 않는다.
   function handleSelectCountryFilter(option: string) {
     setCountryFilterLabel(option)
     setCountryFilterOpen(false)
@@ -143,7 +181,7 @@ export function MaterialPriceDetail({ series, summaries }: MaterialPriceDetailPr
               </button>
               {countryFilterOpen && (
                 <ul className={styles.dropdownMenu}>
-                  {COUNTRY_FILTER_OPTIONS.map((option) => (
+                  {countryFilterOptions.map((option) => (
                     <li key={option}>
                       <button
                         type="button"
@@ -159,16 +197,21 @@ export function MaterialPriceDetail({ series, summaries }: MaterialPriceDetailPr
             </div>
 
             <div className={styles.periodGroup}>
-              {PERIOD_OPTIONS.map((label) => (
-                <button
-                  key={label}
-                  type="button"
-                  className={label === period ? styles.periodButtonActive : styles.periodButton}
-                  onClick={() => setPeriod(label)}
-                >
-                  {label}
-                </button>
-              ))}
+              {PERIOD_OPTIONS.map((label) => {
+                const supported = label in PERIOD_DAYS
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    className={label === period ? styles.periodButtonActive : styles.periodButton}
+                    onClick={() => onPeriodChange(label)}
+                    disabled={!supported}
+                    title={supported ? undefined : '날짜 범위 선택은 아직 준비 중입니다.'}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 

@@ -1,0 +1,100 @@
+.band {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  /* 통화가 14종까지 늘어날 수 있어 좁은 화면에서는 가로 스크롤로 흘린다 — 줄바꿈으로 띠가
+     두세 줄이 되면 ②가 더 이상 "한 줄짜리 밴드"가 아니게 되고, 아래 지도(③)를 밀어낸다. */
+  overflow-x: auto;
+}
+
+.headingGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* 목록이 가로 스크롤돼도 제목은 자리를 지킨다. */
+  flex-shrink: 0;
+}
+
+.heading {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+.asOf {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.rate {
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  /* 숫자 폭을 고정해 값이 갱신될 때 옆 통화가 밀리지 않게 한다. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* 재정환율(≈) 표시. 밑줄 없는 abbr — 기본 점선 밑줄은 이 크기에서 지저분하다. */
+.crossMark {
+  margin-left: 2px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  text-decoration: none;
+  cursor: help;
+}
+
+.change {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 국내 관례(상승 빨강 / 하락 파랑). 리스크 등급 색과 일부러 다른 값을 쓴다 —
+   환율 상승이 곧 위험은 아니라서, 같은 빨강으로 보이면 등급 배지와 혼동된다. */
+.changeUp {
+  color: #D93A3F;
+}
+
+.changeDown {
+  color: #2563EB;
+}
+
+.changeFlat {
+  color: var(--color-text-muted);
+}
+
+.empty {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}

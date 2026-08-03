@@ -38,6 +38,14 @@
 
 전 화면 공통: 리스크 판단 신뢰도 라벨(확정/참고/경고) 표시 필수 (Seq 20), 로그인/회원가입 화면 보안 배지 (Seq 36).
 
+> **각주(2026-08-03)**: `/public/risk-monitoring`·`/public/materials`·`/public/contract-rag`·
+> `/public/ai-briefing` 4개 화면(구매팀 담당자 별도 진행 브랜치 `origin/minji`에서 비로그인
+> 담당 범위만 이식)은 이 표의 어느 Seq에도 직접 대응하지 않는다 — 내용상 Seq 24(1계층
+> 구매팀 대시보드)의 확장 화면이지만, 로그인 게이트 없이 비로그인에도 반영한 것은 요구사항
+> 정의서에 없는 구현 판단(사용자 결정, `docs/mock-schemas.md` "8. 비로그인 — 구매팀 1계층
+> 사이드바 하위 화면 4개" 참고)이다. Seq 23(비로그인 공개 대시보드)은 여전히 `/`(2x2 그리드)
+> 하나만 가리킨다.
+
 ## Frontend 연계 필요 항목 (참고)
 - Seq 4 (로그인): 인증 로직·권한 검증은 Backend, 화면 UI만 Frontend
 - Seq 31 (파일 업로드): 업로드 UI는 Frontend, 수신 후 벡터화·RAG 인덱싱은 Backend

@@ -632,3 +632,117 @@ CLAUDE.md/qa-checklist.md/roadmap-candidates.md에 반영했다.
   유지하고 괄호로 사유를 남김.
 
 코드 변경 없음 — 문서 전용 라운드.
+
+## Phase 11 — 비로그인 대시보드: origin/minji 이식 (`youngjin/demo-layout-v3`, 2026-08-03)
+
+### 배경 — 브랜치 조사
+`youngjin/2nd-demo-layout`(Phase 11 "2차 데모" 완료 후)에서 별도 세션이 원격 브랜치
+`origin/minji`(구매팀 담당자 별도 진행)와 `origin/feat/procurement-risk-kpi`를 조사했다.
+- `feat/procurement-risk-kpi`는 `youngjin/2nd-demo-layout`의 전체 히스토리 + 신규 커밋
+  2개(멀티에이전트 구매 리스크 KPI 연동, `MaterialRiskStatusPanel` 본문 복귀)로 구성된
+  순수 선형 후속 브랜치.
+- `minji`는 그보다 훨씬 이전 시점(`180095f`, Phase 11 이전)에 갈라져 (1) 비로그인 대시보드
+  4패널 실 API 연동 확장 (2) 구매팀 1계층 사이드바 하위 화면 4개 신규(리스크 모니터링/
+  원자재 위험/계약·RAG/AI 브리핑)를 독자적으로 진행 중이었다.
+- 두 브랜치 사이 확정적 충돌 지점 4개를 발견해 보고: `public.api.ts`의 `fetchNewsFeed()`
+  (한쪽은 삭제 후 재수출, 한쪽은 필드 확장), `NewsFeedItem` 스키마(서로 다른 필드 확장
+  방향), `PurchasingDashboardPage.tsx`의 `SIDE_NAV_ITEMS`(해시 placeholder 유지 vs 실제
+  라우트 배열로 교체), `SupplyNewsFeed` 컴포넌트 위치(승격 여부 인지 차이).
+- `AuthContext`/`AuthProvider`/`AuthPage`의 `accessToken` 배선은 두 브랜치가 독립적으로
+  바이트 단위 동일하게 구현했음을 확인(무충돌 지점).
+
+### 이식 작업
+이 조사를 근거로, 신규 브랜치 `youngjin/demo-layout-v3`(`dev-김영진_merge-test` 기준,
+Phase 11 이전 상태 — feat 브랜치 계열 변경 전혀 없음을 `git show HEAD:src/api/public.api.ts`
+등으로 재확인)를 만들어 `git merge`가 아니라 **비로그인 담당 범위에 해당하는 부분만** 파일
+단위로 이식했다(구매팀 담당자 범위인 `/purchasing/*` 인증 버전·`purchasingNav.ts`·
+`KpiSummaryPanel`/`NewsExchangeTicker`/`QuickActionsPanel`/`AlertsPanel` 관련
+`feat/procurement-risk-kpi` 변경은 대상에서 제외).
+
+**설계 결정 2건(AskUserQuestion, 사용자 확인)**:
+1. 사이드바 하위 화면 4개의 "비로그인 접근 모델" — minji 원본은 `accessToken` 필수·mock
+   폴백 없음("지어낸 데이터를 못 보여준다")·`RequireAuth tier="purchasing"` 게이트가
+   있어, Figma "08 비로그인" 화면의 ERP·계약·AI브리핑 잠금 오버레이("로그인하면 전체를
+   볼 수 있습니다")와 상충할 수 있음을 짚어 3가지 선택지를 제시 — **"완전 공개 + mock
+   폴백 신규 작성"** 채택.
+2. 라우트 프리픽스 — `/purchasing/*` 재사용 vs `/public/*` 신설 — **`/public/*` 별도
+   프리픽스** 채택(구매팀 담당자가 나중에 `/purchasing/*`에 인증 버전을 들여올 때 파일/
+   이름 충돌 없게 하기 위함).
+
+**구현 범위**(승인된 plan 그대로, 조건 2건 반영):
+1. 비로그인 4패널 — `PublicDashboardPage.tsx` 전면 교체 + `ExchangeRateBand`/
+   `MaterialPriceTrendCard`(신규) + `ImportDependencyPanel`(`blurred?` prop 추가, 하위호환)
+   + `Footer`(환율 출처 표기 의무). 의존 체인으로 `MaterialPriceDetail.tsx`의 `period`/
+   `onPeriodChange` 필수 prop 전환(breaking change)이 함께 필요해, 구매팀 쪽 유일한
+   소비처 `ImportDependencyRow.tsx`를 내부 `useState`로 자체 충족시켜
+   `PurchasingDashboardPage.tsx`는 무수정으로 유지했다. **승인 조건**: `DonutChart.tsx`의
+   `isAnimationActive` 애니메이션 버그 수정은 이번 범위에서 제외(사용자 지시, 구매팀
+   담당자에게 별도 요청 예정) — 제외 전 `DonutChartProps`/`ImportDependencyPanel`이 그
+   prop을 쓰지 않음을 코드로 재확인해 빌드/런타임 영향 없음을 보고.
+2~3. 사이드바 하위 화면 4개 — `features/public/pages/`에 `Public` 접두 컴포넌트
+   (`PublicRiskMonitoringPage`/`PublicMaterialRiskPage`/`PublicContractRagPage`/
+   `PublicAiBriefingPage`) + 신규 API 4개(`src/api/publicRiskMonitoring.api.ts` 등,
+   `accessToken: string | null` + ①mock 항상 반환/②③비로그인=`LOGIN_REQUIRED_MESSAGE`
+   던짐/②③로그인=`fetchWithAuth` 3단계 분기) + `lib/publicNav.ts`(`PUBLIC_SIDE_NAV_ITEMS`).
+   mock 데이터는 1단계 조사에서 확인한 신규 Figma 9장 중 "04 리스크 이벤트"/"05 원자재
+   위험"/"06 계약 RAG"/"07 AI 브리핑"(파일명은 "브리핑 상세"로 오기 — 별도 보고) 화면
+   예시값을 그대로 옮겼다. `routes.tsx`에 `RequireAuth` 없이 4개 라우트 추가.
+4. `api/types.ts`의 `NewsFeedItem`에 `collected_at`/`grade?`/`headline_original`/
+   `translated`/`country_code`/`url` 추가 + `public.api.ts`의 `fetchNewsFeed()` 재작성 —
+   이 브랜치엔 `youngjin/2nd-demo-layout` 계열의 `publisher` 필드 확장이 없는 깨끗한
+   상태임을 재확인 후 충돌 없이 반영.
+
+### 발견 사항(1단계 조사)
+- untracked Figma 이미지 9개 중 1개(`image (2) 1.png`)는 명명 규칙이 다르고 내용이
+  "데이터 관리"(`/data-management`) 화면 — 나머지 8개("◯◯ figma 2026-08-02.png")와
+  파일명 패턴이 어긋남.
+- "브리핑 상세 figma 2026-08-02.png"는 파일명과 달리 내용이 "07 구매팀 · AI 브리핑"
+  화면 — `docs-ref/ui-demo-images/README.md` 매핑표가 이 9장을 반영하지 못한 상태(구
+  5장 매핑표만 존재, 문서 drift).
+
+### 검증
+- `npm run typecheck`/`lint`/`build` 전부 통과(중간 단계마다 반복 실행해 오류를 조기
+  발견 — `AuthContext`에 `accessToken`을 안 넣고 4개 페이지부터 작성해 처음엔 4개 파일
+  전부 타입 에러가 났고, 공유 의존성을 먼저 갖췄어야 했다는 걸 이때 확인해 즉시 보완).
+- Playwright(`npm run dev`, ①mock 모드): `/`(환율 밴드/수입 의존도/컴팩트 가격 카드 포함
+  4패널 렌더 확인) → `/public/risk-monitoring`(로그인 없이 접근, 이벤트 5건 목록·상세
+  클릭 확인) → `/public/materials`(KPI 4장, 자재 선택·계약 RAG 근거 보기 확인) →
+  `/public/contract-rag`(검색 결과 3건, 우측 계약 문서 CTR-010 렌더 확인 — 스크린샷으로
+  최종 확인, 검증 스크립트 자체의 선택자 문제로 자동 판정만 1건 false negative) →
+  `/public/ai-briefing`(쿼리스트링 없는 진입 + `?source=NEWS&ref=1` 진입 모두 확인, LLM
+  브리핑 생성 클릭 시 본문 렌더). 18건 중 17건 자동 PASS, 1건은 스크린샷 육안 확인으로
+  정상 동작 재확인. 브라우저 콘솔 에러 0건.
+- 회귀 확인: `purchasing@test.local` 로그인 후 `/purchasing` — 기간 탭(3개월) 클릭·SVG
+  19개(지도+도넛 등) 정상 렌더·수입 의존도 패널 정상 표시, 콘솔 에러 0건. fullPage
+  스크린샷에서 Header가 두 번 나타나는 것처럼 보이는 현상을 발견해 DOM 직접 조회
+  (`h1` count=1)로 재확인 — Playwright의 `position:sticky` + `fullPage` 스크린샷 스티칭
+  아티팩트일 뿐 실제 DOM 중복이 아님을 확인(Header.tsx 무수정이라 기존에도 있었을 가능성이
+  높은 촬영 한계, 이번 변경과 무관).
+- 문서 동기화: `docs/mock-schemas.md`(신규 섹션 7·8 + "임시 mock 값" 표 6행 추가 + 기간
+  버튼/필터 행 정정), `docs/naming-glossary.md`(신규 파일 12개 요약·상세 테이블 반영,
+  타입 30여 개 신규 등재, 수정 파일 8개 설명 갱신), `docs/requirements-frontend.md`(Seq
+  매핑 각주 추가), `docs/roadmap.md`(이 Phase 11 항목).
+
+### QA 체크리스트(A~H)
+A(인증 상태 표시 일관성) — `/public/*` 4개도 공통 `Header` 그대로 사용, 이상 없음.
+B(공용 컴포넌트 변경 파급) — `ImportDependencyPanel`/`MaterialPriceDetail`/`Footer`/
+`DonutChart` 변경 시 grep으로 전체 소비처(구매팀 대시보드 포함) 확인 후 하위호환 유지.
+C(접근 제어 피드백) — `/public/*`는 의도적으로 게이트 없음(요구사항 아님, 설계 결정).
+D(클릭 가능 요소 시각 신호) — 기존 컴포넌트 재사용이라 변경 없음.
+E(요구사항 대비 커버리지) — `docs/requirements-frontend.md` 각주로 Seq 미대응임을 명시,
+`docs/mock-schemas.md` 갱신 완료.
+F(공용 레이아웃 컴포넌트 일관성) — 4개 신규 페이지 모두 기존 `Header`/`Footer`/`SideNav`/
+`SideNavToggleButton` 재사용, `ScrollCard`는 사용처 없음(minji 원본이 표/카드형이 아닌
+2단 split 레이아웃이라 그대로 유지).
+G(트러블슈팅 잔존물) — `.scratch/verify-*.mjs` 검증 스크립트는 `.gitignore` 대상 확인,
+커밋 전 `git status`로 재확인.
+H(보고/회귀 점검) — 위 검증 절차에 항목별 결과 기재, DonutChart 제외 조건에 대한 재확인
+결과도 명시.
+
+코드 변경: `src/api/`(신규 4개 + `public.api.ts`/`http.ts`/`types.ts` 수정),
+`src/features/public/`(신규 페이지 4개+컴포넌트 2개, `PublicDashboardPage.tsx` 교체),
+`src/features/purchasing/components/ImportDependencyPanel.tsx`/`ImportDependencyRow.tsx`,
+`src/components/widgets/MaterialPriceDetail.tsx`, `src/components/layout/Footer.tsx`,
+`src/lib/AuthContext.ts`/`AuthProvider.tsx`/`publicNav.ts`/`materialPricePeriods.ts`,
+`src/app/routes.tsx`, `src/features/auth/pages/AuthPage.tsx`. 커밋은 아직 하지 않음(diff
+확인 후 분리 여부를 사용자에게 재확인 예정).

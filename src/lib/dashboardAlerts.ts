@@ -34,14 +34,30 @@ export function buildDashboardAlerts(
   return [...toNewsAlerts(events), ...toPriceAlerts(priceSeries, priceSummaries)]
 }
 
-/** 멀티에이전트 종합 등급이 심각·주의인 뉴스만, 수집 시각 최신순으로. */
+/**
+ * 판정이 끝난 뉴스를 수집 시각 최신순으로 올린다.
+ *
+ * **등급이 아니라 "판정이 끝났는가"로 거른다.** 예전에는 심각·주의만 올렸는데, 멀티에이전트와
+ * 브리핑까지 다 돌고 결과가 정상으로 나온 뉴스가 통째로 사라졌다 — 담당자 입장에서 그건
+ * "확인해보니 괜찮았다"는 결과이고, 알림에 안 뜨면 확인이 끝났는지 아닌지를 알 수 없다.
+ * 정상은 `정보`로 내려 등급 셋을 그대로 구분해 보여준다.
+ *
+ * 판정 완료의 기준은 다른 화면과 같다 — 확정 + 브리핑 존재. `confidence_label`만 보지 않고
+ * `briefing_id`까지 확인하는 이유는 둘이 어긋나면 그게 버그이고, 알림에서만 조용히
+ * 통과시키면 그 버그가 안 보이기 때문이다.
+ */
 function toNewsAlerts(events: RiskMonitoringEvent[]): DashboardAlert[] {
   return events
-    .filter((event) => event.multi_agent_completed && (event.grade === '심각' || event.grade === '주의'))
+    .filter(
+      (event) =>
+        event.confidence_label === '확정' &&
+        event.multi_agent_completed &&
+        event.briefing_id != null,
+    )
     .sort((a, b) => b.collected_at.localeCompare(a.collected_at))
     .map((event) => ({
       id: `news-${event.event_id}`,
-      level: event.grade as '심각' | '주의',
+      level: event.grade === '심각' ? '심각' : event.grade === '주의' ? '주의' : '정보',
       timeLabel: toTimeLabel(event.collected_at),
       title: event.headline,
       // 목록 API에는 기사 요약이 없다(상세 조회에만 있다). 자재·국가만으로도 "무엇이 왜 떴는지"는
@@ -70,13 +86,16 @@ function toPriceAlerts(
     .sort((a, b) => b.risk_score - a.risk_score)
     .map((summary) => {
       const matched = series.find((item) => item.material === summary.material)
-      const lastDate = matched?.points.at(-1)?.date
+      const latest = matched?.points.at(-1)
       return {
         id: `price-${summary.material}`,
         level: '정보' as const,
-        // 뉴스와 달리 **시각이 없다.** 원천이 일봉이라 거래일까지만 있고, 없는 정밀도를
-        // "00:00"으로 채우면 그 시각에 무슨 일이 있었던 것처럼 읽힌다.
-        timeLabel: lastDate ? lastDate.slice(5) : '—',
+        // 거래일(date)은 일봉이라 날짜뿐이다. 시각은 그 행을 마지막으로 적재한 updated_at에서
+        // 온다 — 거래일에 "00:00"을 붙이면 그 시각에 무슨 일이 있었던 것처럼 읽히므로
+        // 지어내지 않고 실제 갱신 시각을 쓴다. 옛 응답에는 이 필드가 없어 날짜로 떨어진다.
+        timeLabel: latest?.updated_at
+          ? toTimeLabel(latest.updated_at)
+          : latest?.date.slice(5) ?? '—',
         title: `${summary.material} 가격 변동성 주의`,
         detail: `구간 등락 ${summary.change_label} · 연율화 변동성 ${summary.risk_score}%`,
         href: '/purchasing#material-price-detail-heading',

@@ -89,6 +89,15 @@ const RECENT_BRIEFING_LIMIT = 5
 const ALERT_EVENT_DAYS = 7
 const ALERT_EVENT_LIMIT = 50
 
+/**
+ * 주요 알림 자동 갱신 주기.
+ *
+ * 대시보드를 열어둔 채로 백그라운드 멀티에이전트가 끝나면 새 판정이 생기는데, 예전에는 진입
+ * 시점에만 조회해서 새로고침하기 전까지 알림이 늘지 않았다. 수집 스케줄러가 15분 주기라
+ * 1분이면 충분히 촘촘하고, 목록 조회 하나뿐이라 부담도 작다.
+ */
+const ALERT_REFRESH_INTERVAL_MS = 60_000
+
 // side-panel-heading(우측 탭 패널)은 항상 뷰포트 밖으로 스크롤되지 않는 별도 영역이라 제외.
 // 순서는 화면 배치와 같아야 도트가 스크롤을 따라간다.
 const SECTION_DOTS_SECTIONS = [
@@ -329,7 +338,6 @@ export function PurchasingDashboardPage() {
     setMaterialRiskLoading(true)
     setSupplierLoading(true)
     setMaterialsLoading(true)
-    setAlertsLoading(true)
     setBriefingsLoading(true)
     setAcknowledgedLoading(true)
     fetchPurchasingKpiSummary(accessToken)
@@ -371,16 +379,6 @@ export function PurchasingDashboardPage() {
       })
       .finally(() => {
         if (!cancelled) setMaterialsLoading(false)
-      })
-    fetchRiskMonitoringEvents(accessToken, { days: ALERT_EVENT_DAYS, limit: ALERT_EVENT_LIMIT })
-      .then((events) => {
-        if (!cancelled) setMonitoringEvents(events)
-      })
-      .catch((err) => {
-        console.error('리스크 이벤트 조회 실패', err)
-      })
-      .finally(() => {
-        if (!cancelled) setAlertsLoading(false)
       })
     fetchRecentAiBriefings(accessToken, RECENT_BRIEFING_LIMIT)
       .then((items) => {
@@ -426,6 +424,42 @@ export function PurchasingDashboardPage() {
       setPendingAssessmentId(null)
     }
   }
+
+  /*
+   * 주요 알림만 주기적으로 다시 부른다. 다른 조회와 묶지 않는 이유: 이건 백그라운드에서
+   * 새 판정이 생기는 유일한 축이라 갱신이 필요하고, 나머지(KPI·표·공급사)를 함께 돌리면
+   * 1분마다 화면 전체가 흔들린다.
+   *
+   * 폴링 중에는 로딩 표시를 켜지 않는다 — 이미 목록이 떠 있는데 1분마다 자리표시자로
+   * 바뀌면 읽던 알림이 사라진다. 첫 조회만 자리표시자를 쓴다.
+   */
+  useEffect(() => {
+    if (!accessToken) return
+    let cancelled = false
+    // 첫 조회에서만 자리표시자를 띄운다(아래 first 참고).
+    setAlertsLoading(true)
+
+    async function load(token: string, first: boolean) {
+      try {
+        const events = await fetchRiskMonitoringEvents(token, {
+          days: ALERT_EVENT_DAYS,
+          limit: ALERT_EVENT_LIMIT,
+        })
+        if (!cancelled) setMonitoringEvents(events)
+      } catch (err) {
+        console.error('리스크 이벤트 조회 실패', err)
+      } finally {
+        if (!cancelled && first) setAlertsLoading(false)
+      }
+    }
+
+    void load(accessToken, true)
+    const timer = window.setInterval(() => void load(accessToken, false), ALERT_REFRESH_INTERVAL_MS)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [accessToken, reloadKey])
 
   /** 되돌리기. 완료 처리와 같은 reloadKey를 올려 KPI·표·이 목록을 한꺼번에 맞춘다 —
       한쪽만 갱신하면 표에는 돌아왔는데 KPI는 그대로인 어긋난 화면이 된다. */

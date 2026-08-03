@@ -210,8 +210,15 @@ export interface AiRecommendation {
 }
 
 export interface MaterialPricePoint {
+  /** 거래일. 일봉이라 날짜까지만 있다. */
   date: string
   price_index: number
+  /**
+   * 이 행을 마지막으로 적재한 시각(ISO). 화면이 "언제 갱신된 값인가"를 표시할 때 쓴다 —
+   * 거래일에 00:00을 붙이면 실제 수집 시각이 아닌 값을 지어내게 된다.
+   * 이 필드가 추가되기 전 응답에는 없으므로 optional이다.
+   */
+  updated_at?: string
 }
 
 /** risk_event에는 가격 필드가 없어, 대상 자재만 market_context에서 가져오고 지수는 데모용으로 합성했다. */
@@ -603,6 +610,11 @@ export interface RiskMonitoringEvent {
   /** 분석(F3)이 아직 없는 기사는 null — 화면이 등급 배지를 생략한다. */
   grade: RiskGrade | null
   confidence_label: ConfidenceLabel
+  /**
+   * 이 뉴스의 완결된 브리핑. 없으면 null이다.
+   * `confidence_label === '확정'`과 항상 짝을 이룬다 — 확정인데 null이면 백엔드 버그다.
+   */
+  briefing_id: string | null
   /** true면 종합 위험도 기준 확정 등급이라 잠정 배지를 숨긴다. */
   multi_agent_completed: boolean
   /** 번역본이 있으면 한국어, 없으면 원문 */

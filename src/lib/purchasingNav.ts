@@ -20,4 +20,7 @@ export const PURCHASING_SIDE_NAV_ITEMS: SideNavItem[] = [
   { label: '계약 · RAG', href: '/purchasing/contract-rag' },
   // 앞의 세 화면이 대상을 넘겨 보내는 곳. 대상 없이 들어오면 최근 브리핑 열람 화면이 된다.
   { label: 'AI 브리핑', href: '/purchasing/ai-briefing' },
+  // 앞의 화면들이 "읽기"라면 여기만 "쓰기"다 — ERP 원본과 계약 문서를 DB에 반영한다.
+  // 되돌리기가 없는 화면이라 목록 맨 끝에 둔다.
+  { label: '데이터 관리', href: '/purchasing/data-management' },
 ]

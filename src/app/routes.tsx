@@ -7,6 +7,7 @@ import { RiskMonitoringPage } from '../features/purchasing/pages/RiskMonitoringP
 import { MaterialRiskPage } from '../features/purchasing/pages/MaterialRiskPage'
 import { ContractRagPage } from '../features/purchasing/pages/ContractRagPage'
 import { AiBriefingPage } from '../features/purchasing/pages/AiBriefingPage'
+import { DataManagementPage } from '../features/purchasing/pages/DataManagementPage'
 import { PlanningDashboardPage } from '../features/planning/pages/PlanningDashboardPage'
 import { ExecutiveDashboardPage } from '../features/executive/pages/ExecutiveDashboardPage'
 import { useAuthState } from '../lib/useAuthState'
@@ -106,6 +107,18 @@ export function AppRoutes() {
         element={
           <RequireAuth tier="purchasing">
             <Navigate to="/purchasing/ai-briefing" replace />
+          </RequireAuth>
+        }
+      />
+      {/*
+        1계층 구매팀 마지막 화면. ERP CSV와 계약 문서를 DB에 반영하는 유일한 쓰기 화면이라
+        같은 tier 가드 안에 둔다(백엔드도 /api/v1/erp/imports를 PURCHASING으로 제한한다).
+      */}
+      <Route
+        path="/purchasing/data-management"
+        element={
+          <RequireAuth tier="purchasing">
+            <DataManagementPage />
           </RequireAuth>
         }
       />

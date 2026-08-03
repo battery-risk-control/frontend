@@ -1063,3 +1063,120 @@ export interface AiBriefingListItem {
   review_passed: boolean | null
   created_at: string
 }
+
+/* ------------------------------------------------------------------ 데이터 관리 */
+
+/**
+ * 1계층 구매팀 "데이터 관리" 화면. ERP CSV 일괄 적재와 RAG 계약 문서 등록 두 모드가 있고,
+ * 두 모드 모두 **분석(DB 미반영) → 반영** 2단계다. 잡 ID가 없어 프론트가 File을 들고 있다가
+ * 반영 단계에서 같은 파일을 다시 보낸다.
+ */
+export type DataImportMode = 'ERP' | 'RAG'
+
+export type ErpImportResult = 'SUCCESS' | 'WARNING' | 'ERROR'
+
+export type ErpImportIssueLevel = 'ERROR' | 'WARNING' | 'DUPLICATE'
+
+/** MAPPED=적재됨, IGNORED=파일에 있으나 버려짐, MISSING=시스템이 요구하는데 파일에 없음 */
+export type ErpImportColumnStatus = 'MAPPED' | 'IGNORED' | 'MISSING'
+
+export interface ErpImportIssue {
+  level: ErpImportIssueLevel
+  /** 헤더를 1행으로 세는 실제 파일 줄 번호. 파일 전체에 대한 지적이면 null. */
+  row_number: number | null
+  column: string | null
+  message: string
+}
+
+export interface ErpImportColumnMapping {
+  source_column: string
+  /** null이면 적재되지 않고 무시되는 컬럼이다. */
+  target_field: string | null
+  description: string
+  required: boolean
+  sample: string | null
+  status: ErpImportColumnStatus
+}
+
+export interface ErpImportFileAnalysis {
+  file_name: string
+  /** 판별된 대상 테이블. null이면 어떤 ERP 테이블인지 알아내지 못한 것이라 반영할 수 없다. */
+  target_table: string | null
+  target_label: string | null
+  /** FK 의존 적재 순서(1~10). 미판별이면 0. */
+  load_order: number
+  size_bytes: number
+  row_count: number
+  column_count: number
+  result: ErpImportResult
+  error_count: number
+  warning_count: number
+  duplicate_count: number
+  columns: ErpImportColumnMapping[]
+  /** 상위 몇 행 미리보기. "내용 분석" 표가 이걸 그린다. */
+  sample_rows: Record<string, string>[]
+  issues: ErpImportIssue[]
+}
+
+export interface ErpImportTableCount {
+  target_table: string
+  label: string
+  row_count: number
+}
+
+export interface ErpImportPreview {
+  files: ErpImportFileAnalysis[]
+  total_rows: number
+  total_errors: number
+  total_warnings: number
+  total_duplicates: number
+  /** 0~100. 오류를 가장 무겁게, 중복·경고 순으로 깎은 점수. */
+  quality_score: number
+  /** 오류가 하나라도 있으면 false — 화면이 "DB에 반영" 버튼을 잠근다. */
+  committable: boolean
+  summary: ErpImportTableCount[]
+}
+
+export interface ErpImportTableResult {
+  target_table: string
+  label: string
+  inserted: number
+  updated: number
+}
+
+export interface ErpImportCommitResult {
+  committed_at: string
+  total_inserted: number
+  total_updated: number
+  results: ErpImportTableResult[]
+}
+
+/**
+ * RAG 모드 분석 결과. 계약 필드는 파일 원문에서 정규식으로 추출한 값이라 **틀릴 수 있다** —
+ * 화면이 수정 가능한 입력으로 보여주고, 사용자가 확인한 값으로 반영한다.
+ */
+export interface ContractDocumentPreview {
+  erp_supplier_id: string
+  erp_material_id: string
+  /** 이 공급사·자재 조합에 이미 계약이 있으면 그 ID. 있으면 새로 만들지 않고 문서만 붙는다. */
+  existing_contract_id: string | null
+  /** 신규 계약일 때 발급 예정인 CTR-XXX. 기존 계약이 있으면 null. */
+  expected_new_contract_id: string | null
+  contract_number: string | null
+  contract_name: string | null
+  effective_date: string | null
+  expiration_date: string | null
+  file_name: string | null
+  size_bytes: number
+  char_count: number
+  text_preview: string
+  /** false면 원문을 읽지 못한 것 — "빈 문서"와 구분해서 안내해야 한다. */
+  text_extracted: boolean
+}
+
+export interface ContractDocumentConfirmResult {
+  contract_id: string
+  contract_created: boolean
+  document_id: string
+  processing_status: string
+}

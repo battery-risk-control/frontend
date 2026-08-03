@@ -84,31 +84,3 @@ export async function fetchRiskMonitoringEvent(
   return result
 }
 
-/**
- * "ERP·계약 영향 분석" 실행. 멀티에이전트(ERP Agent · 계약 RAG Agent · 위험도 합산 · 브리핑 ·
- * 검증)를 지금 돌리고 **갱신된 상세**를 돌려주므로, 호출부는 응답을 그대로 상태에 넣으면 된다.
- *
- * 실행이 끝나면 등급이 종합 위험도 기준으로 바뀌고 신뢰도가 "확정"이 되어 잠정 배지가 사라진다.
- * 실행할 수 없는 기사는 422와 함께 사유가 오는데, 상세의 `erp_impact_available`로 미리 알 수 있어
- * 화면은 버튼을 먼저 비활성화한다.
- *
- * LLM 브리핑 문구 생성은 기본 off다(`useLlm`) — 등급 갱신에 필요 없고 버튼 한 번이 곧 비용이다.
- *
- * 사용 예:
- *   const updated = await runErpImpactAnalysis(accessToken, 252)
- */
-export async function runErpImpactAnalysis(
-  accessToken: string,
-  eventId: number,
-  useLlm = false,
-): Promise<RiskMonitoringDetail> {
-  const result = await fetchWithAuth<RiskMonitoringDetail>(
-    `/api/v1/risk-monitoring/events/${eventId}/erp-impact?useLlm=${useLlm}`,
-    accessToken,
-    { method: 'POST' },
-  )
-  if ('error' in result) {
-    throw new Error(result.message)
-  }
-  return result
-}

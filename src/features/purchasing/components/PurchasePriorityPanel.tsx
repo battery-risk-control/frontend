@@ -33,7 +33,7 @@ export function PurchasePriorityPanel({
   materials,
   isLoading = false,
 }: PurchasePriorityPanelProps) {
-  const ranked = toPurchasePriority(materials)
+  const { ranked, unavailable } = toPurchasePriority(materials)
 
   return (
     <ScrollCard
@@ -60,34 +60,53 @@ export function PurchasePriorityPanel({
             </li>
           ))}
         </ol>
-      ) : ranked.length === 0 ? (
+      ) : ranked.length === 0 && unavailable.length === 0 ? (
         <p className={styles.empty}>표시할 자재가 없습니다.</p>
       ) : (
-        <ol className={styles.list}>
-          {ranked.map((material, index) => (
-            <li key={material.erp_material_id} className={styles.item}>
-              <span className={styles.rank}>{index + 1}</span>
-              <div className={styles.body}>
-                <span className={styles.material}>
-                  {material.material_name}
-                  {material.grade ? (
-                    <RiskGradeBadge grade={material.grade} />
-                  ) : (
-                    <span className={styles.unavailable}>평가 불가</span>
-                  )}
-                </span>
-                <span className={styles.stockDays}>
-                  {material.inventory_days !== null
-                    ? `재고 소진까지 ${Math.round(material.inventory_days)}일`
-                    : '재고 데이터 없음'}
-                </span>
-                {material.grade === null && material.unavailable_reason && (
-                  <span className={styles.recommendation}>{material.unavailable_reason}</span>
-                )}
-              </div>
-            </li>
-          ))}
-        </ol>
+        <>
+          <ol className={styles.list}>
+            {ranked.map((material, index) => (
+              <li key={material.erp_material_id} className={styles.item}>
+                <span className={styles.rank}>{index + 1}</span>
+                <div className={styles.body}>
+                  <span className={styles.material}>
+                    {material.material_name}
+                    {material.grade && <RiskGradeBadge grade={material.grade} />}
+                  </span>
+                  <span className={styles.stockDays}>
+                    {material.inventory_days !== null
+                      ? `재고 소진까지 ${Math.round(material.inventory_days)}일`
+                      : '재고 데이터 없음'}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          {/* 평가하지 못한 자재. 순위를 붙이지 않는다 — 순위 목록의 숫자는 "얼마나 급한가"로
+              읽히는데, 확인이 안 된 것을 그 자리에 끼우면 두 뜻이 섞인다. 대신 별도 영역과
+              라벨로 드러내고 사유를 함께 적어 무엇을 채워야 하는지 바로 알 수 있게 한다. */}
+          {unavailable.length > 0 && (
+            <section className={styles.unavailableSection} aria-label="평가 불가 자재">
+              <h3 className={styles.unavailableHeading}>
+                평가 불가 <span className={styles.unavailableCount}>{unavailable.length}</span>
+              </h3>
+              <ul className={styles.unavailableList}>
+                {unavailable.map((material) => (
+                  <li key={material.erp_material_id} className={styles.unavailableItem}>
+                    <span className={styles.material}>
+                      {material.material_name}
+                      <span className={styles.unavailable}>평가 불가</span>
+                    </span>
+                    {material.unavailable_reason && (
+                      <span className={styles.recommendation}>{material.unavailable_reason}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </>
       )}
     </ScrollCard>
   )

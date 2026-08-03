@@ -173,28 +173,40 @@ const GRADE_SEVERITY: Record<RiskGrade, number> = {
 
 
 /**
- * 구매 대응 우선순위 정렬. 별도 우선순위 스키마가 없으므로 자재별 위험 목록에서 파생한다 —
- * 등급(심각 > 주의 > 정상) → 재고일수(적을수록 긴급) 순.
+ * 구매 대응 우선순위. **평가 가능한 자재만 순위를 매기고**, 평가하지 못한 자재는 순위 없이
+ * 목록 맨 뒤로 보낸다.
  *
- * **평가하지 못한 자재를 맨 뒤로 보내지 않는다.** 등급이 없는 자재는 "안전해서 없는" 게 아니라
- * "확인하지 못한" 것이라 오히려 손이 필요하다. 심각 바로 다음(주의보다 앞)에 세워
- * 담당자 눈에 들어오게 한다.
+ * 예전에는 평가 불가를 심각과 주의 사이(2.5)에 끼워 눈에 띄게 했는데, 그러면 "2위"라는 숫자가
+ * **두 가지 뜻을 갖는다** — "두 번째로 위험하다"와 "확인이 안 됐다". 순위 목록에서 숫자는 급한
+ * 정도로 읽히므로 후자를 그 자리에 두면 오독된다. 미확인은 순위가 아니라 별도 영역과
+ * "평가 불가" 라벨로 드러낸다(사용자 결정, 2026-08-03).
+ *
+ * 백엔드 `MaterialRiskService.DISPLAY_ORDER`도 평가 불가를 맨 뒤에 두므로 이제 두 규칙이 같다 —
+ * 예전에는 같은 자재가 "원자재 공급사 리스크 현황"에서는 마지막, "구매 대응 우선순위"에서는
+ * 2위로 나와 한 화면 안에서 자리가 어긋났다.
  *
  * 사용 예:
- *   const ranked = toPurchasePriority(overview.materials)
+ *   const { ranked, unavailable } = toPurchasePriority(overview.materials)
  */
-export function toPurchasePriority(materials: MaterialRiskItem[]): MaterialRiskItem[] {
-  return [...materials].sort((a, b) => {
-    const severityDiff = priorityRank(b) - priorityRank(a)
+export function toPurchasePriority(materials: MaterialRiskItem[]): PurchasePriority {
+  const assessable = materials.filter((item) => item.grade !== null && item.score !== null)
+  const unavailable = materials.filter((item) => item.grade === null || item.score === null)
+
+  const ranked = [...assessable].sort((a, b) => {
+    const severityDiff = GRADE_SEVERITY[b.grade as RiskGrade] - GRADE_SEVERITY[a.grade as RiskGrade]
     if (severityDiff !== 0) return severityDiff
     // 재고일수가 없는 자재는 비교 불가라 뒤로 보낸다(Infinity) — 0으로 두면 "재고 소진 임박"으로
     // 잘못 올라온다.
     return (a.inventory_days ?? Infinity) - (b.inventory_days ?? Infinity)
   })
+
+  return { ranked, unavailable }
 }
 
-/** 심각(3) > 평가 불가(2.5) > 주의(2) > 정상(1). 평가 불가를 주의보다 앞에 두는 이유는 위 주석 참고. */
-function priorityRank(material: MaterialRiskItem): number {
-  if (material.grade === null) return 2.5
-  return GRADE_SEVERITY[material.grade]
+/** {@link toPurchasePriority} 결과. 순위가 붙는 목록과 붙지 않는 목록을 분리해 돌려준다. */
+export interface PurchasePriority {
+  /** 등급·점수가 있는 자재. 화면이 배열 순서대로 1위부터 번호를 붙인다. */
+  ranked: MaterialRiskItem[]
+  /** 평가하지 못한 자재. 순위를 붙이지 않고 목록 아래 별도 영역에 둔다. */
+  unavailable: MaterialRiskItem[]
 }

@@ -1,0 +1,188 @@
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.cardHeading {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.totalLabel {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.totalValue {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.totalUnit {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.summaryList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.summaryItem {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+}
+
+.summaryLabel {
+  color: var(--color-text-muted);
+}
+
+.summaryCount {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  text-align: right;
+  word-break: break-all;
+}
+
+.score {
+  display: flex;
+  gap: var(--space-1);
+  align-items: baseline;
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.scoreMax {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.scoreNormal {
+  color: var(--color-risk-normal);
+}
+
+.scoreWarning {
+  color: var(--color-risk-warning);
+}
+
+.scoreCritical {
+  color: var(--color-risk-critical);
+}
+
+.scoreBar {
+  height: 6px;
+  overflow: hidden;
+  background: var(--color-bg);
+  border-radius: 999px;
+}
+
+.scoreFill {
+  height: 100%;
+  background: var(--color-primary);
+}
+
+.issueSummary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.issueSummaryRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.warning {
+  color: var(--color-risk-warning);
+}
+
+.critical {
+  color: var(--color-risk-critical);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.commitButton {
+  padding: var(--space-3);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-surface);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.commitButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.blockedNote {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-risk-warning);
+}
+
+/* 되돌릴 수 없다는 사실은 버튼 아래에 항상 둔다 — 누르기 직전에 읽히는 자리다. */
+.warnNote {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.resultHeading {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-risk-normal);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-risk-critical);
+}

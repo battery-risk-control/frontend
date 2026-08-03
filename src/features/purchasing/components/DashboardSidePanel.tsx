@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
@@ -250,6 +250,23 @@ export function DashboardSidePanel({
   onPreviewMouseLeave,
 }: DashboardSidePanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>('news')
+
+  /*
+   * 기사를 고르면 "뉴스 상세"로 돌아온다.
+   *
+   * 브리핑 탭을 보던 중에 아래 "최신 뉴스"나 위험 지도에서 기사를 눌러도 탭이 그대로라,
+   * 클릭이 먹지 않은 것처럼 보였다 — 선택은 바뀌었는데 화면은 계속 브리핑 목록이었다.
+   *
+   * id가 아니라 객체 참조를 본다. 부모가 클릭할 때마다 fromNewsFeedItem/fromRiskBoardItem으로
+   * 새 객체를 만들어 넣으므로, 같은 기사를 다시 눌러도 탭이 돌아온다. 목록이 주기적으로
+   * 갱신돼도 참조는 그대로라 사용자가 브리핑 탭을 보는 중에 끌려가지 않는다.
+   */
+  useEffect(() => {
+    if (selectedNews) {
+      setActiveTab('news')
+    }
+  }, [selectedNews])
+
   const scrollRef = useRef<HTMLDivElement>(null)
   const { hasOverflowTop, hasOverflowBottom } = useScrollOverflowHint(scrollRef, expanded)
 

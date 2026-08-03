@@ -228,41 +228,87 @@
   color: var(--color-text);
 }
 
+/*
+ * 목록 카드 한 장 = 버튼 하나. 예전에는 카드 아래에 검정 막대 버튼("브리핑 상세 보기")이
+ * 하나씩 붙어, 목록을 훑으면 제목보다 막대가 먼저 보였다 — 카드에서 가장 강한 요소가 링크였다.
+ */
 .recentCard {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding-top: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-2);
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+/*
+ * 구분선은 카드와 카드 사이에만 둔다. `:first-of-type`으로 첫 칸의 선을 지우던 방식은 목록에
+ * 다른 버튼이 섞이는 순간 엉뚱한 칸이 첫 번째로 잡힌다 — 인접 선택자는 그 위험이 없다.
+ */
+.recentCard + .recentCard {
   border-top: 1px solid var(--color-border);
 }
 
-.recentCard:first-of-type {
-  padding-top: 0;
-  border-top: none;
+.recentCard:hover {
+  background: var(--color-bg);
 }
 
 .recentTitle {
-  margin: 0;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
+  line-height: 1.45;
   color: var(--color-text);
   overflow-wrap: anywhere;
 }
 
 .recentMeta {
-  margin: 0;
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+}
+
+/* 시각(왼쪽) + 열기 신호(오른쪽). 막대 버튼이 쓰던 세로 자리를 이 한 줄이 대신한다. */
+.recentFoot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
 }
 
 .recentDate {
-  margin: 0 0 var(--space-2);
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
-.primaryAction,
-.secondaryAction {
+/* 카드가 눌린다는 신호. 마우스를 올리기 전에도 보이도록 늘 두되 옅게 남긴다. */
+.recentOpen {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+}
+
+.recentCard:hover .recentOpen {
+  text-decoration: underline;
+}
+
+/*
+ * 페이지를 넘기는 중. 목록을 지우고 골격으로 갈아치우는 대신 이전 페이지를 흐리게만 둔다 —
+ * 응답이 빠를 때 깜빡임만 남고 자리가 튀는 것을 피하고, 그동안 카드가 눌리지도 않게 한다.
+ */
+.recentListRefreshing {
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity var(--transition-fast);
+}
+
+.primaryAction {
   display: block;
   padding: var(--space-3) var(--space-5);
   font: inherit;
@@ -306,11 +352,6 @@
   }
 }
 
-.secondaryAction {
-  width: 100%;
-  color: var(--color-surface);
-  background: var(--color-text);
-}
 
 /*
  * 비활성을 `opacity`로 만들지 않는다. opacity는 배경과 글자를 함께 흐리게 해 대비를 깎는데,
@@ -319,7 +360,6 @@
  * 못 누르는 이유는 버튼 아래 `.blockedReason` 줄이 문장으로 밝힌다.
  */
 .primaryAction:disabled,
-.secondaryAction:disabled,
 .downloadAction:disabled {
   color: var(--color-text-muted);
   background: var(--color-bg);
@@ -331,9 +371,6 @@
   background: var(--color-primary-alt);
 }
 
-.secondaryAction:not(:disabled):hover {
-  opacity: 0.88;
-}
 
 /* --------------------------------------------------- 브리핑 패널 헤더 · PDF 다운로드 */
 
@@ -447,12 +484,14 @@
 }
 
 /* 본문에 떠 있는 브리핑을 목록에서도 표시한다 — 어느 것을 보고 있는지 알 수 있어야 한다. */
-.recentCardSelected {
-  margin: 0 calc(var(--space-2) * -1);
-  padding-right: var(--space-2);
-  padding-left: var(--space-2);
+/*
+ * 지금 열려 있는 브리핑. 카드가 통째로 버튼이 되면서 배경만으로는 hover와 구분되지 않아,
+ * 왼쪽에 색 막대를 둔다 — 마우스가 지나가는 칸과 실제로 열려 있는 칸이 헷갈리지 않게.
+ */
+.recentCardSelected,
+.recentCardSelected:hover {
   background: var(--color-bg);
-  border-radius: var(--radius-sm);
+  box-shadow: inset 3px 0 0 var(--color-primary);
 }
 
 .notice {
@@ -466,6 +505,31 @@
   margin: 0;
   font-size: var(--font-size-xs);
   line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+/*
+ * 조기 종료된 실행에서 등급 배지가 서던 자리. 오류가 아니라 결론이므로 경고색을 쓰지 않고,
+ * 그렇다고 등급처럼 보이지도 않게 중립 배경 + 회색 테두리로 둔다.
+ */
+.skippedNotice {
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border-left: 3px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.skippedTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.skippedDetail {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.55;
   color: var(--color-text-muted);
 }
 

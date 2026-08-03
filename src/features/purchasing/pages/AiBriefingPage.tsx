@@ -543,10 +543,21 @@ function BriefingResult({ detail }: { detail: AiBriefingDetail }) {
           {detail.procurement_risk_level} · {Math.round(detail.procurement_risk_score)}점
         </p>
       ) : (
-        // 조기 종료된 실행은 0점·NORMAL로 응답이 나가므로 등급으로 보여주면 안 된다 — 사유만 밝힌다.
-        <p className={styles.blockedReason}>
-          멀티에이전트가 ERP · 계약 노드까지 가지 못해 종합 점수가 나오지 않았습니다.
-        </p>
+        /*
+          조기 종료된 실행은 0점·NORMAL로 응답이 나가므로 등급으로 보여주면 안 된다.
+
+          예전 문구("ERP · 계약 노드까지 가지 못해")는 실패처럼 읽혔다. 실제로는 그래프가
+          공급망 영향을 확인하고 **더 볼 필요가 없다고 판단해** 계약 조회와 LLM을 건너뛴
+          것이라, 실패가 아니라 결론이다. 무엇을 보고 그렇게 판단했는지는 바로 아래
+          `detail.briefing`("[정상] …")이 문장으로 말하므로 여기서 겹쳐 말하지 않는다.
+        */
+        <div className={styles.skippedNotice}>
+          <p className={styles.skippedTitle}>종합 위험 점수를 산출하지 않았습니다</p>
+          <p className={styles.skippedDetail}>
+            공급망 영향을 확인하는 단계에서 더 볼 필요가 없다고 판단해 계약 조회와 LLM 분석을
+            건너뛴 실행입니다. 점수가 없는 것이지 위험이 0이라는 뜻은 아닙니다.
+          </p>
+        </div>
       )}
 
       {detail.briefing && <p className={styles.briefingText}>{detail.briefing}</p>}
@@ -641,7 +652,18 @@ function EvidencePanel({ detail }: { detail: AiBriefingDetail | null }) {
           <EvidenceRow label="외부 이벤트" step={detail.evidence_chain.external_signal} />
           <EvidenceRow label="ERP 노출" step={detail.evidence_chain.erp_exposure} />
           <EvidenceRow label="계약 RAG" step={detail.evidence_chain.contract_rag} />
-          <EvidenceRow label="최종 위험" step={detail.evidence_chain.final_risk} highlight />
+          {/*
+            조기 종료된 실행의 최종 위험은 계산된 값이 아니라 상수 0·NORMAL이다
+            (fastapi-ai/app/multi_agent/kg/node.py의 build_no_shortage_briefing). 위 세 칸 중
+            안 잰 것들은 이미 "—"로 정직하게 비어 있는데 최종만 숫자로 채워지면, 넷 중 유일하게
+            지어낸 값이 유일하게 측정값처럼 보인다.
+          */}
+          <EvidenceRow
+            label="최종 위험"
+            step={detail.evidence_chain.final_risk}
+            highlight
+            unmeasured={!detail.composite}
+          />
           <p className={styles.footnote}>외부 이벤트 → ERP → 계약 RAG → 브리핑</p>
         </>
       )}
@@ -653,20 +675,32 @@ function EvidenceRow({
   label,
   step,
   highlight = false,
+  unmeasured = false,
 }: {
   label: string
   step: { level: string | null; score: number | null; note: string | null }
   highlight?: boolean
+  /** 값이 실려 오더라도 재지 않은 칸. 응답의 자리채움을 측정값처럼 보이게 두지 않는다. */
+  unmeasured?: boolean
 }) {
   // 계약 RAG처럼 등급이 없는 칸은 note("3개 조항")가 값을 대신한다.
-  const value = step.level
-    ? `${step.level}${step.score === null ? '' : ` · ${Math.round(step.score)}`}`
-    : (step.note ?? '—')
+  const value = unmeasured
+    ? '—'
+    : step.level
+      ? `${step.level}${step.score === null ? '' : ` · ${Math.round(step.score)}`}`
+      : (step.note ?? '—')
 
   return (
     <div className={styles.evidenceRow}>
       <span className={styles.evidenceLabel}>{label}</span>
-      <span className={highlight ? levelClass(step.level ?? '') : styles.evidenceValue}>{value}</span>
+      {/* 안 잰 칸에는 등급 색을 입히지 않는다 — 초록 NORMAL로 칠하면 "안전 판정"으로 읽힌다. */}
+      <span
+        className={
+          highlight && !unmeasured ? levelClass(step.level ?? '') : styles.evidenceValue
+        }
+      >
+        {value}
+      </span>
     </div>
   )
 }
@@ -728,7 +762,8 @@ function RecentPanel({
               type="button"
               className={styles.pageButton}
               onClick={() => onPageChange(page - 1)}
-              disabled={page === 0}
+              // 넘기는 중에는 잠근다 — 연타하면 늦게 도착한 응답이 최신 페이지를 덮는다.
+              disabled={page === 0 || isLoading}
               aria-label="이전 브리핑"
             >
               ‹
@@ -737,7 +772,7 @@ function RecentPanel({
               type="button"
               className={styles.pageButton}
               onClick={() => onPageChange(page + 1)}
-              disabled={page >= lastPage}
+              disabled={page >= lastPage || isLoading}
               aria-label="다음 브리핑"
             >
               ›
@@ -775,9 +810,15 @@ function RecentPanel({
           />
         </div>
       }
-      maxBodyHeight={360}
+      /*
+        높이를 고정하지 않는다. `maxBodyHeight`는 "4개 높이로 고정 + 5번째부터 스크롤" 규칙용인데
+        (design-tokens.md "카드 레이아웃·스크롤 규칙" d) 이 목록은 한 페이지가 정확히
+        RECENT_PAGE_SIZE(4)개라 5번째가 없다. 360px 고정 때문에 마지막 한 장이 잘려, 페이지당
+        4건인데 3건만 보이고 나머지는 스크롤해야 했다.
+      */
     >
-      {isLoading && (
+      {/* 처음 불러올 때는 보여줄 것이 없으니 골격을 세운다. */}
+      {isLoading && items.length === 0 && (
         <div aria-busy="true" aria-label="최근 브리핑 불러오는 중">
           <SkeletonText lines={6} lastLineWidth="45%" />
         </div>
@@ -789,36 +830,62 @@ function RecentPanel({
             : '저장된 브리핑이 아직 없습니다.'}
         </p>
       )}
-      {!isLoading &&
-        items.map((item) => (
-          <article
+      {/*
+        페이지를 넘기는 중에는 목록을 지우지 않고 흐리게만 한다. 골격으로 갈아치우면 응답이
+        빠를 때(로컬은 수십 ms) 깜빡임만 남고 자리가 튀어, 오히려 무슨 일이 일어났는지
+        알기 어렵다. 이전 페이지를 둔 채 "바뀌는 중"만 알리는 편이 읽힌다.
+      */}
+      {items.length > 0 && (
+        <div
+          className={isLoading ? styles.recentListRefreshing : undefined}
+          aria-busy={isLoading || undefined}
+        >
+          {items.map((item) => (
+          /*
+            카드 전체가 버튼이다. 예전에는 카드마다 검정 막대 버튼이 아래 붙어 있어서, 목록을
+            훑을 때 브리핑 제목보다 막대가 먼저 눈에 들어왔다 — 카드에서 가장 강한 요소가
+            "여길 누르세요"였던 셈이다. 카드 안에 다른 누를 것이 없으므로 통째로 버튼으로
+            두는 데 걸림돌도 없다(계약·RAG 화면의 조항 카드와 같은 방식).
+          */
+          <button
+            type="button"
             key={item.briefing_id}
             className={
               item.briefing_id === selectedId
                 ? `${styles.recentCard} ${styles.recentCardSelected}`
                 : styles.recentCard
             }
+            onClick={() => onOpen(item)}
+            aria-pressed={item.briefing_id === selectedId}
           >
-            <p className={styles.recentTitle}>{item.subject_title ?? item.news_id}</p>
-            <p className={styles.recentMeta}>
+            <span className={styles.recentTitle}>{item.subject_title ?? item.news_id}</span>
+            <span className={styles.recentMeta}>
+              {/*
+                "평가 미완료"는 아직 안 끝났다는 뉘앙스라 틀렸다. 조기 종료는 미완이 아니라
+                결론이다 — 공급망 영향을 보고 더 볼 필요가 없다고 판단해 점수를 내지 않은 것이다.
+                응답에는 0·NORMAL이 실려 오지만 계산된 값이 아니라 그대로 쓰면 안 된다.
+              */}
               <span className={levelClass(item.composite ? item.procurement_risk_level : '')}>
                 {item.composite
                   ? `${item.procurement_risk_level} · ${Math.round(item.procurement_risk_score)}`
-                  : '평가 미완료'}
+                  : '점수 미산출'}
               </span>
               {item.review_passed !== null && ` · ${item.review_passed ? '검증 통과' : '검증 실패'}`}
-            </p>
-            <p className={styles.recentDate}>{formatDateTime(item.created_at)}</p>
-            <button
-              type="button"
-              className={styles.secondaryAction}
-              onClick={() => onOpen(item)}
-              aria-pressed={item.briefing_id === selectedId}
-            >
-              브리핑 상세 보기
-            </button>
-          </article>
-        ))}
+            </span>
+            <span className={styles.recentFoot}>
+              <span className={styles.recentDate}>{formatDateTime(item.created_at)}</span>
+              {/*
+                카드가 눌린다는 신호. 카드 전체가 이미 버튼이라 보조 장치이므로 스크린리더에는
+                읽히지 않게 둔다 — 버튼 이름은 제목·등급·시각으로 충분하다.
+              */}
+              <span className={styles.recentOpen} aria-hidden="true">
+                상세 보기 →
+              </span>
+            </span>
+          </button>
+          ))}
+        </div>
+      )}
     </ScrollCard>
   )
 }

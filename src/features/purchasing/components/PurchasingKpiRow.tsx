@@ -22,6 +22,14 @@ interface KpiCell {
    * 렌더하지 않는다. `null`은 "값을 못 구했다"라 "—"로 표시한다.
    */
   value24h?: number | null
+  /**
+   * 24시간 줄의 단위. 생략하면 `unit`을 그대로 쓴다.
+   *
+   * 심각·주의 칸에서만 갈린다 — 큰 숫자는 자재 대분류를 세므로 `종`이지만, 24시간 줄은 그
+   * 시간창에 들어온 **평가 행 전체**라 `건`이다. 같은 단위를 붙이면 "24시간 동안 2종"처럼
+   * 읽혀 없는 뜻이 생긴다.
+   */
+  unit24h?: string
 }
 
 const TONE_CLASS: Record<Tone, string> = {
@@ -45,18 +53,20 @@ const TONE_CLASS: Record<Tone, string> = {
 function toCells(kpi: PurchasingKpiSummary | null): KpiCell[] {
   return [
     {
-      label: '심각',
+      label: '심각 원자재',
       value: kpi?.critical_count ?? null,
-      unit: '건',
+      unit: '종',
       tone: 'critical',
       value24h: kpi ? kpi.critical_count_24h : null,
+      unit24h: '건',
     },
     {
-      label: '주의',
+      label: '주의 원자재',
       value: kpi?.warning_count ?? null,
-      unit: '건',
+      unit: '종',
       tone: 'warning',
       value24h: kpi ? kpi.warning_count_24h : null,
+      unit24h: '건',
     },
     {
       label: 'ERP 영향도',
@@ -86,13 +96,18 @@ function round(score: number | null | undefined): number | null {
 }
 
 /**
- * 구매팀 대시보드 상단 KPI 5칸(목업 최상단 행) — 심각·주의 건수, ERP 영향도, 외부 위험,
+ * 구매팀 대시보드 상단 KPI 5칸(목업 최상단 행) — 심각·주의 원자재 종수, ERP 영향도, 외부 위험,
  * 검증 브리핑 건수.
  *
  * 원천은 `GET /api/v1/purchasing-dashboard/kpi-summary` 하나다. 큰 숫자의 모집단은 **자재
  * 대분류(8종)별 최신 평가 1건**이라 누적 이력이 아니라 현재 상태를 센다 — 같은 자재를 여러 번
  * 평가해도 "지금 심각한 자재"는 하나로 센다. 아래 작은 글씨는 **최근 24시간에 들어온 평가 원본
  * 전체**라 모집단이 다르다.
+ *
+ * **라벨에 "원자재"를 박아 둔다.** 이 칸은 뉴스 사건 수가 아니라 자재 대분류 수를 센다. 예전
+ * 라벨(`심각` / `주의` + 단위 `건`)로는 지도 마커 수·주요 알림 건수와 같은 것을 세는 줄로
+ * 읽혀서, 숫자가 다르면 버그로 보였다 — 실제로는 세는 단위가 다른 것이다(사건 단위로 세는
+ * 화면은 지도와 주요 알림이고, 그쪽 둘은 서로 일치한다).
  *
  * **두 값을 빼서 "전일 대비"로 읽으면 안 된다.** 하나는 대분류별 최신 1건 스냅샷이고 다른
  * 하나는 시간 윈도우 안의 원본 행 전체라, 차이가 증감을 뜻하지 않는다(백엔드 DTO에 같은 경고가
@@ -133,7 +148,7 @@ export function PurchasingKpiRow({ kpi, isLoading = false }: PurchasingKpiRowPro
               {cell.value24h !== undefined && (
                 <span className={styles.subValue}>
                   <span className={styles.subLabel}>24h</span>
-                  {cell.value24h === null ? '—' : `${cell.value24h}${cell.unit}`}
+                  {cell.value24h === null ? '—' : `${cell.value24h}${cell.unit24h ?? cell.unit}`}
                 </span>
               )}
             </dd>

@@ -24,7 +24,7 @@ export function ScoreCardPanel({ card }: ScoreCardPanelProps) {
           <span className={styles.scoreMax}>/100</span>
         </div>
         <div className={styles.scoreFooter}>
-          <RiskGradeBadge grade={card.grade} />
+          {card.grade && <RiskGradeBadge grade={card.grade} />}
           {card.diffLabel && <span className={styles.diffLabel}>{card.diffLabel}</span>}
         </div>
       </div>

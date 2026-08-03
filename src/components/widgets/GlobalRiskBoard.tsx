@@ -13,6 +13,12 @@ import styles from './GlobalRiskBoard.module.css'
 
 interface GlobalRiskBoardProps {
   items: GlobalRiskBoardItem[]
+  /**
+   * 마커 클릭을 바깥으로 알린다(선택). 넘기면 카드 안쪽 상세 패널이 자동으로 펼쳐지지
+   * 않는다 — 같은 내용이 두 군데(카드 내부 + 바깥 소비처, 예: 구매팀 대시보드 우측
+   * "뉴스 상세" 탭) 뜨는 것을 막기 위함이다(tier1 이식, 2026-08-03).
+   */
+  onSelectItem?: (item: GlobalRiskBoardItem) => void
 }
 
 type ViewMode = 'event' | 'country'
@@ -161,7 +167,7 @@ function groupByCountry(items: LocatedItem[]): CountryGroup[] {
  * 사용 예:
  *   <GlobalRiskBoard items={items} />
  */
-export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
+export function GlobalRiskBoard({ items, onSelectItem }: GlobalRiskBoardProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('event')
   const [selected, setSelected] = useState<SelectedDetail | null>(null)
   const [panelExpanded, setPanelExpanded] = useState(false)
@@ -185,12 +191,14 @@ export function GlobalRiskBoard({ items }: GlobalRiskBoardProps) {
 
   function handleSelectEvent(item: LocatedItem) {
     setSelected({ label: item.material, events: [item] })
-    setPanelExpanded(true)
+    setPanelExpanded(!onSelectItem)
+    onSelectItem?.(item)
   }
 
   function handleSelectCountry(group: CountryGroup) {
     setSelected({ label: group.countryName, events: group.events })
-    setPanelExpanded(true)
+    setPanelExpanded(!onSelectItem)
+    onSelectItem?.(group.representative)
   }
 
   return (

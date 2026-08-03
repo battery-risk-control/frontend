@@ -112,16 +112,55 @@ export function fetchAiRecommendations(): AiRecommendation[] {
  * F3 분석(LLM)이 돌지 않아도 채워진다. 백엔드는 자재가 특정된 뉴스만 내려보내고, 그런 뉴스가
  * 아직 없으면 placeholder로 폴백한다 — 공급망과 무관한 기사가 속보 패널에 뜨지 않게 하기 위함.
  *
+ * `limit`(1~100, 생략 시 백엔드 기본 20)으로 건수만 조절한다. 마퀴는 작게, 목록은 크게 쓰지만
+ * **엔드포인트는 하나다** — 마퀴용 API를 따로 두면 상단 자막과 아래 목록이 서로 다른 기사를
+ * 가리키게 된다.
+ *
+ * `offset`으로 과거 기사까지 페이지를 넘길 수 있다.
+ *
  * 사용 예:
  *   const feed = await fetchPublicNewsFeed()
+ *   const top5 = await fetchPublicNewsFeed(5)
+ *   const page2 = await fetchPublicNewsFeed(5, 5)
  */
-export async function fetchPublicNewsFeed(): Promise<NewsFeedItem[]> {
+export async function fetchPublicNewsFeed(
+  limit?: number,
+  offset?: number,
+): Promise<NewsFeedItem[]> {
   if (!API_BASE_URL) {
     return fetchNewsFeed()
   }
-  const result = await fetchJson<NewsFeedItem[]>('/api/v1/public/news-feed')
+  const params = new URLSearchParams()
+  if (limit !== undefined) params.set('limit', String(limit))
+  // offset=0은 백엔드 기본값이라 붙이지 않는다 — 페이지를 넘기지 않는 호출(마퀴 등)의 URL을
+  // 그대로 둬야 기존 캐시·로그와 갈리지 않는다.
+  if (offset) params.set('offset', String(offset))
+  const query = params.toString()
+  const result = await fetchJson<NewsFeedItem[]>(
+    query ? `/api/v1/public/news-feed?${query}` : '/api/v1/public/news-feed',
+  )
   if ('error' in result) {
     throw new Error(result.message)
+  }
+  return result
+}
+
+/**
+ * 공급망 뉴스 속보 전체 건수. 목록이 마지막 페이지에서 "다음"을 잠그는 데 쓴다.
+ *
+ * mock 모드(`VITE_API_BASE_URL` 없음)에서는 넘길 페이지 자체가 없으므로 0을 돌려주고,
+ * 화면은 화살표를 숨긴다.
+ *
+ * 사용 예:
+ *   const total = await fetchPublicNewsFeedCount()
+ */
+export async function fetchPublicNewsFeedCount(): Promise<number> {
+  if (!API_BASE_URL) {
+    return 0
+  }
+  const result = await fetchJson<number>('/api/v1/public/news-feed/count')
+  if (typeof result !== 'number') {
+    throw new Error('뉴스 건수 조회에 실패했습니다.')
   }
   return result
 }

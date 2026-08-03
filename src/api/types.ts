@@ -124,6 +124,13 @@ export interface GlobalRiskBoardItem {
   country_code?: string
   country_name?: string
   coordinates?: { lat: number; lng: number }
+  /**
+   * 기사 원문 링크. 백엔드가 절대 http(s)가 아닌 값을 null로 바꿔 보내므로 존재 여부만 본다.
+   * 실데이터가 0건이라 placeholder로 폴백한 항목에는 없다(지어낸 링크를 만들지 않는다).
+   */
+  source_url?: string | null
+  /** 분석 생성 시각(ISO). placeholder 폴백 항목에는 없다. */
+  collected_at?: string | null
 }
 
 /** AI 기반 권고 조치 리스트. 공개 화면이므로 ERP 내부 상세(재고일수, 공급사명)는 노출하지 않는다. */
@@ -184,6 +191,13 @@ export interface MaterialPriceSummary {
 /** 실시간 뉴스 속보. risk_event_id(RISK-YYYY-MMDD-NNN)에서 날짜를 추출해 최신순으로 정렬한다. */
 export interface NewsFeedItem {
   risk_event_id: string
+  /**
+   * 수집 이벤트 id(`raw_events.id`). `risk_event_id`는 분석이 붙으면 UUID, 아니면 `RAW-{id}`라
+   * 분석이 붙은 기사에서는 이 숫자를 되찾을 수 없었다 — 그래서 "이 기사로 브리핑 생성"과
+   * 리스크 모니터링 사전 선택(`?eventId=`)이 동작하지 않았다.
+   * 수집 원본이 없는 placeholder 폴백 항목에는 없다.
+   */
+  event_id?: number | null
   date: string
   /** 수집 시각(UTC ISO-8601). date는 일 단위라 "3분 전" 같은 상대 표기에는 이 값을 쓴다. */
   collected_at: string
@@ -329,7 +343,12 @@ export interface MaterialRiskGaugeItem {
 export interface ScoreCardItem {
   label: string
   score: number
-  grade: RiskGrade
+  /**
+   * 없을 수 있다(선택) — tier1 `toScoreCards`는 이 두 점수(외부 리스크 종합/ERP 영향)를
+   * 등급으로 나누는 임계값이 백엔드에 없어 채우지 않는다. 기존(surin 이식) mock 값은
+   * 계속 채워서 넘긴다.
+   */
+  grade?: RiskGrade
   diffLabel?: string
 }
 
@@ -420,6 +439,31 @@ export interface ProcurementRiskAssessment {
   contract_gap_score: number | null
   risk_reasons: string[]
   review_passed: boolean | null
+  assessed_at: string
+  /** 이 등급을 만든 자재. 대분류에 자재가 여럿이면 그중 가장 심한 쪽 */
+  representative_material_id: string | null
+  /** 유효한 종합 평가가 나온 자재 수 */
+  valid_material_count: number
+  /** 평가가 시도된 자재 수. valid보다 크면 일부만 성공한 것 */
+  target_material_count: number
+  /** 카드에 접히기 전 자재별 결과 */
+  material_assessments: MaterialAssessment[]
+}
+
+/**
+ * 자재 1개의 평가 결과. 한 뉴스가 ERP 자재 여러 개로 펼쳐질 수 있어(리튬·흑연은 2개씩),
+ * 카드는 가장 심한 자재로 접히고 상세에서 전체를 펼쳐 보여준다.
+ *
+ * `valid=false`면 KG 게이트에서 조기 종료된 자재라 등급·점수가 null이고 사유만 `reasons`에 있다.
+ */
+export interface MaterialAssessment {
+  erp_material_id: string
+  valid: boolean
+  risk_level: string | null
+  risk_score: number | null
+  erp_exposure_score: number | null
+  contract_gap_score: number | null
+  reasons: string[]
   assessed_at: string
 }
 
@@ -740,6 +784,12 @@ export interface AiBriefingContext {
   external_signal_score: number | null
   generate_available: boolean
   generate_blocked_reason: string | null
+  /**
+   * 이 대상으로 이미 저장돼 있는 가장 최근 브리핑. 없으면 null.
+   * 앞 화면에서 넘어왔을 때 화면이 본문을 바로 채우는 데 쓴다 — 없으면 프리필만 보이고
+   * "구매 위험 브리핑" 칸이 비어, 이미 만들어 둔 브리핑을 두고 생성을 다시 누르게 된다.
+   */
+  latest_briefing_id: string | null
 }
 
 /** "ERP 노출 근거" 한 줄에 들어가는 값들. 의존도만 ERP Context에서 오고 나머지는 ERP Agent 결과다. */
@@ -823,6 +873,8 @@ export interface AiBriefingDetail {
 export interface AiBriefingListItem {
   briefing_id: string
   source_type: AiBriefingSource
+  /** 이 브리핑이 어떤 대상으로 만들어졌는지. 상세를 열 때 상단 "분석 대상"까지 함께 맞추는 데 쓴다. */
+  source_ref: string
   subject_title: string | null
   news_id: string
   procurement_risk_level: string
@@ -830,4 +882,142 @@ export interface AiBriefingListItem {
   composite: boolean
   review_passed: boolean | null
   created_at: string
+}
+
+/**
+ * "최신 뉴스" 목록·위험 지도 마커에서 고른 항목의 공통 모양(구매팀 대시보드 우측
+ * "뉴스 상세" 탭). 뉴스(`NewsFeedItem`)와 지도(`GlobalRiskBoardItem`)는 원천이 달라
+ * 필드가 겹치지 않아, 화면이 이 공통 모양으로 모아서 렌더한다. 지도에서 온 항목에는
+ * `headline_original`이 없다(공개 지도 응답에 번역 전 원문이 없다).
+ */
+export interface SelectedArticle {
+  /** 뉴스는 `risk_event_id`, 지도는 `risk_event_id`. 목록의 선택 표시에 쓴다. */
+  id: string
+  /**
+   * 수집 이벤트 id. 뉴스에서 고른 항목에만 있다(지도 응답에는 이 값이 없다).
+   * "이 기사로 브리핑 생성"과 리스크 모니터링 사전 선택이 요구하는 값이다.
+   */
+  event_id?: number | null
+  /** 어디서 골랐는지. 화면이 "선택 기사"와 "지도에서 선택"을 구분해 표기한다. */
+  origin: 'NEWS' | 'MAP'
+  headline: string
+  material: string
+  grade?: RiskGrade
+  confidence_label: ConfidenceLabel
+  country_code: string | null
+  country_name?: string | null
+  /** 뉴스에서 온 항목만 있다 */
+  collected_at?: string
+  headline_original?: string
+  translated?: boolean
+  url?: string | null
+}
+
+/**
+ * 구매팀 대시보드 우측 "주요 알림" 한 줄. 두 원천이 한 목록에 섞인다 — 뉴스(멀티에이전트까지
+ * 끝나 종합 위험도가 나온 건 중 심각·주의만)와 가격(변동성이 높은 자재를 `정보`로).
+ * `정보`는 `RiskGrade`에 없는 값이라 등급 배지를 재사용하지 않고 별도 표기한다.
+ */
+export interface DashboardAlert {
+  id: string
+  level: '심각' | '주의' | '정보'
+  /** 뉴스는 `08-03 00:51`(현지, 24시간), 가격은 `07-31`(거래일까지) — 원천마다 정밀도가 달라 문자열로 굳혀 넘긴다. */
+  timeLabel: string
+  title: string
+  /** 제목 아래 회색 보조 줄. 자재·국가나 등락·변동성처럼 "왜 떴는지"를 적는다. */
+  detail: string
+  /** 클릭 시 이동할 화면 */
+  href: string
+}
+
+/**
+ * 구매팀 대시보드 "원자재별 리스크 요약"(7종·최종 합성 점수) 1행. 평가가 없는 자재도 행이
+ * 온다(7종 고정) — 그 경우 점수·등급·`latest_assessment_id`가 전부 null이고, 화면은
+ * "평가 없음"으로 표시한다.
+ */
+export interface MaterialRiskSummaryItem {
+  material_category: string
+  material_name: string
+  /** 상위 3건 평균(0~100, 소수 1자리). 평가 0건이면 null */
+  risk_score: number | null
+  /** 상위 3건 중 최고 등급. 평가 0건이면 null */
+  risk_level: 'CRITICAL' | 'WARNING' | 'NORMAL' | null
+  /** 24시간 전까지 쌓인 평가만으로 같은 계산을 한 값. 그때 평가가 없었으면 null */
+  risk_score_24h_ago: number | null
+  /** `risk_score - risk_score_24h_ago`. 한쪽이라도 null이면 null이라 ▲▼를 그리지 않는다. */
+  score_delta: number | null
+  /** 완료 처리 대상. KPI 건수가 세는 "대분류별 최신 1건"이라 `top_news`의 상위 3건과는 기준이 다르다. */
+  latest_assessment_id: string | null
+  top_news: MaterialRiskNewsItem[]
+}
+
+/** `MaterialRiskSummaryItem`의 "주요 이슈" 1건. */
+export interface MaterialRiskNewsItem {
+  assessment_id: string
+  /** 번역본이 있으면 한국어, 없으면 영문 원문 */
+  title: string | null
+  score: number | null
+  level: 'CRITICAL' | 'WARNING' | 'NORMAL' | null
+  assessed_at: string | null
+}
+
+/**
+ * 공급사 현황 및 대체 공급사 추천. **좌우의 원천이 다르다** — `current`는 ERP 발주 실적이고
+ * `alternatives`는 분석이 돌 때 저장된 추천 결과라 서로 다른 시점을 가리킬 수 있다.
+ */
+export interface SupplierOverview {
+  /** 발주 금액(원화 환산) 1위 공급사. 발주가 없으면 null */
+  current: CurrentSupplier | null
+  /** 가장 최근 분석의 추천 3건. 추천이 저장된 분석이 없으면 빈 배열 */
+  alternatives: AlternativeSupplier[]
+}
+
+export interface CurrentSupplier {
+  supplier_code: string
+  supplier_name: string
+  country_code: string | null
+  supplier_status: string | null
+  risk_level: string | null
+  /** 전체 발주 금액 대비 비중(%). 고시 매매기준율로 원화 환산 후 계산된 값이다. */
+  dependency_ratio: number
+}
+
+export interface AlternativeSupplier {
+  rank_position: number
+  supplier_code: string
+  supplier_name: string
+  /** 추천 저장 시점이 아니라 `suppliers`의 **현재** 상태. 지금 발주 가능한지를 말해준다. */
+  supplier_status: string | null
+  risk_level: string | null
+  /** "왜 이 공급사인가". 이게 없으면 구매팀이 화면만 보고 판단할 수 없다. */
+  recommendation_reason: string | null
+  pros: string | null
+  cons: string | null
+}
+
+/**
+ * 1계층 구매팀 대시보드 상단 KPI 5칸. 모집단은 자재 대분류(8종)별 최신
+ * `procurement_risk_assessments` 1건이다 — 누적 이력이 아니라 현재 상태를 센다.
+ * 평균 점수와 `latest_assessed_at`은 평가가 0건이면 null이다.
+ */
+export interface PurchasingKpiSummary {
+  /** 평가가 존재하는 자재 대분류 수. 0이면 아래 건수·점수가 전부 비어 있다는 뜻이다. */
+  assessed_category_count: number
+  critical_count: number
+  warning_count: number
+  normal_count: number
+  /** ERP 노출도 평균(0~100). 평가 0건이면 null */
+  erp_exposure_score_avg: number | null
+  /** 외부신호 평균(0~100). 평가 0건이면 null */
+  external_signal_score_avg: number | null
+  /** reviewer 노드 검증을 통과한 브리핑 건수 */
+  verified_briefing_count: number
+  latest_assessed_at: string | null
+  /** 최근 24시간 원본 행 전체 기준. 위 필드들과 모집단이 다르므로 빼서 "전일 대비"로 쓰면 안 된다. */
+  critical_count_24h: number
+  warning_count_24h: number
+  erp_exposure_score_avg_24h: number | null
+  external_signal_score_avg_24h: number | null
+  /** 백엔드가 현재 항상 true로 하드코딩해 보낸다 — 화면에서 쓰지 않는다. */
+  mock: boolean
 }

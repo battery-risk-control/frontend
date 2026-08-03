@@ -3,6 +3,7 @@ import type { DownloadedFile } from './http'
 import type {
   ContractDocumentConfirmResult,
   ContractDocumentPreview,
+  ContractUploadOptions,
   ErpImportCommitResult,
   ErpImportConstraints,
   ErpImportPreview,
@@ -133,8 +134,27 @@ export async function downloadErpErrorCsv(
 }
 
 /**
+ * RAG 업로드 대상(공급사·자재) 선택지 조회.
+ *
+ * 계약 목록(`fetchContracts`)을 쓰지 않는 이유는, 이 화면이 **아직 계약이 없는 조합에 계약서를
+ * 처음 등록**하는 곳이기 때문이다. 계약 목록으로 고르게 하면 이미 계약이 있는 조합밖에 못 고른다.
+ *
+ * 사용 예:
+ *   const { suppliers, materials } = await fetchContractUploadOptions(accessToken)
+ */
+export async function fetchContractUploadOptions(accessToken: string): Promise<ContractUploadOptions> {
+  return unwrap(await fetchWithAuth<ContractUploadOptions>(
+    '/api/v1/documents/contracts/options',
+    accessToken,
+  ))
+}
+
+/**
  * RAG 계약 문서 분석. 파일 원문을 뽑아 계약 필드를 정규식으로 추출해 보여준다. **DB는 건드리지
  * 않는다.** 추출값은 틀릴 수 있으므로 화면이 수정 가능한 입력으로 띄운다.
+ *
+ * 응답의 `existing_contract_id`가 채워져 있으면 그 조합에 이미 계약이 있다는 뜻이다 —
+ * 데이터 관리 화면은 그때 승인을 막고 계약/RAG 화면으로 보낸다(신규 등록 전용이므로).
  *
  * 공급사·자재는 화면에서 고른 계약에서 가져온다 — 이 조합에 계약이 이미 있으면 새로 만들지
  * 않고 그 계약에 문서만 붙는다(`existing_contract_id`).

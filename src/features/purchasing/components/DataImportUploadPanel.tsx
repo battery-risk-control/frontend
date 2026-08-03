@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import type { ContractSummary, DataImportMode } from '../../../api/types'
+import type { ContractUploadOptions, DataImportMode } from '../../../api/types'
 import styles from './DataImportUploadPanel.module.css'
 
 /**
@@ -25,10 +25,15 @@ interface DataImportUploadPanelProps {
   onFilesChange: (files: File[]) => void
   /** 서버가 알려준 최대 파일 크기. 아직 못 받았으면 null. */
   maxFileSizeBytes: number | null
-  /** RAG 모드에서 문서를 붙일 계약 목록. ERP 모드에서는 쓰지 않는다. */
-  contracts: ContractSummary[]
-  selectedContractId: number | null
-  onSelectContract: (contractId: number | null) => void
+  /**
+   * RAG 모드에서 계약서를 붙일 대상. 계약이 아니라 **공급사·자재**를 고른다 — 이 화면은 아직
+   * 계약이 없는 조합에 계약서를 처음 등록하는 곳이라, 계약 목록으로는 그 조합을 고를 수 없다.
+   */
+  options: ContractUploadOptions | null
+  selectedSupplierId: string | null
+  selectedMaterialId: string | null
+  onSelectSupplier: (erpSupplierId: string | null) => void
+  onSelectMaterial: (erpMaterialId: string | null) => void
   onAnalyze: () => void
   isAnalyzing: boolean
   canAnalyze: boolean
@@ -40,9 +45,11 @@ export function DataImportUploadPanel({
   files,
   onFilesChange,
   maxFileSizeBytes,
-  contracts,
-  selectedContractId,
-  onSelectContract,
+  options,
+  selectedSupplierId,
+  selectedMaterialId,
+  onSelectSupplier,
+  onSelectMaterial,
   onAnalyze,
   isAnalyzing,
   canAnalyze,
@@ -96,8 +103,6 @@ export function DataImportUploadPanel({
     accept(Array.from(event.dataTransfer.files))
   }
 
-  const selectedContract = contracts.find((contract) => contract.contract_id === selectedContractId)
-
   return (
     <section className={styles.panel} aria-labelledby="upload-heading">
       <div className={styles.header}>
@@ -105,7 +110,7 @@ export function DataImportUploadPanel({
         <p className={styles.headerNote}>
           {mode === 'ERP'
             ? 'ERP 표준 CSV를 올려 DB에 반영합니다'
-            : '계약 문서를 올려 계약 정보와 RAG 검색 색인에 반영합니다'}
+            : '새 계약서를 등록하고 RAG 검색 색인에 임베딩합니다'}
         </p>
       </div>
 
@@ -125,27 +130,47 @@ export function DataImportUploadPanel({
       </div>
 
       {/*
-        RAG 문서는 어느 계약에 붙는지가 정해져야 분석할 수 있다(백엔드가 공급사·자재를 요구한다).
-        고른 계약에 이미 문서가 있으면 그 계약에 추가되고, 없으면 새 계약을 만든다.
+        백엔드는 계약이 아니라 공급사+자재를 받는다. 그 조합에 계약이 없으면 CTR-XXX를 새로
+        발급하고, 있으면 기존 계약에 문서를 붙인다. 이 화면은 앞의 경우(신규 등록)만 다루므로
+        계약 목록이 아니라 공급사·자재를 고르게 한다 — 계약 목록으로는 "아직 계약이 없는 조합"을
+        애초에 고를 수가 없다.
       */}
       {mode === 'RAG' && (
-        <label className={styles.contractPicker}>
-          <span className={styles.contractLabel}>대상 계약</span>
-          <select
-            className={styles.select}
-            value={selectedContractId ?? ''}
-            onChange={(event) => onSelectContract(event.target.value ? Number(event.target.value) : null)}
-          >
-            <option value="">계약을 선택하세요</option>
-            {contracts.map((contract) => (
-              <option key={contract.contract_id} value={contract.contract_id}>
-                {contract.erp_contract_id ?? `#${contract.contract_id}`} · {contract.supplier_name ?? '공급사 미상'} ·{' '}
-                {contract.material_name ?? '자재 미상'}
-                {contract.document_count === 0 ? ' (문서 없음)' : ''}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className={styles.targetPicker}>
+          <label className={styles.targetField}>
+            <span className={styles.contractLabel}>공급사</span>
+            <select
+              className={styles.select}
+              value={selectedSupplierId ?? ''}
+              onChange={(event) => onSelectSupplier(event.target.value || null)}
+            >
+              <option value="">공급사를 선택하세요</option>
+              {(options?.suppliers ?? []).map((supplier) => (
+                <option key={supplier.erp_supplier_id} value={supplier.erp_supplier_id}>
+                  {supplier.supplier_name} ({supplier.erp_supplier_id})
+                  {supplier.supplier_status !== 'ACTIVE' ? ` · ${supplier.supplier_status}` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className={styles.targetField}>
+            <span className={styles.contractLabel}>자재</span>
+            <select
+              className={styles.select}
+              value={selectedMaterialId ?? ''}
+              onChange={(event) => onSelectMaterial(event.target.value || null)}
+            >
+              <option value="">자재를 선택하세요</option>
+              {(options?.materials ?? []).map((material) => (
+                <option key={material.erp_material_id} value={material.erp_material_id}>
+                  {material.material_name} ({material.erp_material_id})
+                  {!material.active ? ' · 사용 중단' : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       )}
 
       <div
@@ -232,8 +257,8 @@ export function DataImportUploadPanel({
       )}
 
       <div className={styles.actions}>
-        {mode === 'RAG' && files.length > 0 && !selectedContract && (
-          <p className={styles.actionNote}>대상 계약을 먼저 선택해 주세요.</p>
+        {mode === 'RAG' && files.length > 0 && !(selectedSupplierId && selectedMaterialId) && (
+          <p className={styles.actionNote}>공급사와 자재를 먼저 선택해 주세요.</p>
         )}
         <button
           type="button"

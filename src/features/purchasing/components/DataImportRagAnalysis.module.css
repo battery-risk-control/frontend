@@ -128,3 +128,29 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* 신규 등록이 불가능한 조합임을 알리는 배너. 오류가 아니라 "여기서 할 일이 아니다"라는
+   안내라서, 빨간 채움 대신 왼쪽 띠로만 구분한다. */
+.blockedNotice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: rgb(217 58 63 / 8%);
+  border-left: 3px solid var(--color-risk-critical);
+  border-radius: var(--radius-sm);
+}
+
+.blockedTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-risk-critical);
+}
+
+.blockedBody {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  color: var(--color-text);
+}

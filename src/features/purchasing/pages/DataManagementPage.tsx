@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { fetchContracts } from '../../../api/contractRag.api'
 import {
   commitErpCsv,
   confirmContractDocument,
   downloadErpErrorCsv,
   downloadErpValidationReport,
+  fetchContractUploadOptions,
   fetchErpImportConstraints,
   isDataImportApiConfigured,
   previewContractDocument,
@@ -13,7 +13,7 @@ import {
 import type {
   ContractDocumentConfirmResult,
   ContractDocumentPreview,
-  ContractSummary,
+  ContractUploadOptions,
   DataImportMode,
   ErpImportCommitResult,
   ErpImportPreview,
@@ -78,8 +78,9 @@ export function DataManagementPage() {
 
   const [mode, setMode] = useState<DataImportMode>('ERP')
   const [files, setFiles] = useState<File[]>([])
-  const [contracts, setContracts] = useState<ContractSummary[]>([])
-  const [selectedContractId, setSelectedContractId] = useState<number | null>(null)
+  const [uploadOptions, setUploadOptions] = useState<ContractUploadOptions | null>(null)
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null)
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null)
   const [maxFileSizeBytes, setMaxFileSizeBytes] = useState<number | null>(null)
 
   const [erpPreview, setErpPreview] = useState<ErpImportPreview | null>(null)
@@ -128,23 +129,23 @@ export function DataManagementPage() {
     }
   }, [accessToken, apiConfigured])
 
-  // RAG 모드는 문서를 붙일 계약을 골라야 분석할 수 있다. 목록은 미적재 계약까지 포함해서
-  // 가져온다 — 문서가 0건인 신규 계약이야말로 첫 문서를 올릴 대상이다.
+  // RAG 모드는 계약서를 붙일 공급사·자재를 골라야 분석할 수 있다. 계약 목록이 아니라 공급사·자재
+  // 원본을 받는 이유는, 이 화면이 "아직 계약이 없는 조합"에 계약서를 처음 등록하는 곳이기 때문이다.
   useEffect(() => {
-    if (mode !== 'RAG' || !accessToken || !apiConfigured || contracts.length > 0) return
+    if (mode !== 'RAG' || !accessToken || !apiConfigured || uploadOptions !== null) return
     let cancelled = false
-    void fetchContracts(accessToken, true)
-      .then((rows) => {
-        if (!cancelled) setContracts(rows)
+    void fetchContractUploadOptions(accessToken)
+      .then((options) => {
+        if (!cancelled) setUploadOptions(options)
       })
       .catch(() => {
         // 목록을 못 불러와도 ERP 모드는 멀쩡하다. 화면 전체를 막지 않는다.
-        if (!cancelled) setError('계약 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
+        if (!cancelled) setError('공급사·자재 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
       })
     return () => {
       cancelled = true
     }
-  }, [mode, accessToken, apiConfigured, contracts.length])
+  }, [mode, accessToken, apiConfigured, uploadOptions])
 
   // 반영 중에 탭을 닫으면 트랜잭션 결과를 확인할 방법이 사라진다(응답을 받을 화면이 없어진다).
   // 브라우저 기본 경고를 띄워 한 번 붙잡는다.
@@ -162,7 +163,8 @@ export function DataManagementPage() {
     if (next === mode || isCommitting) return
     setMode(next)
     setFiles([])          // 받는 형식이 달라진다 — 남겨두면 CSV가 아닌 파일이 ERP 모드에 남는다
-    setSelectedContractId(null)
+    setSelectedSupplierId(null)
+    setSelectedMaterialId(null)
     setWasRejected(false)
     discardResults()
   }
@@ -174,17 +176,20 @@ export function DataManagementPage() {
     discardResults()
   }
 
-  function handleSelectContract(contractId: number | null) {
-    setSelectedContractId(contractId)
-    discardResults()   // 대상 계약이 바뀌면 이전 분석의 "반영 대상 계약"이 더는 맞지 않는다
+  // 대상 조합이 바뀌면 이전 분석의 "이 조합에 계약이 있는가" 판정이 더는 맞지 않는다.
+  function handleSelectSupplier(erpSupplierId: string | null) {
+    setSelectedSupplierId(erpSupplierId)
+    discardResults()
   }
 
-  const selectedContract = contracts.find((contract) => contract.contract_id === selectedContractId)
+  function handleSelectMaterial(erpMaterialId: string | null) {
+    setSelectedMaterialId(erpMaterialId)
+    discardResults()
+  }
+
   const canAnalyze = mode === 'ERP'
     ? files.length > 0
-    : files.length === 1
-      && Boolean(selectedContract?.erp_supplier_id)
-      && Boolean(selectedContract?.erp_material_id)
+    : files.length === 1 && Boolean(selectedSupplierId) && Boolean(selectedMaterialId)
 
   async function handleAnalyze() {
     if (!accessToken || !canAnalyze) return
@@ -202,10 +207,7 @@ export function DataManagementPage() {
         )
       } else {
         const preview = await previewContractDocument(
-          accessToken,
-          files[0],
-          selectedContract!.erp_supplier_id!,
-          selectedContract!.erp_material_id!,
+          accessToken, files[0], selectedSupplierId!, selectedMaterialId!,
         )
         setRagPreview(preview)
         setRagDraft({
@@ -232,15 +234,29 @@ export function DataManagementPage() {
     return previewedFiles.every((file, index) => file === files[index])
   }, [previewedFiles, files])
 
+  /**
+   * 이 조합에 이미 계약이 있다. 그러면 백엔드는 새 계약을 만들지 않고 <b>기존 계약에 문서를
+   * 붙인다</b> — 그건 "기존 계약 문서 추가"이고 계약/RAG 화면이 맡는 일이다. 데이터 관리는
+   * 신규 등록 전용이라 여기서 막는다.
+   */
+  const ragTargetAlreadyHasContract = ragPreview?.existing_contract_id != null
+
   const canCommit = mode === 'ERP'
     ? Boolean(erpPreview?.committable) && filesMatchPreview && !isCommitting && erpResult === null
-    : ragPreview !== null && !isCommitting && ragResult === null
+    : ragPreview !== null && !ragTargetAlreadyHasContract && !isCommitting && ragResult === null
 
   const blockedReason = commitBlockedReason()
 
   function commitBlockedReason(): string | null {
     if (canCommit || isCommitting) return null
-    if (mode === 'RAG') return ragPreview === null ? '먼저 내용 분석을 실행해 주세요.' : null
+    if (mode === 'RAG') {
+      if (ragPreview === null) return '먼저 내용 분석을 실행해 주세요.'
+      if (ragTargetAlreadyHasContract) {
+        return `이 공급사·자재 조합에는 이미 계약 ${ragPreview.existing_contract_id}이(가) 있습니다. `
+          + '데이터 관리는 신규 계약서 등록 전용입니다. 기존 계약에 문서를 추가하려면 계약/RAG 화면을 이용해 주세요.'
+      }
+      return null
+    }
     if (erpPreview === null) return '먼저 품질검사를 실행해 주세요.'
     if (!erpPreview.committable) return '오류를 수정한 후 다시 업로드해 주세요.'
     if (!filesMatchPreview) return '검사 후 파일이 바뀌었습니다. 품질검사를 다시 실행해 주세요.'
@@ -271,10 +287,7 @@ export function DataManagementPage() {
         setErpResult(await commitErpCsv(accessToken, files))
       } else {
         setRagResult(await confirmContractDocument(
-          accessToken,
-          files[0],
-          selectedContract!.erp_supplier_id!,
-          selectedContract!.erp_material_id!,
+          accessToken, files[0], selectedSupplierId!, selectedMaterialId!,
           {
             contractNumber: ragDraft.contractNumber,
             contractName: ragDraft.contractName,
@@ -295,7 +308,8 @@ export function DataManagementPage() {
   function handleConfirmReject() {
     setRejectOpen(false)
     setFiles([])
-    setSelectedContractId(null)
+    setSelectedSupplierId(null)
+    setSelectedMaterialId(null)
     discardResults()
     setWasRejected(true)
   }
@@ -333,7 +347,8 @@ export function DataManagementPage() {
   function handleStartOver() {
     if (isCommitting) return
     setFiles([])
-    setSelectedContractId(null)
+    setSelectedSupplierId(null)
+    setSelectedMaterialId(null)
     setWasRejected(false)
     discardResults()
   }
@@ -399,9 +414,11 @@ export function DataManagementPage() {
                 files={files}
                 onFilesChange={handleFilesChange}
                 maxFileSizeBytes={maxFileSizeBytes}
-                contracts={contracts}
-                selectedContractId={selectedContractId}
-                onSelectContract={handleSelectContract}
+                options={uploadOptions}
+                selectedSupplierId={selectedSupplierId}
+                selectedMaterialId={selectedMaterialId}
+                onSelectSupplier={handleSelectSupplier}
+                onSelectMaterial={handleSelectMaterial}
                 onAnalyze={handleAnalyze}
                 isAnalyzing={isAnalyzing}
                 canAnalyze={canAnalyze && apiConfigured && !isCommitting}

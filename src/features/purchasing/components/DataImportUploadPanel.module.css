@@ -58,10 +58,24 @@
   border-color: var(--color-primary);
 }
 
-.contractPicker {
+/* 공급사·자재를 나란히 둔다. 둘이 한 쌍으로 "대상 조합"을 이루므로 세로로 떼어놓지 않는다. */
+.targetPicker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.targetField {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .targetPicker {
+    grid-template-columns: 1fr;
+  }
 }
 
 .contractLabel {

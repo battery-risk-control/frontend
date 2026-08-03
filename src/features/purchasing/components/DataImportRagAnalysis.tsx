@@ -37,6 +37,23 @@ export function DataImportRagAnalysis({ preview, draft, onDraftChange }: DataImp
         <p className={styles.headerNote}>DB에는 아직 아무것도 반영되지 않았습니다</p>
       </div>
 
+      {/*
+        이 조합에 계약이 이미 있으면 백엔드는 새 계약을 만들지 않고 기존 계약에 문서를 붙인다.
+        그건 "기존 계약 문서 추가"라 계약/RAG 화면의 일이다. 여기서는 승인을 막고 이유를 밝힌다 —
+        버튼만 잠그고 이유를 안 쓰면 사용자는 무엇이 잘못됐는지 알 수 없다.
+      */}
+      {preview.existing_contract_id && (
+        <div className={styles.blockedNotice}>
+          <p className={styles.blockedTitle}>이미 계약이 있는 조합입니다</p>
+          <p className={styles.blockedBody}>
+            {preview.erp_supplier_id} · {preview.erp_material_id} 에는 계약{' '}
+            <strong>{preview.existing_contract_id}</strong>이(가) 이미 등록돼 있습니다.
+            데이터 관리는 <strong>신규 계약서 등록 전용</strong>이라 여기서는 반영할 수 없습니다.
+            기존 계약에 문서를 추가하려면 <strong>계약/RAG</strong> 화면을 이용해 주세요.
+          </p>
+        </div>
+      )}
+
       <dl className={styles.metaGrid}>
         <div className={styles.metaItem}>
           <dt className={styles.metaLabel}>파일</dt>
@@ -47,11 +64,11 @@ export function DataImportRagAnalysis({ preview, draft, onDraftChange }: DataImp
           <dd className={styles.metaValue}>{preview.erp_supplier_id} · {preview.erp_material_id}</dd>
         </div>
         <div className={styles.metaItem}>
-          <dt className={styles.metaLabel}>반영 대상 계약</dt>
+          <dt className={styles.metaLabel}>등록 대상 계약</dt>
           <dd className={styles.metaValue}>
             {preview.existing_contract_id
-              ? `${preview.existing_contract_id} (기존 계약에 문서 추가)`
-              : `${preview.expected_new_contract_id ?? '자동 발급'} (신규 계약 생성)`}
+              ? `${preview.existing_contract_id} · 이미 존재`
+              : `${preview.expected_new_contract_id ?? '자동 발급'} · 신규 발급 예정`}
           </dd>
         </div>
         <div className={styles.metaItem}>

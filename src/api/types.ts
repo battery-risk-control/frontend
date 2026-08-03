@@ -1224,6 +1224,33 @@ export interface ErpImportConstraints {
   allowed_extensions: string[]
 }
 
+export interface ContractSupplierOption {
+  erp_supplier_id: string
+  supplier_name: string
+  country_code: string
+  /** ACTIVE | SUSPENDED 등. 중단된 공급사도 목록에 있으므로 화면이 구분해 보여준다. */
+  supplier_status: string
+}
+
+export interface ContractMaterialOption {
+  erp_material_id: string
+  material_name: string
+  material_category: string
+  active: boolean
+}
+
+/**
+ * RAG 업로드 대상 선택지.
+ *
+ * **계약 목록이 아니라 공급사·자재 목록인 이유:** 데이터 관리 화면은 아직 계약이 없는 조합에
+ * 계약서를 **처음 등록**하는 곳이다. 계약 목록으로 고르게 하면 이미 계약이 있는 조합밖에 못 골라
+ * 신규 등록 자체가 불가능해진다. 기존 계약에 문서를 더하는 일은 계약/RAG 화면이 맡는다.
+ */
+export interface ContractUploadOptions {
+  suppliers: ContractSupplierOption[]
+  materials: ContractMaterialOption[]
+}
+
 /**
  * RAG 모드 분석 결과. 계약 필드는 파일 원문에서 정규식으로 추출한 값이라 **틀릴 수 있다** —
  * 화면이 수정 가능한 입력으로 보여주고, 사용자가 확인한 값으로 반영한다.

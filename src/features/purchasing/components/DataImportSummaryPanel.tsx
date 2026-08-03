@@ -120,9 +120,11 @@ export function DataImportSummaryPanel({
           <h2 className={styles.cardHeading}>4. 승인 또는 거부</h2>
           <ul className={styles.summaryList}>
             <li className={styles.summaryItem}>
-              <span className={styles.summaryLabel}>계약</span>
+              <span className={styles.summaryLabel}>신규 계약</span>
               <span className={styles.summaryCount}>
-                {ragPreview.existing_contract_id ? '기존 유지' : '신규 1건'}
+                {ragPreview.existing_contract_id
+                  ? '불가 (이미 존재)'
+                  : ragPreview.expected_new_contract_id ?? '자동 발급'}
               </span>
             </li>
             <li className={styles.summaryItem}>
@@ -131,9 +133,12 @@ export function DataImportSummaryPanel({
             </li>
             <li className={styles.summaryItem}>
               <span className={styles.summaryLabel}>RAG 색인</span>
-              <span className={styles.summaryCount}>{ragPreview.text_extracted ? '적재' : '원문 미확인'}</span>
+              <span className={styles.summaryCount}>{ragPreview.text_extracted ? '신규 임베딩' : '원문 미확인'}</span>
             </li>
           </ul>
+          <p className={ragPreview.existing_contract_id ? styles.verdictBlocked : styles.verdictOk}>
+            최종 판정 · {ragPreview.existing_contract_id ? '신규 등록 불가' : '신규 등록 가능'}
+          </p>
         </section>
       )}
 

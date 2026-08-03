@@ -1,9 +1,12 @@
-import { fetchWithAuth } from './http'
+import { downloadGetWithAuth, fetchWithAuth } from './http'
+import type { DownloadedFile, FetchJsonError } from './http'
 import type {
   AiBriefingContext,
   AiBriefingDetail,
   AiBriefingListItem,
+  AiBriefingListQuery,
   AiBriefingSource,
+  ApiPage,
 } from './types'
 
 /**
@@ -84,19 +87,58 @@ export async function generateAiBriefing(
 }
 
 /**
- * 우측 하단 "최근 브리핑". 누가 만들었든 팀 전체가 같은 목록을 본다.
+ * 우측 하단 "최근 브리핑" 한 페이지. 누가 만들었든 팀 전체가 같은 목록을 본다.
+ *
+ * **필터와 페이징을 함께 서버로 보낸다.** 받아온 배열을 화면에서 거르면 서버가 이미 자른 한
+ * 페이지 안에서만 걸러져, 조건에 맞는데 뒷 페이지에 있는 브리핑이 통째로 사라진다.
+ *
+ * 값이 `null`/`undefined`인 축은 쿼리에서 아예 뺀다 — 빈 문자열을 실어 보내면 서버가 "전체"로
+ * 받아주긴 하지만, URL만 보고 무엇으로 걸렀는지 읽을 수 없게 된다.
  *
  * 사용 예:
- *   const recent = await fetchRecentAiBriefings(accessToken, 5)
+ *   const page = await fetchRecentAiBriefings(accessToken, { source: 'NEWS', days: 7, page: 0 })
  */
 export async function fetchRecentAiBriefings(
   accessToken: string,
-  limit = 5,
-): Promise<AiBriefingListItem[]> {
-  return unwrap(await fetchWithAuth<AiBriefingListItem[]>(
-    `/api/v1/ai-briefing/briefings?limit=${limit}`,
+  query: AiBriefingListQuery = {},
+): Promise<ApiPage<AiBriefingListItem>> {
+  const params = new URLSearchParams()
+  if (query.source) params.set('source', query.source)
+  if (query.level) params.set('level', query.level)
+  if (query.reviewStatus) params.set('reviewStatus', query.reviewStatus)
+  if (query.days != null) params.set('days', String(query.days))
+  params.set('page', String(query.page ?? 0))
+  params.set('size', String(query.size ?? 5))
+
+  return unwrap(await fetchWithAuth<ApiPage<AiBriefingListItem>>(
+    `/api/v1/ai-briefing/briefings?${params.toString()}`,
     accessToken,
   ))
+}
+
+/**
+ * "다운로드" — 저장된 브리핑을 PDF로 받는다.
+ *
+ * **서버가 LLM을 다시 부르지 않는다.** 이미 저장된 그 행을 그리는 일이라 화면에서 읽은 내용과
+ * 문서가 어긋나지 않고, 같은 브리핑을 몇 번을 받아도 같은 파일이 나온다.
+ *
+ * 파일명은 서버의 `Content-Disposition`에서 온다 — 여기 넘기는 이름은 헤더가 없을 때만 쓰는
+ * 최후의 값이다.
+ *
+ * 사용 예:
+ *   const file = await downloadAiBriefingReport(accessToken, briefingId)
+ *   if ('error' in file) setError(file.message)
+ *   else saveBlob(file.blob, file.fileName)
+ */
+export async function downloadAiBriefingReport(
+  accessToken: string,
+  briefingId: string,
+): Promise<DownloadedFile | FetchJsonError> {
+  return downloadGetWithAuth(
+    `/api/v1/ai-briefing/briefings/${encodeURIComponent(briefingId)}/report.pdf`,
+    accessToken,
+    'ai-briefing.pdf',
+  )
 }
 
 /**

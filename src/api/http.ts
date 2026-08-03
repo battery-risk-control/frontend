@@ -116,12 +116,48 @@ export async function downloadWithAuth(
   body: FormData,
   fallbackFileName: string,
 ): Promise<DownloadedFile | FetchJsonError> {
-  const res = await fetch(`${API_BASE_URL ?? ''}${path}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body,
-  })
+  return toDownloadedFile(
+    await fetch(`${API_BASE_URL ?? ''}${path}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body,
+    }),
+    fallbackFileName,
+  )
+}
 
+/**
+ * 파일을 **GET으로** 받아온다. 올릴 것 없이 id 하나로 받는 문서용이다(브리핑 PDF 등).
+ *
+ * `downloadWithAuth`와 응답 처리는 완전히 같고 요청 모양만 다르다 — 판정을 한 곳
+ * (`toDownloadedFile`)에 두는 게 핵심이다. 두 벌로 두면 한쪽만 Content-Type 검사를 빠뜨려도
+ * 티가 나지 않는데, 그때 사용자는 열리지 않는 PDF를 손에 쥔다.
+ *
+ * 사용 예:
+ *   const file = await downloadGetWithAuth(path, token, 'ai-briefing.pdf')
+ *   if ('error' in file) { ... } else { saveBlob(file.blob, file.fileName) }
+ */
+export async function downloadGetWithAuth(
+  path: string,
+  token: string,
+  fallbackFileName: string,
+): Promise<DownloadedFile | FetchJsonError> {
+  return toDownloadedFile(
+    await fetch(`${API_BASE_URL ?? ''}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+    fallbackFileName,
+  )
+}
+
+/**
+ * 파일 응답을 해석한다. 성공하면 바이너리가, 실패하면 평소의 JSON 오류 봉투가 오므로
+ * Content-Type을 보고 갈라야 한다.
+ */
+async function toDownloadedFile(
+  res: Response,
+  fallbackFileName: string,
+): Promise<DownloadedFile | FetchJsonError> {
   const contentType = res.headers.get('Content-Type') ?? ''
   if (!res.ok || contentType.includes('application/json')) {
     try {
@@ -129,7 +165,7 @@ export async function downloadWithAuth(
       return { error: payload.error.code, message: payload.error.message }
     } catch {
       // 서버가 죽었거나 프록시가 HTML 오류 페이지를 돌려준 경우 — 본문이 JSON이 아니다.
-      return { error: 'DOWNLOAD_FAILED', message: `보고서를 받지 못했습니다 (HTTP ${res.status}).` }
+      return { error: 'DOWNLOAD_FAILED', message: `파일을 받지 못했습니다 (HTTP ${res.status}).` }
     }
   }
 

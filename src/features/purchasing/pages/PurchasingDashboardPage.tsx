@@ -380,9 +380,11 @@ export function PurchasingDashboardPage() {
       .finally(() => {
         if (!cancelled) setMaterialsLoading(false)
       })
-    fetchRecentAiBriefings(accessToken, RECENT_BRIEFING_LIMIT)
-      .then((items) => {
-        if (!cancelled) setBriefings(items)
+    // 이 화면은 "최근 몇 건"만 보여주는 사이드 패널이라 필터 없이 첫 페이지만 받는다.
+    // 필터·페이징은 AI 브리핑 화면의 몫이다.
+    fetchRecentAiBriefings(accessToken, { size: RECENT_BRIEFING_LIMIT })
+      .then((page) => {
+        if (!cancelled) setBriefings(page.content)
       })
       .catch((err) => {
         console.error('최근 브리핑 조회 실패', err)

@@ -35,7 +35,7 @@ function toDeltaLabel(delta: number | null): { text: string; className: string }
 }
 
 /**
- * 원자재별 리스크 요약 — 배터리 원자재 7종을 항상 같은 자리에 세우고, 각 자재의 **최종 합성
+ * 원자재별 리스크 점수 — 배터리 원자재 7종을 항상 같은 자리에 세우고, 각 자재의 **최종 합성
  * 점수**(외부신호 + ERP노출 + 계약공백)를 리스크 지수로 보여준다.
  *
  * 점수는 그 자재 뉴스 중 **상위 3건의 평균**, 등급은 그 3건 중 **최고**다. 최신 1건만 보면
@@ -62,7 +62,7 @@ export function MaterialRiskSummaryTable({
       /* `material-risk-summary-heading`은 아래 게이지 행의 MaterialRiskSummaryCard가 이미
          쓰고 있다. 같은 id가 문서에 둘이면 PageSectionDots가 먼저 찾은 쪽으로만 이동한다. */
       headingId="material-risk-composite-heading"
-      title="원자재별 리스크 요약"
+      title="원자재별 리스크 점수"
       maxBodyHeight={420}
     >
       <p className={styles.caption}>

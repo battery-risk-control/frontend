@@ -59,7 +59,7 @@ export async function fetchPurchasingKpiSummary(accessToken: string): Promise<Pu
 }
 
 /**
- * 원자재별 리스크 요약 7종(최종 합성 점수 기준).
+ * 원자재별 리스크 점수 7종(최종 합성 점수 기준).
  *
  * 평가가 없는 자재도 행이 오므로 화면이 7줄을 항상 같은 자리에 그린다 — 목록을 프론트에서
  * 만들지 않는 이유는, 자재를 추가할 때 백엔드와 화면 두 곳을 고쳐야 하는 상태를 만들지

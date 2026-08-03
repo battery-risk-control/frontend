@@ -98,7 +98,7 @@ const SECTION_DOTS_SECTIONS = [
   { id: '원자재 가격 추이', headingId: 'material-price-detail-heading' },
   // 이름이 비슷한 두 섹션이 나란히 있다. 위쪽은 최종 합성 점수(7종 표), 아래쪽은 ERP 노출도
   // 게이지다 — 점수의 뜻이 달라 도트에서도 구분되게 라벨을 나눴다.
-  { id: '원자재별 리스크 요약', headingId: 'material-risk-composite-heading' },
+  { id: '원자재별 리스크 점수', headingId: 'material-risk-composite-heading' },
   { id: '원자재 리스크 개요', headingId: 'material-risk-summary-heading' },
   { id: '원자재 공급사 리스크 현황', headingId: 'material-risk-heading' },
   { id: 'ERP 영향', headingId: 'erp-impact-heading' },

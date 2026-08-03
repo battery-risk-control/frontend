@@ -107,7 +107,7 @@ function NewsDetail({ news }: { news: SelectedArticle | null }) {
       </p>
     )
   }
-  const briefingRef = toNewsEventRef(news.id)
+  const briefingRef = toNewsEventRef(news)
   return (
     <div className={styles.newsDetail}>
       <span className={styles.detailCaption}>
@@ -151,15 +151,14 @@ function NewsDetail({ news }: { news: SelectedArticle | null }) {
           </a>
         )}
         {briefingRef === null ? (
-          /* 이 기사의 `risk_event_id`가 분석 UUID라 브리핑이 받는 숫자 ref를 되찾을 수 없다
-             (`toNewsEventRef` 주석 참고). 눌러도 400이 나는 버튼을 두느니 이벤트를 고를 수 있는
-             화면으로 보낸다. */
+          /* ref를 만들 수 없는 건 수집 원본이 없는 placeholder 폴백뿐이다. 그 항목은 실제
+             기사가 아니라 브리핑을 만들 대상이 없으므로 목록 화면으로만 보낸다. */
           <Link to="/purchasing/risk-monitoring" className={styles.secondaryAction}>
             리스크 모니터링에서 브리핑 생성
           </Link>
         ) : (
           <Link
-            to={`/purchasing/ai-briefing?source=NEWS&ref=${briefingRef}`}
+            to={`/purchasing/ai-briefing?source=NEWS&ref=${encodeURIComponent(briefingRef)}`}
             className={styles.secondaryAction}
           >
             이 기사로 브리핑 생성

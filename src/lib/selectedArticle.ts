@@ -9,6 +9,7 @@ import type { GlobalRiskBoardItem, NewsFeedItem, SelectedArticle } from '../api/
 export function fromNewsFeedItem(item: NewsFeedItem): SelectedArticle {
   return {
     id: item.risk_event_id,
+    event_id: item.event_id ?? null,
     origin: 'NEWS',
     headline: item.headline,
     material: item.material,

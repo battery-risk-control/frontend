@@ -152,6 +152,11 @@ export interface GlobalRiskBoardItem {
 export interface SelectedArticle {
   /** 뉴스는 `risk_event_id`, 지도는 `risk_event_id`. 목록의 선택 표시에 쓴다. */
   id: string
+  /**
+   * 수집 이벤트 id. 뉴스에서 고른 항목에만 있다(지도 응답에는 이 값이 없다).
+   * "이 기사로 브리핑 생성"과 리스크 모니터링 사전 선택이 요구하는 값이다.
+   */
+  event_id?: number | null
   /** 어디서 골랐는지. 화면이 "선택 기사"와 "지도에서 선택"을 구분해 표기한다. */
   origin: 'NEWS' | 'MAP'
   headline: string
@@ -253,6 +258,13 @@ export interface MaterialPriceSummary {
 /** 실시간 뉴스 속보. risk_event_id(RISK-YYYY-MMDD-NNN)에서 날짜를 추출해 최신순으로 정렬한다. */
 export interface NewsFeedItem {
   risk_event_id: string
+  /**
+   * 수집 이벤트 id(`raw_events.id`). `risk_event_id`는 분석이 붙으면 UUID, 아니면 `RAW-{id}`라
+   * 분석이 붙은 기사에서는 이 숫자를 되찾을 수 없었다 — 그래서 "이 기사로 브리핑 생성"과
+   * 리스크 모니터링 사전 선택(`?eventId=`)이 동작하지 않았다.
+   * 수집 원본이 없는 placeholder 폴백 항목에는 없다.
+   */
+  event_id?: number | null
   date: string
   /** 수집 시각(UTC ISO-8601). date는 일 단위라 "3분 전" 같은 상대 표기에는 이 값을 쓴다. */
   collected_at: string
@@ -409,7 +421,7 @@ export interface ScoreCardItem {
 }
 
 /**
- * 원자재별 리스크 요약 한 줄
+ * 원자재별 리스크 점수 한 줄
  * (`GET /api/v1/purchasing-dashboard/material-risk-summary`).
  *
  * **`MaterialRiskItem`과 점수의 뜻이 다르다.** 저쪽은 ERP 노출도 단독 점수고, 이건
@@ -969,6 +981,12 @@ export interface AiBriefingContext {
   external_signal_score: number | null
   generate_available: boolean
   generate_blocked_reason: string | null
+  /**
+   * 이 대상으로 이미 저장돼 있는 가장 최근 브리핑. 없으면 null.
+   * 앞 화면에서 넘어왔을 때 화면이 본문을 바로 채우는 데 쓴다 — 없으면 프리필만 보이고
+   * "구매 위험 브리핑" 칸이 비어, 이미 만들어 둔 브리핑을 두고 생성을 다시 누르게 된다.
+   */
+  latest_briefing_id: string | null
 }
 
 /** "ERP 노출 근거" 한 줄에 들어가는 값들. 의존도만 ERP Context에서 오고 나머지는 ERP Agent 결과다. */

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   fetchContractDetail,
@@ -19,12 +19,56 @@ import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
+import { hasMeaningfulPageNumbers } from '../../../lib/clausePages'
 import { useAuthState } from '../../../lib/useAuthState'
 import { PURCHASING_SIDE_NAV_ITEMS } from '../../../lib/purchasingNav'
 import styles from './ContractRagPage.module.css'
 
-const DEFAULT_QUERY = '납기 지연과 공급 중단 시 적용되는 계약 조항'
-const TOP_K = 5
+/**
+ * 검색창 placeholder이자 빈 결과 화면의 "예시" 버튼 문구.
+ *
+ * <p>예전에는 이 문장이 `query`의 <b>초기값</b>이라 검색창에 그대로 박혀 있었다. 처음 한 번은
+ * 편하지만 그다음부터는 매번 전체 선택 후 지워야 해서, 자주 쓰는 사람일수록 손해였다.
+ */
+const EXAMPLE_QUERY = '납기 지연과 공급 중단 시 적용되는 계약 조항'
+/**
+ * 백엔드에서 받아올 청크 수.
+ *
+ * <p>화면에 세울 조항은 {@link DISPLAY_LIMIT}개뿐인데 그보다 넉넉히 받는 이유: 적재된 계약서
+ * 30개가 **같은 템플릿으로 만들어져** 있어서, 예컨대 "제5조 불가항력"은 계약이 달라도 본문이
+ * 글자 하나까지 같다. 5건만 받으면 그 5자리를 같은 조항 하나가 전부 먹어 검색이 고장 난 것처럼
+ * 보인다(실제로 그랬다). 넉넉히 받아 합친 뒤 서로 다른 조항으로 자리를 채운다.
+ */
+const SEARCH_TOP_K = 20
+
+/** 합친 뒤 화면에 세울 조항 수. */
+const DISPLAY_LIMIT = 5
+
+/**
+ * 우측 패널의 처리 결과 안내.
+ *
+ * <p>예전에는 문자열 하나를 `.warning`으로 그렸다. 업로드가 성공해도 경고 박스가 떠서
+ * "뭔가 잘못됐나" 싶었고, 파일명·청크 수·다음 할 일이 한 문단에 뭉쳐 있어 읽히지도 않았다.
+ * 성패를 색으로 가르고 제목과 본문을 나눈다.
+ */
+interface PanelNotice {
+  tone: 'success' | 'info' | 'warning'
+  title: string
+  detail?: string
+}
+
+const NOTICE_TONE_CLASS: Record<PanelNotice['tone'], string> = {
+  success: styles.success,
+  info: styles.info,
+  warning: styles.warning,
+}
+
+/** 문서 적재 상태 → 한글. 정상(COMPLETED)일 때는 아예 표시하지 않으므로 여기 없어도 된다. */
+const DOCUMENT_STATUS_LABEL: Record<string, string> = {
+  PENDING: '적재 대기',
+  PROCESSING: '적재 중',
+  FAILED: '적재 실패',
+}
 
 /** 백엔드 DocumentService가 받는 형식·크기와 같은 값. 어긋나면 화면이 통과시킨 파일이 서버에서 막힌다. */
 const ALLOWED_EXTENSIONS = ['.pdf', '.txt']
@@ -50,7 +94,7 @@ export function ContractRagPage() {
   const [contracts, setContracts] = useState<ContractSummary[]>([])
   /** 계약 목록 조회 중인지. select는 자리표시자를 넣을 데가 없어 안내 문구와 비활성으로 알린다. */
   const [contractsLoading, setContractsLoading] = useState(true)
-  const [query, setQuery] = useState(DEFAULT_QUERY)
+  const [query, setQuery] = useState('')
   const [scopeContractId, setScopeContractId] = useState<number | null>(null)
   const [search, setSearch] = useState<ContractClauseSearchResult | null>(null)
   const [selectedClause, setSelectedClause] = useState<ContractClauseHit | null>(null)
@@ -61,7 +105,7 @@ export function ContractRagPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [panelError, setPanelError] = useState<string | null>(null)
-  const [panelNotice, setPanelNotice] = useState<string | null>(null)
+  const [panelNotice, setPanelNotice] = useState<PanelNotice | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const apiConfigured = isContractRagApiConfigured()
@@ -103,7 +147,7 @@ export function ContractRagPage() {
     try {
       const result = await searchClauses(accessToken, query.trim(), {
         contractId: scopeContractId,
-        topK: TOP_K,
+        topK: SEARCH_TOP_K,
       })
       setSearch(result)
       // 첫 결과의 계약을 우측 패널에 미리 띄운다 — 사진처럼 검색 직후에도 우측이 비지 않게.
@@ -143,11 +187,24 @@ export function ContractRagPage() {
   }
 
   /**
-   * 계약 선택. 검색 범위를 좁히는 것과 **우측 패널을 여는 것**을 한 번에 한다 —
-   * 검색 결과가 없어도(=문서 미적재 계약이어도) 계약 상세로 들어가 첫 문서를 올릴 수 있어야 한다.
+   * 검색 범위만 바꾼다. 결과는 다음 검색부터 반영된다 — 필터를 건드렸다고 이미 받아둔 결과를
+   * 지우면, 범위를 이리저리 바꿔 보는 동안 화면이 계속 비어 버린다.
+   *
+   * <p>예전에는 이 드롭다운이 **우측 패널을 여는 일까지** 했다. 검색 필터를 만졌는데 오른쪽
+   * 문서 패널이 통째로 바뀌니 무슨 일이 일어난 건지 알 수 없었다. 그쪽은 이제 우측 패널이
+   * 자기 선택기로 직접 한다({@link handleOpenContract}).
    */
-  function handleSelectContract(contractId: number | null) {
+  function handleChangeScope(contractId: number | null) {
     setScopeContractId(contractId)
+  }
+
+  /**
+   * 우측 "계약 문서" 패널을 연다.
+   *
+   * <p>검색을 거치지 않는 진입로가 반드시 필요하다 — 문서가 0건인 계약은 검색에 걸릴 수가
+   * 없어서, 이 선택기가 없으면 첫 계약서를 올릴 방법이 아예 사라진다.
+   */
+  function handleOpenContract(contractId: number | null) {
     setPanelNotice(null)
     setSelectedClause(null)
     if (contractId === null) {
@@ -172,16 +229,33 @@ export function ContractRagPage() {
         const result = await uploadContractDocument(
           accessToken, detail.contract.contract_id, stagedFile)
         setPanelNotice(result.duplicate
-          ? `이미 적재된 문서입니다 (${result.original_file_name}). 다시 임베딩하지 않았습니다.`
-          : `업로드 완료 — ${result.original_file_name} · ${result.chunk_count}개 청크 적재.`
-            + ' 새 조항을 찾으려면 "계약서 검색"을 다시 누르세요.')
+          ? {
+              tone: 'info',
+              title: '이미 적재된 문서입니다',
+              detail: `${result.original_file_name} — 내용이 같아 다시 임베딩하지 않았습니다.`,
+            }
+          : {
+              tone: 'success',
+              title: `업로드 완료 · ${result.chunk_count}개 청크 적재`,
+              detail: `${result.original_file_name} — 새 조항을 찾으려면 "조항 검색"을 다시 누르세요.`,
+            })
         setStagedFile(null)
         if (fileInputRef.current) fileInputRef.current.value = ''
       } else {
         const result = await reprocessContractDocuments(
           accessToken, detail.contract.contract_id)
-        setPanelNotice(
-          `재처리 완료 — 성공 ${result.success_count}건 · 실패 ${result.failed_count}건`)
+        // 실패가 하나라도 있으면 성공 색으로 그리지 않는다 — 초록 상자에 "실패 2건"은 안 읽힌다.
+        setPanelNotice(result.failed_count > 0
+          ? {
+              tone: 'warning',
+              title: `재처리 완료 — 실패 ${result.failed_count}건`,
+              detail: `성공 ${result.success_count}건. 실패한 문서는 다시 올려야 검색에 걸립니다.`,
+            }
+          : {
+              tone: 'success',
+              title: `재처리 완료 · ${result.success_count}건`,
+              detail: '새 조항을 찾으려면 "조항 검색"을 다시 누르세요.',
+            })
       }
       // 상세뿐 아니라 목록도 다시 읽는다 — 목록에 청크 수·"미적재" 표시가 붙어 있어서
       // 여기서 갱신하지 않으면 방금 올린 계약이 계속 "미적재"로 남는다.
@@ -243,6 +317,31 @@ export function ContractRagPage() {
     stageFile(event.dataTransfer.files?.[0] ?? null)
   }
 
+  /**
+   * 검색 결과 제목의 범위 표기. 예전에는 좁혀 검색하면 `contract_id 17`이 그대로 떴는데,
+   * 그건 DB PK라 화면에서 할 일이 없다. 목록에서 사람이 쓰는 식별자를 찾아 쓴다.
+   */
+  function scopeLabel(result: ContractClauseSearchResult): string {
+    if (result.scope === 'all') return '전체 계약'
+    const scoped = contracts.find((contract) => contract.contract_id === result.contract_id)
+    return scoped?.erp_contract_id ?? scoped?.contract_name ?? '선택한 계약'
+  }
+
+  /** 이번 검색이 실제로 훑은 계약. 전체 검색이었으면 null이다. */
+  const searchedContract =
+    search && search.scope === 'filtered'
+      ? contracts.find((contract) => contract.contract_id === search.contract_id)
+      : null
+
+  /** 같은 본문을 한 장으로 합친 뒤 화면에 세울 만큼만 남긴 목록. */
+  const clauses = useMemo(
+    () => (search ? mergeIdenticalClauses(search.results).slice(0, DISPLAY_LIMIT) : []),
+    [search],
+  )
+
+  // 적재된 계약서가 전부 txt면 페이지가 늘 1이라 알려주는 게 없다. 갈릴 때만 보여준다.
+  const showPages = hasMeaningfulPageNumbers(clauses.map((clause) => clause.hit.page_number))
+
   return (
     <div className={styles.page}>
       <Header />
@@ -257,48 +356,61 @@ export function ContractRagPage() {
             </p>
           </div>
 
+          {/*
+            위: 어디서 찾을지(검색 범위) / 아래: 무엇을 찾을지(검색어) 두 줄이다.
+            셋을 한 줄에 두고 flex-wrap으로 흘리면 화면 폭에 따라 드롭다운이 내려갔다 버튼이
+            내려갔다 해서 배치가 예측되지 않았고, 드롭다운은 폭에 눌려 계약명이 잘렸다
+            (`CTR-016 · Synthetic Graphite Supply Agreement 1` 처럼 길다).
+          */}
           <section className={styles.searchBar} aria-label="계약 조항 검색">
-            <input
-              type="search"
-              className={styles.searchInput}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') void handleSearch()
-              }}
-              placeholder={DEFAULT_QUERY}
-              aria-label="검색어"
-            />
             <label className={styles.scopeSelect}>
-              <span>계약 선택</span>
+              {/* "계약 선택"은 무엇을 고르는 건지만 말하고 무슨 일이 일어나는지는 안 말한다. */}
+              <span>검색 범위</span>
               <select
                 value={scopeContractId ?? ''}
                 disabled={contractsLoading}
                 onChange={(event) =>
-                  handleSelectContract(event.target.value ? Number(event.target.value) : null)
+                  handleChangeScope(event.target.value ? Number(event.target.value) : null)
                 }
               >
                 {/* 목록이 오기 전에 "전체 계약"만 띄우면 계약이 하나도 없는 것처럼 읽힌다.
                     select에는 자리표시자를 넣을 수 없어 문구와 비활성으로 대신한다. */}
                 <option value="">{contractsLoading ? '계약 목록 불러오는 중…' : '전체 계약'}</option>
+                {/*
+                  "(미적재)"는 남긴다 — 그 계약을 고르면 검색이 반드시 빈다는 예고라, 없으면
+                  결과가 0건인 이유를 알 수 없다. 반대로 청크 수는 적재량이라 담당자가 고를 때
+                  쓰는 정보가 아니다(적재 상태는 우측 패널이 자세히 보여준다).
+                */}
                 {contracts.map((contract) => (
                   <option key={contract.contract_id} value={contract.contract_id}>
                     {contract.erp_contract_id ?? `#${contract.contract_id}`} · {contract.contract_name}
-                    {contract.document_count === 0
-                      ? ' (미적재)'
-                      : ` (${contract.indexed_chunk_count}청크)`}
+                    {contract.document_count === 0 ? ' (미적재)' : ''}
                   </option>
                 ))}
               </select>
             </label>
-            <button
-              type="button"
-              className={styles.searchButton}
-              onClick={() => void handleSearch()}
-              disabled={isSearching || !query.trim()}
-            >
-              {isSearching ? '검색 중…' : '계약서 검색'}
-            </button>
+            <div className={styles.searchRow}>
+              <input
+                type="search"
+                className={styles.searchInput}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') void handleSearch()
+                }}
+                placeholder={EXAMPLE_QUERY}
+                aria-label="검색어"
+              />
+              <button
+                type="button"
+                className={styles.searchButton}
+                onClick={() => void handleSearch()}
+                disabled={isSearching || !query.trim()}
+              >
+                {/* 찾는 것은 계약서가 아니라 조항이다. "계약서 검색"은 문서를 찾는 것처럼 읽힌다. */}
+                {isSearching ? '검색 중…' : '조항 검색'}
+              </button>
+            </div>
           </section>
 
           {!apiConfigured && (
@@ -318,11 +430,8 @@ export function ContractRagPage() {
           <div className={styles.split}>
             <section className={styles.panel} aria-labelledby="clause-list-heading">
               <h2 id="clause-list-heading" className={styles.panelHeading}>
-                {search
-                  ? `검색 결과 · ${search.scope === 'all'
-                      ? `전체 계약 ${search.result_count}건`
-                      : `contract_id ${search.contract_id}`}`
-                  : '검색 결과'}
+                {/* 건수는 합친 뒤의 조항 수다 — 화면에 선 카드 수와 어긋나면 안 된다. */}
+                {search ? `검색 결과 · ${scopeLabel(search)} ${clauses.length}건` : '검색 결과'}
               </h2>
 
               {searchError && <p className={styles.error}>{searchError}</p>}
@@ -333,21 +442,41 @@ export function ContractRagPage() {
                   <SkeletonText lines={5} lastLineWidth="55%" />
                 </div>
               )}
+              {/*
+                예시 질의는 검색창에 미리 채우지 않고 여기에 버튼으로 둔다. 채워두면 다른 것을
+                검색하려는 사람이 전체 선택 후 지워야 하는데, 그건 매번 치르는 비용인 반면
+                예시가 필요한 건 처음 한 번이다.
+              */}
               {!isSearching && !search && !searchError && (
-                <p className={styles.notice}>
-                  검색어를 넣고 "계약서 검색"을 누르면 의미가 가까운 조항을 유사도 순으로 보여줍니다.
-                </p>
+                <div className={styles.notice}>
+                  <p className={styles.emptyLead}>
+                    찾고 싶은 상황을 문장으로 넣으면 뜻이 가까운 조항을 관련도 순으로 보여줍니다.
+                  </p>
+                  <button
+                    type="button"
+                    className={styles.exampleQuery}
+                    onClick={() => setQuery(EXAMPLE_QUERY)}
+                  >
+                    예시: {EXAMPLE_QUERY}
+                  </button>
+                </div>
               )}
-              {!isSearching && search && search.results.length === 0 && (
+              {/*
+                결과가 0건인 이유를 가른다. 판단 기준은 **검색한 그 계약**의 적재 여부다 —
+                우측 패널이 보고 있는 계약이 아니다. 둘은 이제 따로 움직여서(검색 범위와 문서
+                패널을 분리했다), 우측 것을 보면 "전체 계약을 검색했는데 이 계약에는 문서가
+                없습니다"처럼 엉뚱한 안내가 나간다.
+              */}
+              {!isSearching && search && clauses.length === 0 && (
                 <p className={styles.notice}>
-                  {detail && detail.contract.document_count === 0
-                    ? '이 계약에는 적재된 문서가 없습니다. 우측에서 계약서를 올린 뒤 다시 검색하세요.'
-                    : '일치하는 조항이 없습니다. 계약 선택을 전체 계약으로 넓히거나 표현을 바꿔 보세요.'}
+                  {searchedContract?.document_count === 0
+                    ? '이 계약에는 적재된 문서가 없습니다. 우측 "계약 문서"에서 계약서를 올린 뒤 다시 검색하세요.'
+                    : '일치하는 조항이 없습니다. 검색 범위를 전체 계약으로 넓히거나 표현을 바꿔 보세요.'}
                 </p>
               )}
 
               <ul className={styles.clauseList}>
-                {search?.results.map((hit) => {
+                {clauses.map(({ hit, alsoIn }, index) => {
                   const key = `${hit.document_id}-${hit.chunk_index}`
                   const isSelected =
                     selectedClause?.document_id === hit.document_id &&
@@ -364,15 +493,36 @@ export function ContractRagPage() {
                       >
                         <span className={styles.clauseTop}>
                           <span className={styles.clauseTitle}>{hit.clause_title}</span>
-                          <span className={styles.clauseScore}>
-                            유사도 {hit.similarity_score.toFixed(2)}
+                          {/*
+                            유사도 원값(0.61) 대신 순위를 쓴다. 구매 담당자에게 그 숫자는 높은
+                            건지 낮은 건지 알 수 없고, 임베딩 모델이 바뀌면 같은 관련도라도 값이
+                            달라진다. 원자재 위험 화면도 같은 표기라 두 화면이 같은 말을 한다.
+                            원값은 title에 남겨 개발 중 확인할 수 있게 한다.
+                          */}
+                          <span
+                            className={styles.clauseScore}
+                            title={`유사도 ${hit.similarity_score.toFixed(3)}`}
+                          >
+                            {index + 1}순위
                           </span>
                         </span>
+                        {/*
+                          내부 값은 빼고 사람이 쓰는 식별자만 남긴다. `source`(어느 벡터스토어에서
+                          왔는지)와 `contract_id`(DB PK)는 화면에서 할 일이 없다. 페이지는 적재된
+                          문서가 전부 txt라 늘 1이므로, 갈릴 때만 보여준다.
+                        */}
                         <p className={styles.clauseMeta}>
-                          {hit.contract?.erp_contract_id ?? `contract_id ${hit.contract?.contract_id ?? '—'}`}
-                          {' · '}page {hit.page_number} · source: {hit.source}
+                          {[
+                            hit.contract?.erp_contract_id ?? hit.contract?.contract_name,
+                            // 같은 본문이 여러 계약에 있다는 것 자체가 정보다 — 표준 계약이라
+                            // 한 곳만 고쳐서는 안 된다는 뜻이라서.
+                            alsoIn.length > 0 ? `외 ${alsoIn.length}건에 동일 조항` : null,
+                            showPages ? `p.${hit.page_number}` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </p>
-                        <p className={styles.clauseContent}>{truncate(hit.content)}</p>
+                        <p className={styles.clauseContent}>{previewBody(hit)}</p>
                       </button>
                     </li>
                   )
@@ -381,19 +531,61 @@ export function ContractRagPage() {
             </section>
 
             <section className={styles.panel} aria-labelledby="contract-doc-heading">
-              <h2 id="contract-doc-heading" className={styles.panelHeading}>계약 문서</h2>
+              {/*
+                이 패널이 무엇을 보여줄지는 이 패널이 고른다. 예전에는 검색창 옆 드롭다운이
+                검색 범위와 이 패널을 동시에 조종해서, 필터를 만졌을 뿐인데 오른쪽이 통째로
+                바뀌는 것처럼 보였다.
+              */}
+              <div className={styles.panelHead}>
+                <h2 id="contract-doc-heading" className={styles.panelHeading}>계약 문서</h2>
+                <select
+                  className={styles.panelSelect}
+                  value={detail?.contract.contract_id ?? ''}
+                  disabled={contractsLoading}
+                  aria-label="계약 문서를 볼 계약 선택"
+                  onChange={(event) =>
+                    handleOpenContract(event.target.value ? Number(event.target.value) : null)
+                  }
+                >
+                  <option value="">{contractsLoading ? '불러오는 중…' : '계약 선택…'}</option>
+                  {contracts.map((contract) => (
+                    <option key={contract.contract_id} value={contract.contract_id}>
+                      {contract.erp_contract_id ?? `#${contract.contract_id}`} · {contract.contract_name}
+                      {contract.document_count === 0 ? ' (미적재)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
               {panelError && <p className={styles.error}>{panelError}</p>}
-              {panelNotice && <p className={styles.warning}>{panelNotice}</p>}
+              {panelNotice && (
+                <div className={NOTICE_TONE_CLASS[panelNotice.tone]} role="status">
+                  <p className={styles.noticeTitle}>{panelNotice.title}</p>
+                  {panelNotice.detail && (
+                    <p className={styles.noticeDetail}>{panelNotice.detail}</p>
+                  )}
+                </div>
+              )}
+              {/*
+                빈 자리에 "조항을 선택하세요"만 두면 이 패널이 검색 결과의 종속물처럼 보인다.
+                실제로는 검색을 거치지 않고도 들어올 수 있는 곳이고 — 문서가 0건인 계약은 검색에
+                걸릴 수가 없어서 위 드롭다운이 유일한 진입로다 — 첫 계약서를 올리는 자리이기도
+                하다. 그 사실을 여기서 밝힌다.
+              */}
               {!detail && !panelError && (
-                <p className={styles.notice}>검색 결과에서 조항을 선택하세요.</p>
+                <p className={styles.notice}>
+                  검색 결과에서 조항을 고르면 그 조항이 속한 계약이 열립니다.
+                  <br />
+                  아직 계약서를 올리지 않은 계약은 검색에 걸리지 않으니, 위 목록에서 직접 골라 여기서 등록하세요.
+                </p>
               )}
 
               {detail && (
                 <>
+                  {/* 사람이 읽는 계약명이 먼저다. CTR-004는 식별자라 그 아래 작게 둔다. */}
+                  <p className={styles.contractName}>{detail.contract.contract_name}</p>
                   <p className={styles.contractCode}>
                     {detail.contract.erp_contract_id ?? `#${detail.contract.contract_id}`}
                   </p>
-                  <p className={styles.contractName}>{detail.contract.contract_name}</p>
 
                   <div className={styles.field}>
                     <span className={styles.fieldLabel}>계약 기간</span>
@@ -402,30 +594,35 @@ export function ContractRagPage() {
                     </p>
                   </div>
 
+                  {/* 코드(SUP-AUS-01)만 있으면 어느 회사인지 알 수 없다. 이름이 있으면 이름으로. */}
                   <div className={styles.field}>
                     <span className={styles.fieldLabel}>공급사 / 자재</span>
                     <p className={styles.fieldValue}>
-                      {detail.contract.erp_supplier_id ?? '—'} / {detail.contract.erp_material_id ?? '—'}
+                      {detail.contract.supplier_name ?? detail.contract.erp_supplier_id ?? '—'}
+                      {' / '}
+                      {detail.contract.material_name ?? detail.contract.erp_material_id ?? '—'}
                     </p>
                   </div>
 
-                  <div className={styles.field}>
-                    <span className={styles.fieldLabel}>임베딩</span>
-                    <p className={styles.embedding}>
-                      {detail.embedding_type ?? '미적재'}
-                      <br />
-                      {detail.embedding_version ?? '—'}
-                      <br />
-                      mock: {String(detail.mock_embedding ?? '—')}
+                  {/*
+                    임베딩 모델명·버전은 뺐다(OPENAI_API / openai-text-embedding-3-large). 구매
+                    담당자가 이 화면에서 할 수 있는 일이 없는 값이다. 반대로 mock 여부는 검색
+                    순위를 믿어도 되는지가 걸리므로, 정상이 아닐 때만 경고로 남긴다.
+                  */}
+                  {detail.mock_embedding === true && (
+                    <p className={styles.warning}>
+                      이 계약은 mock 임베딩으로 적재돼 있습니다. 조항 순서를 근거로 쓰지 마세요.
                     </p>
-                  </div>
+                  )}
 
                   {detail.documents.length > 0 && (
                     <ul className={styles.documentList}>
                       {detail.documents.map((document) => (
                         <li key={document.document_id}>
-                          {document.original_file_name} · {document.chunk_count}청크 ·{' '}
-                          {document.processing_status}
+                          {document.original_file_name}
+                          {/* 적재가 정상이면 굳이 말하지 않는다 — 문제일 때만 눈에 띄어야 한다. */}
+                          {document.processing_status !== 'COMPLETED' &&
+                            ` · ${DOCUMENT_STATUS_LABEL[document.processing_status] ?? document.processing_status}`}
                         </li>
                       ))}
                     </ul>
@@ -489,10 +686,62 @@ export function ContractRagPage() {
   )
 }
 
-/** 카드에는 조항 앞부분만 보여준다 — 전체 원문은 조항을 골랐을 때 우측 계약에서 확인한다. */
-function truncate(content: string, max = 260): string {
-  const normalized = content.replace(/\s*\n\s*/g, ' ').trim()
-  return normalized.length > max ? `${normalized.slice(0, max)}…` : normalized
+/** 본문이 같은 조항을 한 장으로 묶은 것. */
+interface MergedClause {
+  /** 대표 조항. 검색 결과가 관련도 순이므로 같은 본문 중 가장 위에 걸린 것이다. */
+  hit: ContractClauseHit
+  /** 같은 본문이 걸린 다른 계약들(대표 제외). */
+  alsoIn: ContractSummary[]
+}
+
+/**
+ * 본문이 같은 조항을 한 장으로 합친다.
+ *
+ * <p>계약서 30개가 같은 템플릿이라 "제5조 불가항력"이 다섯 계약에서 **글자 하나까지 똑같이**
+ * 걸린다. 그대로 그리면 완전히 같은 카드 다섯 장이 쌓여 검색이 고장 난 것처럼 보인다.
+ *
+ * <p>합치면 자리가 줄어드는 게 아니라 정보가 는다 — "이 조항은 5개 계약에 동일하다"는 것 자체가
+ * 표준 계약이라는 뜻이라, 한 곳만 고쳐서는 안 된다는 판단으로 이어진다. 남는 자리는 서로 다른
+ * 조항이 채운다.
+ *
+ * <p>묶는 기준은 백엔드가 적재할 때 본문으로 만든 {@code content_hash}다. 글자 하나만 달라도
+ * 갈리므로 "비슷한 조항"을 잘못 합칠 일은 없다 — 놓치는 쪽으로 안전하다.
+ */
+function mergeIdenticalClauses(hits: ContractClauseHit[]): MergedClause[] {
+  const merged = new Map<string, MergedClause>()
+  for (const hit of hits) {
+    const key = hit.content_hash || `${hit.document_id}-${hit.chunk_index}`
+    const found = merged.get(key)
+    if (!found) {
+      merged.set(key, { hit, alsoIn: [] })
+    } else if (hit.contract) {
+      found.alsoIn.push(hit.contract)
+    }
+  }
+  return [...merged.values()]
+}
+
+/**
+ * 카드에 보여줄 조항 앞부분.
+ *
+ * <p>두 가지를 손본다.
+ * <ul>
+ *   <li><b>공백 정리</b> — 원문이 탭으로 들여쓴 계약서라 그대로 두면 문장 중간에 큰 구멍이
+ *       생긴다. 예전 코드는 개행만 지우고 탭은 남겨 뒀다.</li>
+ *   <li><b>조항 머리 제거</b> — 카드 제목이 이미 "제5조 · 불가항력"이라고 말하는데 본문도
+ *       "Article 5 FORCE MAJEURE"로 시작하면 같은 말을 두 번 읽게 된다. 떼면 실제 내용부터
+ *       보인다.</li>
+ * </ul>
+ * 전체 원문은 조항을 골랐을 때 우측 계약에서 확인한다.
+ */
+function previewBody(hit: ContractClauseHit, max = 260): string {
+  let text = hit.content.replace(/\s+/g, ' ').trim()
+  text = text.replace(/^(?:Article\s+[\d.]+|제\s*\d+\s*조(?:의\s*\d+)?)\s*[(:.-]*\s*/i, '')
+  const heading = hit.clause_heading?.trim()
+  if (heading && text.toUpperCase().startsWith(heading.toUpperCase())) {
+    text = text.slice(heading.length).replace(/^[)\s:.-]+/, '')
+  }
+  return text.length > max ? `${text.slice(0, max)}…` : text
 }
 
 function formatDate(value: string | null): string {

@@ -18,6 +18,8 @@ import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
+import { hasMeaningfulPageNumbers } from '../../../lib/clausePages'
+import { dataQualityLabel, dataQualityTone } from '../../../lib/dataQuality'
 import { useAuthState } from '../../../lib/useAuthState'
 import { PURCHASING_SIDE_NAV_ITEMS } from '../../../lib/purchasingNav'
 import styles from './MaterialRiskPage.module.css'
@@ -119,7 +121,7 @@ export function MaterialRiskPage() {
             </p>
           )}
 
-          <SummaryCards summary={summary} />
+          <SummaryCards summary={summary} materials={materials} />
 
           <div className={styles.split}>
             <section className={styles.listPanel} aria-labelledby="material-list-heading">
@@ -221,8 +223,44 @@ export function MaterialRiskPage() {
   )
 }
 
+/** 데이터 품질 색 등급 → 이 화면의 CSS 클래스. */
+const QUALITY_TONE_CLASS: Record<ReturnType<typeof dataQualityTone>, string> = {
+  normal: styles.toneNormal,
+  warning: styles.toneWarning,
+  critical: styles.toneCritical,
+  neutral: styles.toneNeutral,
+}
+
+/**
+ * 데이터 품질 KPI 한 장.
+ *
+ * 서버가 주는 `data_quality_status`는 **점수가 나온 자재** 중 가장 나쁜 값이다(평가하지 못한
+ * 자재는 빠져 있고, 그쪽은 각주와 목록의 "평가 불가"가 맡는다). 그것만 띄우면 몇 종이 걸린
+ * 것인지 알 수 없어 같은 상태인 자재 수를 세어 붙인다.
+ *
+ * 세는 대상을 `score !== null`로 좁히는 이유: 서버가 이 상태를 고른 모집단과 같아야 한다.
+ * 전체에서 세면 카드는 "정상"인데 건수만 결측 자재를 포함해 커지는 앞뒤 안 맞는 값이 나온다.
+ *
+ * VALID일 때는 건수를 붙이지 않는다. "정상 9종"은 옆 카드(평가 자재 9)와 같은 말이다.
+ */
+function qualityCardValue(summary: MaterialRiskSummary, materials: MaterialRiskItem[]): string {
+  const label = dataQualityLabel(summary.data_quality_status)
+  if (summary.data_quality_status === 'VALID') return label
+  const affected = materials.filter(
+    (material) =>
+      material.score !== null && material.data_quality_status === summary.data_quality_status,
+  ).length
+  return affected > 0 ? `${label} ${affected}종` : label
+}
+
 /** 상단 KPI 4장. 목록과 같은 응답에서 오므로 별도 조회를 하지 않는다. */
-function SummaryCards({ summary }: { summary: MaterialRiskSummary | null }) {
+function SummaryCards({
+  summary,
+  materials,
+}: {
+  summary: MaterialRiskSummary | null
+  materials: MaterialRiskItem[]
+}) {
   const cards = [
     { label: '평가 자재', value: summary ? String(summary.assessed_material_count) : '—', tone: styles.toneNeutral },
     { label: '심각', value: summary ? String(summary.critical_count) : '—', tone: styles.toneCritical },
@@ -233,7 +271,13 @@ function SummaryCards({ summary }: { summary: MaterialRiskSummary | null }) {
         : String(summary.average_inventory_days),
       tone: styles.toneInfo,
     },
-    { label: '데이터 품질', value: summary?.data_quality_status ?? '—', tone: styles.toneNormal },
+    {
+      label: '데이터 품질',
+      value: summary ? qualityCardValue(summary, materials) : '—',
+      tone: summary
+        ? QUALITY_TONE_CLASS[dataQualityTone(summary.data_quality_status)]
+        : styles.toneNeutral,
+    },
   ]
   return (
     <section className={styles.summaryRow} aria-label="원자재 위험 요약">
@@ -325,7 +369,7 @@ function MaterialDetailView({
           {detail.inventory_snapshot_at && (
             <p className={styles.footnote}>
               재고 기준 {formatDate(detail.inventory_snapshot_at)} · 데이터 품질{' '}
-              {detail.data_quality_status}
+              {dataQualityLabel(detail.data_quality_status)}
             </p>
           )}
         </section>
@@ -359,23 +403,48 @@ function MaterialDetailView({
       {contract && (
         <section className={styles.detailSection}>
           <h4 className={styles.detailSectionTitle}>연결 계약</h4>
+          {/*
+            사람이 읽는 계약명을 앞에 세운다. 예전에는 `CTR-016 · contract_id 17`이 굵게 오고
+            계약명이 회색 각주로 밀려 있었는데, contract_id는 DB PK라 구매 담당자에게 아무
+            뜻이 없다 — RAG 검색 필터로는 계속 쓰이지만 그건 화면 밖의 일이다.
+          */}
           <p className={styles.detailText}>
-            <b>
-              {contract.erp_contract_id} · contract_id {contract.contract_id}
-            </b>
+            <b>{contract.contract_name ?? contract.erp_contract_id ?? '이름 없는 계약'}</b>
             <br />
             <span className={styles.footnote}>
-              {contract.contract_name} · {contract.status}
+              {[contract.erp_contract_id, contractStatusLabel(contract.status)]
+                .filter(Boolean)
+                .join(' · ')}
             </span>
           </p>
         </section>
       )}
 
-      {/* ERP Agent가 계약 검토가 필요하다고 판단한 건은 버튼을 눌러야 할 이유를 먼저 말한다. */}
+      {/*
+        "확인이 필요하다"에서 멈추지 않고 **무엇을** 확인해야 하는지까지 말한다. 그 목록은 ERP
+        Agent가 이미 만들어 상세 응답에 담아 보낸 것이다 — erp_rules.yaml의 contractQuestionRules가
+        발주 지연 상태와 대체 공급사 상태를 보고 고른 질문이라, 이 자재가 왜 걸렸는지가 질문의
+        내용에 그대로 드러난다. 지금까지는 이 값이 버튼을 눌러야만 보였다.
+
+        어떤 규칙이 켜졌는지를 화면이 역으로 추론하지는 않는다. 규칙은 erp_rules.yaml에 있고,
+        그걸 프론트에서 흉내 내면 규칙이 바뀔 때 화면만 조용히 틀린 말을 하게 된다.
+
+        근거를 불러온 뒤에는 목록을 감춘다 — 아래 결과 영역이 같은 질문을 답과 함께 다시
+        보여주므로, 좁은 패널에 같은 목록이 두 번 쌓이지 않게 한다.
+      */}
       {detail.contract_review_required && contract && (
-        <p className={styles.reviewRequired}>
-          ERP 상황상 계약 조항 확인이 필요한 자재입니다.
-        </p>
+        <div className={styles.reviewRequired}>
+          <p className={styles.reviewRequiredTitle}>
+            ERP 상황상 계약 조항 확인이 필요한 자재입니다.
+          </p>
+          {evidence === null && detail.contract_questions.length > 0 && (
+            <ul className={styles.reviewRequiredList}>
+              {detail.contract_questions.map((question) => (
+                <li key={question.question_code}>{question.question}</li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
       <div className={styles.actions}>
@@ -411,28 +480,54 @@ function MaterialDetailView({
 }
 
 function ContractEvidenceView({ evidence }: { evidence: ContractEvidence }) {
+  // 지금 적재된 계약서가 전부 txt라 페이지가 늘 1이다. 뜻이 있을 때만 보여준다.
+  const showPages = hasMeaningfulPageNumbers(evidence.results.map((item) => item.page_number))
   return (
     <section className={styles.resultSection} aria-label="계약 RAG 근거">
-      <h4 className={styles.detailSectionTitle}>계약 근거 · {evidence.results.length}건</h4>
-      {/* 무엇을 물었는지 밝히지 않으면 왜 이 조항이 걸렸는지 알 수 없다. */}
+      <h4 className={styles.detailSectionTitle}>계약 근거</h4>
+      {/*
+        건수를 제목에 붙이지 않는다. 예전 제목이 "계약 근거 · 5건"이었는데 바로 아래 질문이
+        공교롭게 5개라 "5건 = 이 질문들"로 읽혔다. 세는 숫자는 그 대상 목록 바로 위에 둔다.
+
+        무엇을 물었는지 밝히지 않으면 왜 이 조항이 걸렸는지 알 수 없다.
+      */}
+      <p className={styles.evidenceLabel}>검색한 질문</p>
       <ul className={styles.questionList}>
         {evidence.questions.map((question) => (
           <li key={question.question_code}>{question.question}</li>
         ))}
       </ul>
       {evidence.mock && (
-        <p className={styles.footnote}>mock 임베딩이라 유사도 점수를 신뢰할 수 없습니다.</p>
+        <p className={styles.footnote}>mock 임베딩이라 조항 순서를 신뢰할 수 없습니다.</p>
       )}
-      {evidence.results.length === 0 && (
+      {evidence.results.length === 0 ? (
         <p className={styles.notice}>이 계약에서 해당 조항을 찾지 못했습니다.</p>
+      ) : (
+        <p className={styles.evidenceLabel}>찾은 조항 {evidence.results.length}건</p>
       )}
       <ul className={styles.clauseList}>
-        {evidence.results.map((item) => (
+        {evidence.results.map((item, index) => (
           <li key={`${item.document_id}-${item.chunk_index}`} className={styles.clause}>
-            <span className={styles.clauseMeta}>
-              p.{item.page_number} · 유사도 {item.similarity_score.toFixed(3)}
+            {/*
+              제목을 먼저 세운다. 청크 하나가 4.01·4.02·4.03을 통째로 담고 있어서 영문 원문만
+              깔면 무엇에 관한 조항인지 읽기 전에는 알 수 없다. 백엔드가 본문 머리에서 뽑아
+              한글 라벨까지 입혀 보낸다.
+            */}
+            <span className={styles.clauseTitle}>{item.clause_title}</span>
+            {/*
+              유사도 원값(0.474 같은)을 그대로 보여주지 않는다. 구매 담당자에게 그 숫자는
+              높은 건지 낮은 건지 알 수 없고, 임베딩 모델이 바뀌면 같은 관련도라도 값이
+              달라진다. 대신 벡터 검색이 이미 매긴 순서를 순위로 보여준다.
+              원값은 title에 남겨 개발 중 확인할 수 있게 한다.
+            */}
+            <span
+              className={styles.clauseMeta}
+              title={`유사도 ${item.similarity_score.toFixed(3)}`}
+            >
+              {index + 1}순위
+              {showPages && ` · p.${item.page_number}`}
             </span>
-            <span className={styles.clauseText}>{item.content}</span>
+            <span className={styles.clauseText}>{highlightFigures(item.content)}</span>
           </li>
         ))}
       </ul>
@@ -455,6 +550,45 @@ function Fact({ label, value }: { label: string; value: string }) {
       <dd className={styles.factValue}>{value}</dd>
     </div>
   )
+}
+
+/**
+ * 조항 본문에서 눈에 걸려야 하는 수치. 위약금률·상한·납기일수처럼 **판단이 걸리는 숫자**만
+ * 잡는다("3.0%", "30.0%", "90 days", "fifteen (15) Business Days", "USD 1,200.00").
+ *
+ * 조항 하나가 문단 여럿을 담고 있어서, 정작 물어본 것의 답인 수치가 영문 문장 속에 묻힌다.
+ * 번역·요약은 LLM이 필요하지만 "어디를 봐야 하는가"는 이 정도로 짚어진다.
+ *
+ * 캡처 그룹이 하나라 `split`이 [본문, 수치, 본문, 수치, …]로 돌려준다 — 홀수 자리가 수치다.
+ */
+const FIGURE_PATTERN =
+  /(\d+(?:\.\d+)?\s?%|\d+(?:,\d{3})*(?:\.\d+)?\s+(?:Business\s+)?(?:days?|weeks?|months?|years?)|USD\s?\d[\d,]*(?:\.\d+)?)/i
+
+function highlightFigures(text: string) {
+  return text
+    .split(FIGURE_PATTERN)
+    .map((part, index) =>
+      index % 2 === 1 ? (
+        <b key={index} className={styles.figure}>
+          {part}
+        </b>
+      ) : (
+        part
+      ),
+    )
+}
+
+/** 계약 상태 코드 → 한글. 모르는 코드는 원문 그대로 둔다 — 임의로 뭉뚱그리면 새 상태가 묻힌다. */
+const CONTRACT_STATUS_LABEL: Record<string, string> = {
+  DRAFT: '초안',
+  ACTIVE: '유효',
+  EXPIRED: '만료',
+  TERMINATED: '해지',
+}
+
+function contractStatusLabel(status: string | null): string | null {
+  if (!status) return null
+  return CONTRACT_STATUS_LABEL[status] ?? status
 }
 
 const ALTERNATIVE_LABEL: Record<string, string> = {

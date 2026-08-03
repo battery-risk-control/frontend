@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchRiskMonitoringEvent, fetchRiskMonitoringEvents } from '../../../api/publicRiskMonitoring.api'
-import type { RiskMonitoringDetail, RiskMonitoringEvent } from '../../../api/types'
+import type { RiskExternalSignal, RiskMonitoringDetail, RiskMonitoringEvent } from '../../../api/types'
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
@@ -63,18 +63,20 @@ function collectCountries(events: RiskMonitoringEvent[]): CountryOption[] {
 }
 
 /**
- * 비로그인 `/public/risk-monitoring` — 구매팀 1계층 "리스크 모니터링"(minji 브랜치,
- * `origin/minji`의 `RiskMonitoringPage.tsx`)을 이식했다. 좌측 이벤트 목록 + 우측 이벤트
- * 상세 2단 구성은 원본과 동일하다.
+ * 비로그인 `/public/risk-monitoring` — 구매팀 1계층 "리스크 모니터링"을
+ * `origin/minji-tier1-dashboard`의 `RiskMonitoringPage.tsx` 기준으로 이식했다(2026-08-03,
+ * 지난 `5bfd7db`가 구버전 `origin/minji` 기준이었던 것을 정정 — `?eventId=` URL 복원,
+ * `returnTo` 왕복, 동적 버튼 라벨(`resolveAction`), `hasSignalInputs` 예외 처리, 자재별
+ * 세부 breakdown이 이번에 새로 반영됐다).
  *
- * **원본과의 차이(2026-08-03, 사용자 결정 "완전 공개 + mock 폴백 신규 작성")**: 원본은
- * `accessToken` 필수 + `RequireAuth tier="purchasing"` 게이트가 있어 로그인하지 않으면 화면이
- * 비어 있었다. 이 화면은 `publicRiskMonitoring.api.ts`가 ①단계(mock)에서 항상 데이터를
- * 반환하도록 바꿔, 로그인 여부와 무관하게 접근 가능하다 — 그래서 원본에 있던 `apiConfigured`
- * 가드·안내 문구를 제거했다(mock이 항상 있어 "API 미설정" 상태 자체가 없다). ②/③단계(실
- * 백엔드)에서 비로그인으로 접근하면 이 화면들에 대응하는 공개(비인증) 엔드포인트가 없어
+ * **원본과의 차이(완전 공개 + mock 폴백)**: 원본은 `accessToken` 필수 + `RequireAuth
+ * tier="purchasing"` 게이트가 있어 로그인하지 않으면 화면이 비어 있었다. 이 화면은
+ * `publicRiskMonitoring.api.ts`가 ①단계(mock)에서 항상 데이터를 반환하도록 바꿔, 로그인
+ * 여부와 무관하게 접근 가능하다 — 그래서 원본에 있던 `apiConfigured` 가드·안내 문구를
+ * 제거했다(mock이 항상 있어 "API 미설정" 상태 자체가 없다). ②/③단계(실 백엔드)에서
+ * 비로그인으로 접근하면 이 화면들에 대응하는 공개(비인증) 엔드포인트가 없어
  * `publicRiskMonitoring.api.ts`가 `LOGIN_REQUIRED_MESSAGE`를 던지고, 그 메시지가 기존
- * `listError`/`detailError` 표시 경로 그대로 화면에 나타난다(별도 UI 분기 추가 안 함).
+ * `listError`/`detailError` 표시 경로 그대로 화면에 나타난다.
  *
  * 목록은 GDELT 15분 스케줄러가 수집·번역한 뉴스이고, 각 기사에 분석·멀티에이전트 결과가
  * 붙은 만큼 등급이 얹힌다. **잠정/확정 구분이 이 화면의 핵심이다** —
@@ -83,12 +85,13 @@ function collectCountries(events: RiskMonitoringEvent[]): CountryOption[] {
  * - 멀티에이전트 실행 후: 종합 위험도로 등급이 갱신되고 신뢰도가 "확정"이라 배지가 사라진다
  *
  * "ERP·계약 영향 분석" 버튼은 여기서 분석을 돌리지 않고 **AI 브리핑 화면으로 이동**한다
- * (`/public/ai-briefing?source=NEWS&ref={event_id}`, 원본은 `/purchasing/ai-briefing`).
+ * (`/public/ai-briefing?source=NEWS&ref={event_id}&returnTo=...`, 원본은 `/purchasing/...`).
  * 실행은 그 화면의 "LLM 브리핑 생성"이 맡는다.
  */
 export function PublicRiskMonitoringPage() {
   const { accessToken } = useAuthState()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [events, setEvents] = useState<RiskMonitoringEvent[]>([])
   const [selected, setSelected] = useState<RiskMonitoringDetail | null>(null)
   const [grade, setGrade] = useState(ALL)
@@ -139,6 +142,36 @@ export function PublicRiskMonitoringPage() {
     }
   }, [accessToken, country, days, grade, material, reloadToken])
 
+  /**
+   * URL의 {@code ?eventId=}로 상세를 복원한다. AI 브리핑에서 돌아왔을 때(returnTo) 같은 기사가
+   * 다시 열리게 하는 경로이며, 링크를 공유하거나 새로고침해도 선택이 유지된다.
+   *
+   * 목록 조회와 독립적으로 돈다 — 상세는 단건 조회라 그 기사가 현재 필터·기간에 걸리지
+   * 않아도 열려야 한다.
+   */
+  useEffect(() => {
+    const requested = Number(searchParams.get('eventId'))
+    if (!Number.isFinite(requested) || requested <= 0) {
+      return
+    }
+    let cancelled = false
+    async function restore(token: string | null, eventId: number) {
+      try {
+        const detail = await fetchRiskMonitoringEvent(token, eventId)
+        if (!cancelled) setSelected(detail)
+      } catch (err) {
+        if (!cancelled) {
+          setDetailError(err instanceof Error ? err.message : '이벤트 상세를 불러오지 못했습니다.')
+        }
+      }
+    }
+    void restore(accessToken, requested)
+    return () => {
+      cancelled = true
+    }
+    // reloadToken을 넣어, 브리핑을 돌리고 돌아온 뒤 새로고침하면 상세도 함께 다시 읽는다.
+  }, [accessToken, searchParams, reloadToken])
+
   /** 필터 변경·새로고침의 공통 진입점 — 조회를 유발하는 쪽이 로딩 표시를 켠다. */
   const requestReload = useCallback((apply?: () => void) => {
     setIsLoading(true)
@@ -159,8 +192,13 @@ export function PublicRiskMonitoringPage() {
   const filtersApplied =
     grade !== ALL || country !== ALL || material !== ALL || days !== DEFAULT_DAYS
 
+  /**
+   * 선택한 이벤트를 URL에 남긴다 — AI 브리핑에 다녀와도 같은 기사가 열려 있어야 하기 때문이다.
+   * {@code replace}로 넣어 뒤로가기 기록을 목록 클릭마다 쌓지 않는다.
+   */
   async function handleSelect(eventId: number) {
     setDetailError(null)
+    setSearchParams({ eventId: String(eventId) }, { replace: true })
     try {
       setSelected(await fetchRiskMonitoringEvent(accessToken, eventId))
     } catch (err) {
@@ -169,12 +207,16 @@ export function PublicRiskMonitoringPage() {
   }
 
   /**
-   * AI 브리핑 화면으로 이 기사를 넘긴다. 여기서는 멀티에이전트를 돌리지 않는다 —
-   * 실행·저장·근거 표시가 전부 그 화면의 몫이라 두 곳에서 돌리면 같은 그래프가 두 번 탄다.
+   * AI 브리핑 화면으로 이 기사를 넘긴다. {@code returnTo}에 선택한 eventId까지 실어 보내
+   * 돌아왔을 때 같은 기사가 열려 있게 한다.
    */
   function handleErpImpact() {
     if (!selected) return
-    navigate(`/public/ai-briefing?source=NEWS&ref=${selected.event_id}`)
+    const returnTo = `/public/risk-monitoring?eventId=${selected.event_id}`
+    navigate(
+      `/public/ai-briefing?source=NEWS&ref=${selected.event_id}`
+        + `&returnTo=${encodeURIComponent(returnTo)}`,
+    )
   }
 
   return (
@@ -342,6 +384,7 @@ function EventDetailView({
 }) {
   const signal = detail.external_signal
   const risk = detail.procurement_risk
+  const action = resolveAction(detail)
   return (
     <div className={styles.detailBody}>
       <h3 className={styles.detailTitle}>{detail.headline}</h3>
@@ -381,11 +424,29 @@ function EventDetailView({
       {signal && (
         <section className={styles.detailSection}>
           <h4 className={styles.detailSectionTitle}>외부 신호</h4>
-          <p className={styles.detailText}>
-            Goldstein {formatNumber(signal.goldstein_scale)} · Tone {formatNumber(signal.tone_score)}
-            <br />
-            관련 뉴스 {signal.news_count ?? '—'}건 · 위험 점수 {formatNumber(signal.risk_score)}
-          </p>
+          {hasSignalInputs(signal) ? (
+            <p className={styles.detailText}>
+              Goldstein {formatNumber(signal.goldstein_scale)} · Tone{' '}
+              {formatNumber(signal.tone_score)}
+              <br />
+              관련 뉴스 {signal.news_count ?? '—'}건 · 위험 점수 {formatNumber(signal.risk_score)}
+            </p>
+          ) : (
+            /*
+             * 입력값이 하나도 기록되지 않은 분석. 전부 "—"인 줄을 그대로 두면 "입력이 없는데
+             * 점수가 나왔다"로 읽혀 점수를 지어낸 것처럼 보인다 — 점수만 남기고 사유를 밝힌다.
+             */
+            <>
+              <p className={styles.detailText}>
+                외부신호 위험 점수 {formatNumber(signal.risk_score)}
+              </p>
+              <p className={styles.inlineNote}>
+                트리아지·LLM 단계까지의 점수입니다. 이 뉴스는 세부 입력 신호를 저장하기 전에
+                분석돼 Goldstein·Tone·관련 뉴스 건수가 남아 있지 않습니다 — 이후 수집분부터는
+                함께 기록됩니다.
+              </p>
+            </>
+          )}
         </section>
       )}
 
@@ -410,6 +471,41 @@ function EventDetailView({
                 <li key={reason}>{reason}</li>
               ))}
             </ul>
+          )}
+
+          {/*
+           * 자재별 내역은 대상이 둘 이상일 때만 펼친다 — 하나뿐이면 위 종합 점수와 같은 값이라
+           * 같은 숫자를 두 번 보여주는 셈이 된다.
+           */}
+          {risk.target_material_count > 1 && (
+            <div className={styles.materialBreakdown}>
+              <p className={styles.detailSectionTitle}>
+                자재별 결과 · 유효 {risk.valid_material_count}/{risk.target_material_count}
+                {risk.representative_material_id && (
+                  <span className={styles.footnote}>
+                    {' '}· 대표 {risk.representative_material_id}
+                  </span>
+                )}
+              </p>
+              <ul className={styles.materialList}>
+                {risk.material_assessments.map((item) => (
+                  <li key={item.erp_material_id}>
+                    <span
+                      className={
+                        item.erp_material_id === risk.representative_material_id
+                          ? `${styles.materialCode} ${styles.materialCodeRepresentative}`
+                          : styles.materialCode
+                      }
+                    >
+                      {item.erp_material_id}
+                    </span>
+                    {item.valid
+                      ? ` ${item.risk_level} ${formatNumber(item.risk_score)}점`
+                      : ' 조기 종료 — 종합 점수 없음'}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </section>
       )}
@@ -445,14 +541,46 @@ function EventDetailView({
           onClick={onErpImpact}
           disabled={!detail.erp_impact_available}
         >
-          ERP · 계약 영향 분석
+          {action.label}
         </button>
       </div>
       {!detail.erp_impact_available && detail.erp_impact_blocked_reason && (
         <p className={styles.blockedReason}>{detail.erp_impact_blocked_reason}</p>
       )}
+      {detail.erp_impact_available && action.note && (
+        <p className={styles.blockedReason}>{action.note}</p>
+      )}
     </div>
   )
+}
+
+/**
+ * 버튼 문구·안내. 백그라운드 점수화 스케줄러가 있어서 사용자가 누르지 않아도 결과가 생길 수 있으므로,
+ * 버튼은 "분석 전/후"가 아니라 지금 결과가 어떤 상태인지를 말해야 한다.
+ *
+ * 재실행 안내를 붙이는 이유: 평가 저장이 append-only라 다시 돌리면 기존 결과를 덮어쓰는 게 아니라
+ * 이력이 하나 더 쌓인다. 눌러도 되는지 판단할 근거를 화면이 줘야 한다.
+ */
+function resolveAction(detail: RiskMonitoringDetail): { label: string; note: string | null } {
+  const risk = detail.procurement_risk
+  if (!risk || risk.target_material_count === 0) {
+    return { label: 'ERP · 계약 영향 분석', note: null }
+  }
+  if (risk.completed && risk.valid_material_count < risk.target_material_count) {
+    return {
+      label: '부분 분석 결과 보기 · 재실행',
+      note: `자재 ${risk.target_material_count}개 중 ${risk.valid_material_count}개만 평가됐습니다. `
+        + '재실행하면 새 평가 이력이 추가됩니다.',
+    }
+  }
+  if (risk.completed) {
+    return { label: 'AI 브리핑 보기 · 재생성', note: '재생성하면 새 평가 이력이 추가됩니다.' }
+  }
+  // 실행은 됐지만 유효 평가가 하나도 없는 경우(전부 KG 게이트 조기 종료).
+  return {
+    label: '다시 ERP · 계약 영향 분석하기',
+    note: '이전 실행은 종합 점수까지 가지 못했습니다. 재실행하면 새 평가 이력이 추가됩니다.',
+  }
 }
 
 /** 오늘 수집분은 시:분만, 그 이전은 날짜까지 — 목록 한 줄에 들어가야 해서 짧게 쓴다. */
@@ -467,4 +595,16 @@ function formatDateTime(isoString: string): string {
 /** null은 "0"이 아니라 "—"로 — 값이 없는 것과 0인 것은 다르다. */
 function formatNumber(value: number | null): string {
   return value === null || value === undefined ? '—' : String(value)
+}
+
+/**
+ * severity 점수를 만든 입력값이 하나라도 기록돼 있는지. 응답에 값이 있는지만 본다.
+ * tone은 0.0이 정상값이라 falsy 검사를 쓰면 안 된다 — null만 걸러야 한다.
+ */
+function hasSignalInputs(signal: RiskExternalSignal): boolean {
+  return (
+    signal.goldstein_scale !== null
+    || signal.tone_score !== null
+    || signal.news_count !== null
+  )
 }

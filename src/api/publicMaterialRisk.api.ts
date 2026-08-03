@@ -242,17 +242,26 @@ const MOCK_CONTRACT_EVIDENCE: ContractEvidence = {
 /**
  * 상단 KPI + 자재별 위험 목록.
  *
+ * `refresh`를 true로 넘기면 백엔드 캐시를 무시하고 다시 계산한다("새로고침" 버튼용).
+ *
  * 사용 예:
  *   const overview = await fetchMaterialRiskOverview(accessToken)
+ *   const fresh = await fetchMaterialRiskOverview(accessToken, true)
  */
-export async function fetchMaterialRiskOverview(accessToken: string | null): Promise<MaterialRiskOverview> {
+export async function fetchMaterialRiskOverview(
+  accessToken: string | null,
+  refresh = false,
+): Promise<MaterialRiskOverview> {
   if (!API_BASE_URL) {
     return MOCK_OVERVIEW
   }
   if (!accessToken) {
     throw new Error(LOGIN_REQUIRED_MESSAGE)
   }
-  const result = await fetchWithAuth<MaterialRiskOverview>('/api/v1/material-risk/overview', accessToken)
+  const result = await fetchWithAuth<MaterialRiskOverview>(
+    `/api/v1/material-risk/overview${refresh ? '?refresh=true' : ''}`,
+    accessToken,
+  )
   if ('error' in result) {
     throw new Error(result.message)
   }

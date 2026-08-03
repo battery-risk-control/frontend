@@ -86,6 +86,7 @@ const MOCK_DETAIL_BASE: Omit<AiBriefingDetail, 'source_type' | 'source_ref'> = {
 const MOCK_LIST_ITEM: AiBriefingListItem = {
   briefing_id: MOCK_DETAIL_BASE.briefing_id,
   source_type: 'NEWS',
+  source_ref: MOCK_DETAIL_BASE.news_id,
   subject_title: MOCK_DETAIL_BASE.subject_title,
   news_id: MOCK_DETAIL_BASE.news_id,
   procurement_risk_level: MOCK_DETAIL_BASE.procurement_risk_level,
@@ -126,6 +127,7 @@ export async function fetchAiBriefingContext(
       external_signal_score: 60,
       generate_available: true,
       generate_blocked_reason: null,
+      latest_briefing_id: MOCK_DETAIL_BASE.briefing_id,
     }
   }
   if (!accessToken) {
@@ -140,16 +142,20 @@ export async function fetchAiBriefingContext(
 }
 
 /**
- * "LLM 브리핑 생성".
+ * "LLM 브리핑 생성". `analysisId`를 함께 보내면 프리필이 보여준 그 분석으로 고정한다 —
+ * 안 보내면 서버가 다시 고르고, 그 사이 수집 스케줄러가 새 분석을 넣으면 상단 외부신호와
+ * 결과가 어긋난다.
  *
  * 사용 예:
  *   const briefing = await generateAiBriefing(accessToken, 'MATERIAL', 'MAT-CO-SULF')
+ *   const pinned = await generateAiBriefing(accessToken, 'NEWS', '252', true, context.analysis_id)
  */
 export async function generateAiBriefing(
   accessToken: string | null,
   source: AiBriefingSource,
   ref: string,
   useLlm = true,
+  analysisId: string | null = null,
 ): Promise<AiBriefingDetail> {
   if (!API_BASE_URL) {
     return { ...MOCK_DETAIL_BASE, source_type: source, source_ref: ref }
@@ -160,7 +166,7 @@ export async function generateAiBriefing(
   return unwrap(
     await fetchWithAuth<AiBriefingDetail>('/api/v1/ai-briefing/briefings', accessToken, {
       method: 'POST',
-      body: JSON.stringify({ source, ref, use_llm: useLlm }),
+      body: JSON.stringify({ source, ref, use_llm: useLlm, analysis_id: analysisId }),
     }),
   )
 }

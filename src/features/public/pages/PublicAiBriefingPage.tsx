@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   fetchAiBriefing,
   fetchAiBriefingContext,
@@ -22,22 +22,44 @@ import styles from './PublicAiBriefingPage.module.css'
 
 const SOURCES: AiBriefingSource[] = ['NEWS', 'MATERIAL', 'CONTRACT']
 
+/** 이 화면의 "최근 브리핑" 노출 건수. 백엔드 상한이 50이라 그 이상은 의미가 없다. */
+const RECENT_BRIEFING_LIMIT = 50
+
 /**
- * 비로그인 `/public/ai-briefing` — 구매팀 1계층 "AI 브리핑"(minji 브랜치의
- * `AiBriefingPage.tsx`)을 이식했다. 상단 "분석 대상 · ERP 연결" + 좌측 브리핑 본문 + 우측
- * 분석 근거·최근 브리핑 구성은 원본과 동일하다. 원본과의 차이(완전 공개 + mock 폴백)는
+ * 복귀 경로 화이트리스트. 앞 화면이 넘긴 {@code returnTo}를 <b>그대로 믿고 이동하면 안 된다</b> —
+ * 쿼리스트링은 누구나 조작할 수 있어서, `//evil.example.com` 같은 값이 오면 오픈 리다이렉트가 된다.
+ *
+ * <p>`/public/*` 화면 내부 경로만 허용한다(원본은 `/purchasing/`). 판정은 문자열 기준이며
+ * `//`(프로토콜 상대 URL)과 백슬래시를 함께 막는다 — 브라우저가 `/\evil.com`을 외부 주소로
+ * 해석하는 경우가 있다.
+ */
+function safeReturnTo(value: string | null): string | null {
+  if (!value) {
+    return null
+  }
+  const normalized = value.trim()
+  if (!normalized.startsWith('/public/') || normalized.includes('//') || normalized.includes('\\')) {
+    return null
+  }
+  return normalized
+}
+
+/**
+ * 비로그인 `/public/ai-briefing` — 구매팀 1계층 "AI 브리핑"을
+ * `origin/minji-tier1-dashboard`의 `AiBriefingPage.tsx` 기준으로 이식했다(2026-08-03,
+ * 지난 `5bfd7db`가 구버전 `origin/minji` 기준이었던 것을 정정 — `?briefing=` URL-as-source-
+ * of-truth, `safeReturnTo`+복귀 링크, `handleOpen`의 URL 파라미터 동기화, 브리핑 생성 시
+ * `analysis_id` 고정 전달이 이번에 새로 반영됐다). 원본과의 차이(완전 공개 + mock 폴백)는
  * `PublicRiskMonitoringPage.tsx` 최상단 주석 참고 — 이 화면도 같은 원칙을 따른다.
  *
  * 이 화면에는 **두 가지 진입 경로**가 있고 화면이 그리는 것도 그만큼 갈린다.
- * - `?source=NEWS&ref=1`처럼 앞 화면(리스크 모니터링·원자재 위험·계약·RAG, 모두 `/public/*`)에서
- *   넘어온 경우. 상단 프리필을 받아 채우고 "LLM 브리핑 생성"을 누를 수 있다. 누르기 전에는
- *   본문이 비어 있다 — 화면에 들어오기만 해도 멀티에이전트가 돌면 버튼 없이 비용이 나가기
- *   때문이다(mock 모드에서도 같은 흐름을 유지한다).
- * - 쿼리스트링 없이 메뉴로 직접 들어온 경우. 분석 대상이 없으므로 생성 버튼은 비활성이고,
- *   "최근 브리핑"에서 "브리핑 상세 보기"로 저장된 브리핑을 열어 본다.
+ * - `?source=NEWS&ref=252`처럼 앞 화면(리스크 모니터링·원자재 위험·계약·RAG)에서 넘어온 경우.
+ *   상단 프리필을 받아 채우고 "LLM 브리핑 생성"을 누를 수 있다.
+ * - 쿼리스트링 없이 메뉴로 직접 들어온 경우. "최근 브리핑"에서 저장된 브리핑을 열어 본다.
  *
  * 생성 결과와 저장된 브리핑은 **같은 타입**이라 `BriefingResult` 하나로 그린다.
  */
+
 /**
  * 프리필 상태. 어떤 대상의 것인지(`key`)를 함께 들고 다닌다 — 대상이 바뀌었는데 이전 대상의
  * 프리필이 남아 있으면 "분석 대상"과 "ERP 연결"이 서로 다른 대상을 가리키게 된다.
@@ -48,11 +70,17 @@ interface ContextState {
   error: string | null
 }
 
+/** 열람 중인 브리핑. `key`(briefing_id)로 URL과 짝을 맞춘다 — 아래 주석 참고. */
+interface DetailState {
+  key: string
+  value: AiBriefingDetail
+}
+
 export function PublicAiBriefingPage() {
   const { accessToken } = useAuthState()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [contextState, setContextState] = useState<ContextState | null>(null)
-  const [detail, setDetail] = useState<AiBriefingDetail | null>(null)
+  const [detailState, setDetailState] = useState<DetailState | null>(null)
   const [recent, setRecent] = useState<AiBriefingListItem[]>([])
   const [actionError, setActionError] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -64,10 +92,20 @@ export function PublicAiBriefingPage() {
     : null
   const ref = searchParams.get('ref')
   const targetKey = source && ref ? `${source}:${ref}` : null
+  const returnTo = safeReturnTo(searchParams.get('returnTo'))
 
   const applied = contextState && contextState.key === targetKey ? contextState : null
   const context = applied?.value ?? null
   const contextError = applied?.error ?? null
+
+  /*
+   * 열람 중인 브리핑은 **URL이 원본**이다(`?briefing={id}`). 상세를 열 때 source·ref까지
+   * 함께 URL에 넣으므로 상단·본문·생성 버튼이 항상 같은 대상을 가리킨다. 새로고침하거나
+   * 링크를 공유해도 같은 브리핑이 열리는 건 덤이다.
+   */
+  const briefingId = searchParams.get('briefing')
+  const detail = detailState && detailState.key === briefingId ? detailState.value : null
+  const loadedBriefingId = detailState?.key ?? null
 
   // 앞 화면에서 넘어온 대상의 프리필. 생성은 하지 않는다.
   useEffect(() => {
@@ -105,7 +143,9 @@ export function PublicAiBriefingPage() {
     let cancelled = false
     async function load(token: string | null) {
       try {
-        const items = await fetchRecentAiBriefings(token)
+        // 이 화면은 "최근 브리핑"이 전부인 화면이라 대시보드 사이드패널(5건)과 달리 넉넉히
+        // 받는다. 기본값 5로 두면 그날 몇 건만 만들어도 이전 브리핑이 곧바로 묻혔다.
+        const items = await fetchRecentAiBriefings(token, RECENT_BRIEFING_LIMIT)
         if (!cancelled) setRecent(items)
       } catch {
         // 최근 목록이 비어도 생성은 할 수 있어야 하므로 화면을 막지 않는다.
@@ -118,6 +158,46 @@ export function PublicAiBriefingPage() {
     }
   }, [accessToken, recentToken])
 
+  // URL의 briefing으로 상세를 채운다. 방금 생성해 이미 손에 든 것은 다시 부르지 않는다.
+  useEffect(() => {
+    if (!briefingId || loadedBriefingId === briefingId) {
+      return
+    }
+    let cancelled = false
+    async function load(token: string | null, id: string) {
+      try {
+        const value = await fetchAiBriefing(token, id)
+        if (!cancelled) setDetailState({ key: id, value })
+      } catch (err) {
+        if (cancelled) return
+        setActionError(err instanceof Error ? err.message : '브리핑을 불러오지 못했습니다.')
+      }
+    }
+    void load(accessToken, briefingId)
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken, briefingId, loadedBriefingId])
+
+  /*
+   * 앞 화면(리스크 모니터링 등)에서 대상만 들고 넘어왔는데 이미 저장된 브리핑이 있으면
+   * 그 본문을 띄운다. 이미 만들어 둔 브리핑을 두고 "생성"을 다시 눌러야 하는 낭비를 막는다.
+   */
+  useEffect(() => {
+    if (briefingId || !context?.latest_briefing_id) {
+      return
+    }
+    const next = new URLSearchParams(searchParams)
+    next.set('briefing', context.latest_briefing_id)
+    setSearchParams(next, { replace: true })
+  }, [briefingId, context, searchParams, setSearchParams])
+
+  /*
+   * 프리필이 없으면(= `?briefing={id}`만 들고 들어온 링크 진입) 열람 중인 상세에서 머리말을
+   * 만든다. 상세에 분석 대상·ERP 연결이 모두 들어 있어 굳이 서버를 다시 부를 필요가 없다.
+   */
+  const displayContext = context ?? (detail ? contextFromDetail(detail) : null)
+
   const refreshRecent = useCallback(() => setRecentToken((previous) => previous + 1), [])
 
   async function handleGenerate() {
@@ -125,7 +205,14 @@ export function PublicAiBriefingPage() {
     setIsGenerating(true)
     setActionError(null)
     try {
-      setDetail(await generateAiBriefing(accessToken, source, ref))
+      // analysis_id를 함께 보내 프리필이 보여준 그 뉴스로 고정한다 — 안 보내면 서버가 다시 고르고,
+      // 그 사이 수집 스케줄러가 새 분석을 넣으면 상단 외부신호와 결과가 어긋난다.
+      const created = await generateAiBriefing(
+        accessToken, source, ref, true, context?.analysis_id ?? null)
+      setDetailState({ key: created.briefing_id, value: created })
+      const next = new URLSearchParams(searchParams)
+      next.set('briefing', created.briefing_id)
+      setSearchParams(next, { replace: true })
       refreshRecent()
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'AI 브리핑 생성에 실패했습니다.')
@@ -134,13 +221,17 @@ export function PublicAiBriefingPage() {
     }
   }
 
-  async function handleOpen(briefingId: string) {
+  /**
+   * "브리핑 상세 보기". 본문만 바꾸지 않고 **대상까지 함께 옮긴다** — 그러지 않으면 상단
+   * "분석 대상 · ERP 연결"이 이전 대상으로 남아 본문과 다른 것을 가리킨다.
+   */
+  function handleOpen(item: AiBriefingListItem) {
     setActionError(null)
-    try {
-      setDetail(await fetchAiBriefing(accessToken, briefingId))
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : '브리핑을 불러오지 못했습니다.')
-    }
+    const next = new URLSearchParams(searchParams)
+    next.set('source', item.source_type)
+    next.set('ref', item.source_ref)
+    next.set('briefing', item.briefing_id)
+    setSearchParams(next)
   }
 
   return (
@@ -158,14 +249,27 @@ export function PublicAiBriefingPage() {
           </div>
 
           <TargetBar
-            context={context}
-            hasTarget={Boolean(source && ref)}
+            context={displayContext}
+            hasTarget={Boolean(source && ref) || Boolean(detail)}
             isGenerating={isGenerating}
             onGenerate={() => void handleGenerate()}
           />
+          {/*
+           * 앞 화면으로 돌아가는 링크. 생성이 끝난 뒤 강조하는 이유는, 그때가 등급 변화를
+           * 확인하러 돌아갈 시점이기 때문이다. returnTo에 eventId가 실려 있어 같은 기사가 다시 열린다.
+           */}
+          {returnTo && (
+            <Link
+              to={returnTo}
+              className={detail ? `${styles.returnLink} ${styles.returnLinkReady}` : styles.returnLink}
+            >
+              ← 리스크 모니터링으로 돌아가기
+              {detail && <span className={styles.returnHint}>갱신된 등급 확인</span>}
+            </Link>
+          )}
           {contextError && <p className={styles.error}>{contextError}</p>}
-          {context && !context.generate_available && context.generate_blocked_reason && (
-            <p className={styles.blockedReason}>{context.generate_blocked_reason}</p>
+          {displayContext && !displayContext.generate_available && displayContext.generate_blocked_reason && (
+            <p className={styles.blockedReason}>{displayContext.generate_blocked_reason}</p>
           )}
           {actionError && <p className={styles.error}>{actionError}</p>}
 
@@ -175,7 +279,10 @@ export function PublicAiBriefingPage() {
                 구매 위험 브리핑
               </h2>
               {isGenerating && <p className={styles.notice}>멀티에이전트 실행 중…</p>}
-              {!isGenerating && !detail && (
+              {!isGenerating && !detail && briefingId && (
+                <p className={styles.notice}>브리핑을 불러오는 중…</p>
+              )}
+              {!isGenerating && !detail && !briefingId && (
                 <p className={styles.notice}>
                   {source && ref
                     ? '"LLM 브리핑 생성"을 누르면 ERP · 계약 근거를 모아 브리핑을 만듭니다.'
@@ -187,7 +294,7 @@ export function PublicAiBriefingPage() {
 
             <div className={styles.sideColumn}>
               <EvidencePanel detail={detail} />
-              <RecentPanel items={recent} onOpen={(id) => void handleOpen(id)} />
+              <RecentPanel items={recent} onOpen={handleOpen} />
             </div>
           </div>
         </main>
@@ -195,6 +302,36 @@ export function PublicAiBriefingPage() {
       <Footer />
     </div>
   )
+}
+
+/**
+ * 상세만 들고 들어왔을 때 쓰는 머리말. `?briefing={id}` 링크(대시보드 우측 "브리핑" 목록)로
+ * 오면 URL에 `source`/`ref`가 없어 프리필을 부를 수 없다. 상세에 이미 같은 값이 전부 들어
+ * 있으므로 그걸로 머리말을 채운다. 생성 버튼만 잠근다 — 대상을 다시 특정할 수 없으니 여기서
+ * 재생성을 허용하면 엉뚱한 것을 만들 수 있다.
+ */
+function contextFromDetail(detail: AiBriefingDetail): AiBriefingContext {
+  return {
+    source_type: detail.source_type,
+    source_ref: detail.source_ref,
+    subject_title: detail.subject_title,
+    news_id: detail.news_id,
+    analysis_id: detail.analysis_id,
+    source_headline: detail.source_headline,
+    erp_material_id: detail.erp_material_id,
+    erp_supplier_id: detail.erp_supplier_id,
+    erp_contract_id: detail.erp_contract_id,
+    contract_id: detail.contract_id,
+    material_name: detail.material_name,
+    material_category: detail.material_category,
+    country_code: null,
+    impact_domain: detail.impact_domain,
+    external_signal_level: detail.evidence_chain?.external_signal?.level ?? null,
+    external_signal_score: detail.evidence_chain?.external_signal?.score ?? null,
+    generate_available: false,
+    generate_blocked_reason: '저장된 브리핑을 열람 중입니다. 다시 생성하려면 목록에서 대상을 선택하세요.',
+    latest_briefing_id: detail.briefing_id,
+  }
 }
 
 /** 상단 "분석 대상 · ERP 연결 · LLM 브리핑 생성". 프리필이 비어도 자리를 유지해 화면이 흔들리지 않는다. */
@@ -393,7 +530,8 @@ function RecentPanel({
   onOpen,
 }: {
   items: AiBriefingListItem[]
-  onOpen: (briefingId: string) => void
+  /** 항목 전체를 넘긴다 — 상세를 열 때 `source_type`·`source_ref`로 상단 대상까지 맞춰야 한다. */
+  onOpen: (item: AiBriefingListItem) => void
 }) {
   return (
     <section className={styles.sidePanel} aria-labelledby="recent-heading">
@@ -416,7 +554,7 @@ function RecentPanel({
           <button
             type="button"
             className={styles.secondaryAction}
-            onClick={() => onOpen(item.briefing_id)}
+            onClick={() => onOpen(item)}
           >
             브리핑 상세 보기
           </button>
@@ -433,7 +571,7 @@ function levelClass(level: string): string {
   return `${styles.levelTag} ${styles.toneNeutral}`
 }
 
-/** null은 "0"이 아니라 "—"로 — 값이 없는 것과 0인 것은 다르다(다른 `/public/*` 화면과 같은 방침). */
+/** null은 "0"이 아니라 "—"로 — 값이 없는 것과 0인 것은 다르다(다른 화면과 같은 방침). */
 function formatDays(value: number | null): string {
   return value === null || value === undefined ? '—' : `${value}일`
 }

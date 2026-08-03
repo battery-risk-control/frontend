@@ -331,3 +331,37 @@
   font-size: var(--font-size-sm);
   color: var(--color-risk-critical);
 }
+
+/* 자재별 결과. 대분류 카드 하나로 접히기 전의 근거를 펼쳐 보여준다(리튬·흑연만 2개). */
+.materialBreakdown {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--color-border);
+}
+
+.materialList {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+  font-size: var(--font-size-xs);
+  line-height: 1.7;
+  color: var(--color-text-muted);
+}
+
+.materialCode {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+/* 카드 등급을 만든 자재 — 어느 쪽이 대표인지 한눈에 보이게 한다. */
+.materialCodeRepresentative {
+  color: var(--color-risk-critical);
+}
+
+/* 값이 왜 비어 있는지 밝히는 짧은 각주. 잠정 등급 안내(provisionalNote)보다 한 단계 조용하게 —
+   판단을 바꾸는 정보가 아니라 "표시가 깨진 게 아니다"라는 설명이라서다. */
+.inlineNote {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}

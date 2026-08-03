@@ -44,15 +44,15 @@ export function AcknowledgedPanel({
   onUndo,
 }: AcknowledgedPanelProps) {
   return (
-    <ScrollCard headingId="acknowledged-heading" title="완료 처리 항목" maxBodyHeight={420}>
+    <ScrollCard headingId="acknowledged-heading" title="완료 처리 항목" maxBodyHeight={280}>
       {isLoading ? (
         <div aria-busy="true" aria-label="완료 처리 항목 불러오는 중">
           <SkeletonText lines={4} lastLineWidth="50%" />
         </div>
       ) : items.length === 0 ? (
         <p className={styles.empty}>
-          완료 처리한 항목이 없습니다. 왼쪽 표에서 "대응 완료"를 누르면 여기로 옮겨지고, 여기서
-          다시 되돌릴 수 있습니다.
+          완료 처리한 항목이 없습니다. 위 표에서 "대응 완료"를 누르면 여기로 옮겨지고, 여기서 다시
+          되돌릴 수 있습니다.
         </p>
       ) : (
         <ul className={styles.list}>

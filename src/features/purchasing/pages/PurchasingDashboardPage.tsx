@@ -536,21 +536,22 @@ export function PurchasingDashboardPage() {
 
           {/* 원자재 7종 · 최종 합성 점수(외부신호+ERP노출+계약공백). 아래 게이지 행과 자리가
               붙어 있지만 **점수의 뜻이 다르다** — 게이지는 ERP 노출도 단독 점수다. */}
-          <div className={styles.materialRiskRow}>
-            <MaterialRiskSummaryTable
-              items={materialRiskSummary}
-              isLoading={materialRiskLoading}
-              pendingAssessmentId={pendingAssessmentId}
-              onAcknowledge={handleAcknowledge}
-            />
-            {/* 왼쪽 표에서 "대응 완료"로 내려간 항목이 여기로 올라온다. 되돌릴 자리가 여기뿐이다. */}
-            <AcknowledgedPanel
-              items={acknowledged}
-              isLoading={acknowledgedLoading}
-              pendingAssessmentId={pendingAssessmentId}
-              onUndo={handleUndoAcknowledge}
-            />
-          </div>
+          <MaterialRiskSummaryTable
+            items={materialRiskSummary}
+            isLoading={materialRiskLoading}
+            pendingAssessmentId={pendingAssessmentId}
+            onAcknowledge={handleAcknowledge}
+          />
+          {/* 위 표에서 "대응 완료"로 내려간 항목이 여기로 옮겨진다. 되돌릴 자리가 여기뿐이다.
+              옆이 아니라 아래에 두는 이유: main 컬럼이 SideNav(220) + 우측 패널(320) + 도트
+              레일(40)에 이미 눌려 있어, 5칸짜리 표 옆에 300px를 떼면 "주요 이슈" 칸이 먼저
+              줄어든다. 게다가 이 목록은 대개 비어 있어서 빈 카드가 폭을 상시 점유한다. */}
+          <AcknowledgedPanel
+            items={acknowledged}
+            isLoading={acknowledgedLoading}
+            pendingAssessmentId={pendingAssessmentId}
+            onUndo={handleUndoAcknowledge}
+          />
 
           {/* ── 목업에 없는 기존 구성 (아래) ───────────────────────
               목업이 화면 전체를 반영한 것이 아니라, 지우지 않고 아래로 내렸다. */}

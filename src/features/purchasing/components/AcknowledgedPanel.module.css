@@ -1,23 +1,26 @@
+/* 표 아래 전체 폭을 쓴다. 한 줄에 여러 건이 들어가도록 가로로 흐르게 두되, 좁아지면
+   자연스럽게 줄바꿈되게 한다 — 항목 수가 0~수 건으로 들쭉날쭉해서 고정 열 수를 정할 수 없다. */
 .list {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* 카드 하나가 뉴스 제목까지 담아야 해서 최소 폭을 준다. 그보다 좁아지면 제목이 두 글자씩
+   끊겨 무슨 건인지 알아볼 수 없다. */
 .item {
+  flex: 1 1 320px;
+  min-width: 0;
+  max-width: 480px;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.item:last-child {
-  padding-bottom: 0;
-  border-bottom: none;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
 .head {
@@ -39,12 +42,15 @@
 }
 
 .subject {
+  margin: 0;
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+  /* 제목이 길어도 카드 높이가 들쭉날쭉해지지 않게 두 줄로 끊는다. */
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
 }
 
 .meta {
@@ -52,6 +58,8 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
 }
 
 .who {

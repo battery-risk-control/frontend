@@ -220,23 +220,27 @@ function BriefingList({ briefings }: { briefings: AiBriefingListItem[] }) {
 /**
  * 데이터 업로드 카드. 목업 우측 하단 자리다.
  *
- * **업로드를 여기서 처리하지 않고 기존 화면으로 보낸다.** 계약서는 계약·RAG 화면이 이미
- * 업로드·재처리·인덱싱 상태까지 다루고 있어 같은 기능을 두 곳에 두면 갈라진다. ERP CSV는
- * 백엔드에 업로드 엔드포인트 자체가 없어(`contract-rag` 쪽만 있다) 파일 선택창을 띄우면
- * 고를 수는 있는데 보낼 곳이 없는 상태가 된다.
+ * **업로드를 여기서 처리하지 않고 데이터 관리 화면으로 보낸다.** 두 종류 모두 파일을 고르는
+ * 것으로 끝나지 않고 검사 → 확인 → 반영 3단계를 거치는데, 좁은 사이드 패널에서 그 과정을
+ * 보여줄 수 없다. 같은 기능을 두 곳에 두면 갈라지기도 한다.
+ *
+ * 링크에 `mode`를 실어 보내 <b>누른 항목에 맞는 탭이 열리게</b> 한다. 그냥 화면만 열면 항상
+ * ERP 탭이 뜨는데, "계약서 PDF"를 눌러 CSV 업로드 화면이 나오면 잘못 눌렀나 싶어진다.
  */
 function UploadCard() {
   return (
     <ScrollCard headingId="data-upload-heading" title="데이터 업로드">
       <div className={styles.uploadBody}>
-        <Link to="/purchasing/contract-rag" className={styles.uploadItem}>
+        <Link to="/purchasing/data-management?mode=RAG" className={styles.uploadItem}>
           <span className={styles.uploadTitle}>계약서 PDF / TXT</span>
-          <span className={styles.uploadHint}>계약 · RAG 화면에서 업로드 →</span>
+          <span className={styles.uploadHint}>데이터 관리 화면에서 등록 →</span>
         </Link>
-        <div className={`${styles.uploadItem} ${styles.uploadDisabled}`}>
+        {/* 예전에는 "업로드 API 준비 중"이라 비활성이었다. /api/v1/erp/imports의 preview·commit이
+            생기면서 데이터 관리 화면이 검사·반영까지 다루므로 이제 보낼 곳이 있다. */}
+        <Link to="/purchasing/data-management?mode=ERP" className={styles.uploadItem}>
           <span className={styles.uploadTitle}>ERP CSV</span>
-          <span className={styles.uploadHint}>업로드 API 준비 중 — 현재는 DB 적재로 반영됩니다</span>
-        </div>
+          <span className={styles.uploadHint}>데이터 관리 화면에서 검사 후 반영 →</span>
+        </Link>
       </div>
     </ScrollCard>
   )

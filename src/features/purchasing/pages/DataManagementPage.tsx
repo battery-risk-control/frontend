@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   commitErpCsv,
   confirmContractDocument,
@@ -59,6 +60,16 @@ const STEP_INDEX: Record<ImportStep, number> = {
 }
 
 /**
+ * `?mode=` 쿼리로 시작 탭을 정한다. 대시보드 "데이터 업로드" 카드가 항목별로 다른 값을 보낸다.
+ *
+ * 모르는 값이면 ERP로 떨어진다 — 링크 오타 하나로 빈 화면이 뜨는 것보다, 기본 탭이 열리고
+ * 사용자가 직접 옮기는 편이 낫다.
+ */
+function initialMode(value: string | null): DataImportMode {
+  return value?.toUpperCase() === 'RAG' ? 'RAG' : 'ERP'
+}
+
+/**
  * 1계층 구매팀 "데이터 관리". 구매팀 화면 중 유일하게 **DB에 쓰는** 화면이다.
  *
  * 지켜야 하는 순서는 하나다: <b>업로드 → 품질검사 → 사용자 검토 → 승인 또는 거부 → 반영</b>.
@@ -76,7 +87,16 @@ export function DataManagementPage() {
   const { accessToken } = useAuthState()
   const apiConfigured = isDataImportApiConfigured()
 
-  const [mode, setMode] = useState<DataImportMode>('ERP')
+  /*
+   * 시작 모드는 URL에서 온다(`?mode=RAG`). 대시보드 "데이터 업로드" 카드가 항목별로 다른
+   * 값을 실어 보내서, "계약서 PDF"를 눌렀는데 CSV 화면이 열리는 일이 없게 한다.
+   *
+   * 초기값으로만 읽고 이후에는 로컬 state가 원본이다 — URL을 계속 따라가게 만들면 뒤로가기가
+   * 모드만 되돌리면서 이미 올린 파일·검사 결과와 어긋난다. 대신 모드를 바꿀 때 URL을
+   * `replace`로 맞춰 둬, 새로고침해도 보던 모드가 유지된다.
+   */
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [mode, setMode] = useState<DataImportMode>(() => initialMode(searchParams.get('mode')))
   const [files, setFiles] = useState<File[]>([])
   const [uploadOptions, setUploadOptions] = useState<ContractUploadOptions | null>(null)
   const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null)
@@ -162,6 +182,9 @@ export function DataManagementPage() {
   function handleModeChange(next: DataImportMode) {
     if (next === mode || isCommitting) return
     setMode(next)
+    // 새로고침해도 보던 모드가 유지되게 URL을 맞춘다. replace라 뒤로가기 기록이 쌓이지 않는다 —
+    // 탭을 몇 번 오갔다고 그만큼 뒤로 눌러야 하면 화면을 빠져나갈 수 없다.
+    setSearchParams({ mode: next }, { replace: true })
     setFiles([])          // 받는 형식이 달라진다 — 남겨두면 CSV가 아닌 파일이 ERP 모드에 남는다
     setSelectedSupplierId(null)
     setSelectedMaterialId(null)

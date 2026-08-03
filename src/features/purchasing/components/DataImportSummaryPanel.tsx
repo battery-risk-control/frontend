@@ -61,8 +61,13 @@ export function DataImportSummaryPanel({
     <aside className={styles.column} aria-label="반영 요약">
       {mode === 'ERP' && erpPreview && !committed && (
         <>
+          {/*
+            번호를 뗐다. 이 카드는 "무엇이 얼마나 들어오는가"만 말하는 정보 카드인데, 스텝퍼의
+            4단계(승인 또는 거부)는 아래 버튼 카드가 하는 일이다. 정보 카드에 결정 번호가 붙어
+            있으면 읽는 순서(무엇이 들어오나 → 믿을 만한가 → 실행)가 첫 칸에서 끊긴다.
+          */}
           <section className={styles.card}>
-            <h2 className={styles.cardHeading}>4. 승인 또는 거부</h2>
+            <h2 className={styles.cardHeading}>가져오기 요약</h2>
             <p className={styles.totalLabel}>예상 DB 반영 건수</p>
             <p className={styles.totalValue}>
               {erpPreview.total_rows.toLocaleString()}
@@ -84,11 +89,21 @@ export function DataImportSummaryPanel({
           <section className={styles.card}>
             <h2 className={styles.cardHeading}>데이터 품질 점수</h2>
             <p className={styles.score}>
-              <span className={scoreToneClass(erpPreview.quality_score)}>{erpPreview.quality_score}</span>
+              <span className={scoreBand(erpPreview.quality_score).tone}>
+                {erpPreview.quality_score}
+              </span>
               <span className={styles.scoreMax}>/100</span>
+              {/* 92라는 숫자만으로는 좋은 건지 알 수 없다. 색과 같은 임계값에서 뽑은 라벨을 붙인다. */}
+              <span className={scoreBand(erpPreview.quality_score).badge}>
+                {scoreBand(erpPreview.quality_score).grade}
+              </span>
             </p>
+            {/* 막대도 점수와 같은 색을 쓴다 — 같은 값을 두 색으로 그리면 어느 쪽이 뜻인지 흐려진다. */}
             <div className={styles.scoreBar}>
-              <div className={styles.scoreFill} style={{ width: `${erpPreview.quality_score}%` }} />
+              <div
+                className={`${styles.scoreFill} ${scoreBand(erpPreview.quality_score).fill}`}
+                style={{ width: `${erpPreview.quality_score}%` }}
+              />
             </div>
             <ul className={styles.issueSummary}>
               <li className={styles.issueSummaryRow}>
@@ -108,8 +123,16 @@ export function DataImportSummaryPanel({
                 <span>{erpPreview.total_duplicates.toLocaleString()}건</span>
               </li>
             </ul>
+            {/*
+              결론만 말하고 원인을 빼면 "품질 보통인데 왜 못 넣지"가 된다. 점수와 판정은 다른
+              축이라(점수는 데이터가 얼마나 깨끗한가, 판정은 넣어도 되는가) 71점이면서 반영
+              불가인 상태가 정상이다 — 그 둘을 이어붙이는 일을 화면이 대신한다.
+            */}
             <p className={erpPreview.committable ? styles.verdictOk : styles.verdictBlocked}>
-              최종 판정 · {erpPreview.committable ? 'DB 반영 가능' : 'DB 반영 불가'}
+              최종 판정 ·{' '}
+              {erpPreview.committable
+                ? 'DB 반영 가능'
+                : `DB 반영 불가 (${blockedCause(erpPreview)})`}
             </p>
           </section>
         </>
@@ -117,7 +140,8 @@ export function DataImportSummaryPanel({
 
       {mode === 'RAG' && ragPreview && !committed && (
         <section className={styles.card}>
-          <h2 className={styles.cardHeading}>4. 승인 또는 거부</h2>
+          {/* ERP의 "가져오기 요약"과 같은 자리·같은 성격의 정보 카드다. 번호는 버튼 카드가 갖는다. */}
+          <h2 className={styles.cardHeading}>등록 요약</h2>
           <ul className={styles.summaryList}>
             <li className={styles.summaryItem}>
               <span className={styles.summaryLabel}>신규 계약</span>
@@ -144,7 +168,12 @@ export function DataImportSummaryPanel({
 
       {!committed ? (
         <section className={styles.card}>
-          <h2 className={styles.cardHeading}>{mode === 'ERP' ? 'DB 반영 결정' : '5. DB 반영'}</h2>
+          {/*
+            스텝퍼의 4단계가 바로 이 카드다(1 업로드 · 2 검증 · 3 매핑 · 4 승인/거부 · 5 반영 완료).
+            예전에는 ERP가 번호 없는 "DB 반영 결정", RAG가 "5. DB 반영"이었는데, RAG 쪽은 아래
+            "5. 반영 완료"와 번호가 겹쳐 5가 두 개였다. 두 모드 모두 스텝퍼와 같은 번호를 쓴다.
+          */}
+          <h2 className={styles.cardHeading}>4. 승인 또는 거부</h2>
           <p className={styles.note}>
             {mode === 'ERP'
               ? '반영은 한 트랜잭션으로 실행되어, 한 행이라도 실패하면 전부 되돌아갑니다.'
@@ -285,10 +314,55 @@ export function DataImportSummaryPanel({
 }
 
 /** 점수 색은 임계값이 아니라 읽는 사람의 판단을 돕는 힌트다 — 80 이상 정상, 60 이상 주의. */
-function scoreToneClass(score: number): string {
-  if (score >= 80) return styles.scoreNormal
-  if (score >= 60) return styles.scoreWarning
-  return styles.scoreCritical
+/**
+ * 반영이 막힌 이유.
+ *
+ * <p>서버의 판정식({@code committable = totalErrors == 0 && totalRows > 0})을 그대로 뒤집어
+ * 읽는다. 조건을 화면에서 새로 만들면, 서버가 막은 이유와 화면이 대는 이유가 갈릴 수 있다.
+ *
+ * <p>마지막 줄은 지금 식으로는 닿지 않는 자리다. 그래도 사유를 지어내지 않고 남겨 둔다 —
+ * 나중에 판정 조건이 늘면 여기서 조용히 틀린 말을 하는 대신 "확인 필요"로 드러난다.
+ */
+function blockedCause(preview: ErpImportPreview): string {
+  if (preview.total_errors > 0) return `오류 ${preview.total_errors.toLocaleString()}건`
+  if (preview.total_rows === 0) return '반영할 행 없음'
+  return '사유 확인 필요'
+}
+
+/**
+ * 품질 점수의 색과 등급 라벨.
+ *
+ * <p>둘을 한 함수에서 뽑는다. 임계값을 따로 두면 한쪽만 고쳤을 때 "초록인데 보통" 같은
+ * 조합이 나오는데, 색과 라벨이 어긋나면 어느 쪽을 믿어야 할지 알 수 없다.
+ */
+function scoreBand(score: number): {
+  tone: string
+  badge: string
+  fill: string
+  grade: string
+} {
+  if (score >= 80) {
+    return {
+      tone: styles.scoreNormal,
+      badge: styles.badgeNormal,
+      fill: styles.fillNormal,
+      grade: '우수',
+    }
+  }
+  if (score >= 60) {
+    return {
+      tone: styles.scoreWarning,
+      badge: styles.badgeWarning,
+      fill: styles.fillWarning,
+      grade: '보통',
+    }
+  }
+  return {
+    tone: styles.scoreCritical,
+    badge: styles.badgeCritical,
+    fill: styles.fillCritical,
+    grade: '미흡',
+  }
 }
 
 function formatDateTime(iso: string): string {

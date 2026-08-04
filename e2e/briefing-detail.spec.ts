@@ -13,11 +13,6 @@ test.describe('구형 브리핑 경로', () => {
     await loginAs(page, 'purchasing@test.local')
     await expect(page).toHaveURL(/\/purchasing$/)
 
-    // MaterialRiskStatusPanel은 Phase 11(2026-07-29)에서 본문 밖으로 이동해 SideNav
-    // "원자재 공급사 리스크 현황" 실제 라우트(/purchasing/material-risk)에서만 렌더링된다.
-    await page.getByRole('link', { name: '원자재 공급사 리스크 현황' }).click()
-    await expect(page).toHaveURL(/\/purchasing\/material-risk$/)
-
     await page.getByRole('link', { name: '브리핑 보기' }).first().click()
 
     await expect(page).toHaveURL(/\/purchasing\/ai-briefing$/)

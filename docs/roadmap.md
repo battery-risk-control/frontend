@@ -139,6 +139,125 @@
     KG 게이트 미배선 시 ERP/계약 분석이 통째로 스킵되는 버그(`kg_service` 호스트 프로세스로
     기동 + `KG_SERVICE_BASE_URL` 배선)도 함께 발견·수정됨 — 전부 백엔드(`빅프로젝트/backend`)
     변경.
+- [x] Phase 11 — 비로그인 대시보드: `origin/minji`(구매팀 담당자 별도 진행 브랜치) 이식
+  (`youngjin/demo-layout-v3` 브랜치, `git merge`가 아니라 비로그인 담당 범위만 파일 단위
+  이식, 2026-08-03). 사전 조사(브랜치 diff/의존성 분석) 결과 minji는 이 브랜치가 갈라진
+  시점(`180095f`, Phase 11 이전 — `youngjin/2nd-demo-layout` 계열의 Phase 11과는 이름만
+  같은 별개 작업)보다 먼저 갈라져 (1) 비로그인 대시보드 4패널 실 API 연동 확장 (2) 구매팀
+  1계층 사이드바 하위 화면 4개 신규(리스크 모니터링/원자재 위험/계약·RAG/AI 브리핑,
+  `accessToken` 필수·mock 폴백 없음)를 진행 중이었음을 확인.
+  - 1. 비로그인 4패널: `PublicDashboardPage.tsx` 전면 교체(4패널 전부 비동기 mode 분기) +
+    `ExchangeRateBand`/`MaterialPriceTrendCard`(신규 컴포넌트) + `ImportDependencyPanel`(기존,
+    `blurred?` prop 추가) + `Footer`(환율 출처 표기 의무 추가). 의존 체인으로
+    `MaterialPriceDetail.tsx`의 `period`/`onPeriodChange` 필수 prop 전환(breaking change)이
+    함께 딸려와, 유일한 구매팀 쪽 소비처 `ImportDependencyRow.tsx`도 내부 `useState`로 자체
+    충족시켜 `PurchasingDashboardPage.tsx`는 무수정으로 유지했다.
+  - 2~3. 사이드바 하위 화면 4개: 사용자 결정(AskUserQuestion, 2026-08-03) — 접근 모델
+    "완전 공개 + mock 폴백 신규 작성", 라우트 프리픽스 "`/public/*` 별도 신설". minji 원본은
+    `RequireAuth tier="purchasing"` + `accessToken` 필수(mock 폴백 없음, "지어낸 데이터를
+    못 보여준다"는 설계 원칙)였으나, `/purchasing/*`의 구매팀 담당자 범위(별도 진행)와 완전히
+    분리하기 위해 `features/public/pages/`에 `Public` 접두 컴포넌트(`PublicRiskMonitoringPage`
+    등) + 신규 API 4개(`publicRiskMonitoring.api.ts` 등, `accessToken: string | null` +
+    ①mock/②③비로그인=`LOGIN_REQUIRED_MESSAGE`/②③로그인=`fetchWithAuth` 3단계 분기)로 새로
+    두었다. mock 데이터는 Figma "04~07"(2026-08-02) 화면 예시값을 그대로 옮겼다.
+  - 4. `NewsFeedItem` 스키마 확장(`collected_at`/`grade`/`headline_original`/`translated`/
+    `country_code`/`url`) + `fetchNewsFeed()` 재작성 — 사전 조사에서 `youngjin/2nd-demo-layout`
+    계열(`publisher` 필드 방향)과 다른 방향으로 확장돼 있음을 확인했으나, 이 브랜치엔 그
+    변경이 없는 깨끗한 상태임을 재확인 후 진행해 충돌이 없었다.
+  - 공유 의존성: `AuthContext`/`AuthProvider`/`AuthPage`에 `accessToken` 배선을 이 작업에서
+    처음 추가(minji/`feat/procurement-risk-kpi` 브랜치와 독립적으로 동일한 구현 — 사전
+    조사에서 두 브랜치 diff가 바이트 단위로 동일함을 확인했던 지점).
+  - 검증: `npm run typecheck`/`lint`/`build` 통과, Playwright로 비로그인 `/`·`/public/*` 4개
+    전부 로그인 없이 접근+상호작용(필터/상세선택/검색/브리핑 생성) 확인 + `/purchasing`
+    로그인 후 회귀 없음(기간 탭·도넛차트 정상) 확인, 콘솔 에러 0건.
+  - 승인 조건: DonutChart.tsx의 `isAnimationActive` 버그 수정은 이번 범위에서 제외(사용자
+    지시) — `ImportDependencyPanel`/`MaterialPriceDetail`이 `DonutChartProps` 외 새 prop을
+    쓰지 않아 빌드/런타임 영향 없음을 확인 후 진행.
+
+- [x] Phase 12 — 구매팀 대시보드(tier1) 비로그인 전면 이식 (`youngjin/demo-layout-v3`,
+  2026-08-03). **Phase 11의 `5bfd7db`(비로그인 4패널+`/public/*` 4화면 이식)가 잘못된 브랜치
+  (`origin/minji`, 구버전) 기준이었음이 밝혀져 이번 Phase로 대체됐다** — 실제 최신 구매팀
+  대시보드는 `origin/minji-tier1-dashboard`에 있었고, 구조·데이터 소스·세부 기능이 크게
+  달랐다(0단계 조사에서 확인).
+  - 배경: `origin/minji-tier1-dashboard`의 `PurchasingDashboardPage.tsx`(본문 12섹션+우측
+    `DashboardSidePanel`)를 비로그인 대시보드(`/`)에 그대로 복제하고, 기존에 잘못 이식된
+    `/public/*` 4화면도 tier1 기준으로 재동기화했다.
+  - 사용자 확정 사항(AskUserQuestion, 2026-08-03): (1) 기존 `/public/*` 4화면의 tier1 격차
+    해소도 이번 범위에 포함, (2) KPI 3종 API는 tier1의 "mock 금지" 원칙 대신 `/public/*`
+    공통 원칙("완전 공개 + mock 폴백") 적용, (3) 이름 충돌 컴포넌트(`MaterialRiskStatusPanel`/
+    `ErpImpactPanel`/`PurchasePriorityPanel`)는 `Public` 접두 신규 컴포넌트로 분리(기존
+    `/purchasing` 쪽·`PurchasingDashboardPage.tsx`는 무수정).
+  - 1단계(본문 12섹션): 이전 세션 산출물(`ExchangeRateBand`/`MaterialPriceTrendCard`) 삭제,
+    `publicPurchasingDashboard.api.ts` 신규(KPI 요약/원자재별 리스크 점수/공급사 현황 3종,
+    3단계 mock 분기), `public.api.ts`(`fetchPublicNewsFeed` limit/offset 확장+
+    `fetchPublicNewsFeedCount` 신규)/`publicMaterialRisk.api.ts`(`refresh` 파라미터 추가)
+    확장, `api/types.ts`에 `PurchasingKpiSummary`/`MaterialRiskSummaryItem`/`SupplierOverview`/
+    `SelectedArticle`/`DashboardAlert`/`MaterialAssessment` 등 신규, lib 헬퍼 4종
+    (`dashboardAlerts`/`selectedArticle`/`newsEventRef`/`formatCollectedAt`) 이식, 신규
+    컴포넌트 6개(`PurchasingDashboardHeader`/`PurchasingKpiRow`/`LiveNewsMarquee`/
+    `LatestNewsPanel`/`MaterialRiskSummaryTable`/`SupplierOverviewPanel`) + `Public` 접두
+    3종(`PublicMaterialRiskStatusPanel`/`PublicErpImpactPanel`/`PublicPurchasePriorityPanel`)
+    이식, `PublicDashboardPage.tsx` 12섹션 재구성.
+  - 2단계(`DashboardSidePanel`): 탭 3개(뉴스 상세/주요 알림/브리핑)+`UploadCard` 이식, 기존
+    `AlertsBellButton` 배선 재사용, 업로드 카드의 "계약서 PDF/TXT" 링크를 `/public/contract-rag`로.
+  - 3단계+4단계(기존 `/public/*` 4화면 tier1 동기화, 같은 파일이라 묶어 진행): 각 화면 최상단
+    주석에 tier1 대비 정정 사항 기록 — `PublicRiskMonitoringPage`(`?eventId=` URL 복원+
+    `returnTo` 왕복, `resolveAction` 동적 버튼 라벨, `hasSignalInputs`, 자재별
+    `material_assessments` breakdown), `PublicMaterialRiskPage`(`forceRefresh` 새로고침,
+    `hasErpContext()`, ERP 경고 목록, 계약 검토 강조), `PublicContractRagPage`(계약 선택
+    드롭다운이 상세 패널 직접 오픈, `stageFile` 파일 검증, tier1이 제거한 "근거로 사용하기"
+    evidence 기능 함께 제거, 업로드 UI `accessToken` 있을 때만 노출), `PublicAiBriefingPage`
+    (`?briefing=` URL-as-source-of-truth, `safeReturnTo`+복귀 링크, `handleOpen` URL 동기화,
+    `analysis_id` 고정 전달).
+  - 구현 중 발견해 계획을 벗어난 최소 수정 2건(모두 하위호환, 기존 소비처 무수정): (1)
+    `ImportDependencyRow.tsx` — `period`/`onPeriodChange`를 선택적 prop으로 추가(0단계
+    조사 당시 "수정 불필요"로 잘못 판단했던 것을 구현 중 typecheck에서 발견), (2)
+    `GlobalRiskBoard.tsx` — `onSelectItem?` 선택적 prop 추가(마커 클릭을 바깥으로 알림,
+    카드 내부 패널 자동 확장 억제). `ScoreCardItem.grade`도 선택 필드로 완화하고
+    `ScoreCardPanel.tsx`가 조건부 렌더하도록 함께 수정.
+  - 작업 중 상위 브랜치(`origin/minji-tier1-dashboard`)가 실제로 계속 갱신되고 있음을 재확인
+    (조사 시작 시점 이후 `event_id`/`source_ref`/`latest_briefing_id` 등 필드가 추가된 새
+    커밋이 들어옴) — 작업 중반에 재`fetch`해 최신 상태로 다시 맞췄다.
+  - 검증: `npm run typecheck`/`lint`/`build` 통과, Playwright(계획서 "검증" 항목) + 회귀 확인
+    (`git diff --stat -- src/features/purchasing/`로 `ImportDependencyRow.tsx`/
+    `ScoreCardPanel.tsx` 외 무수정 확인), `docs/qa-checklist.md` A~H 순회 — 상세는
+    `docs/timeline.md` Phase 12 항목 참고.
+
+- [ ] Phase 13 — `origin/minji-tier1-dashboard` 후속 27커밋 재동기화 (`feat/public-tier`,
+  2026-08-04~). Phase 12 조사 기준점(`309bd1c`) 이후 그 브랜치에 27개 커밋이 추가로 쌓인 것을
+  확인(`git fetch`, HEAD `c2dbe67`) — 규모가 커 A~I로 성격별 분류해 배치로 나눠 반영한다
+  (사용자 결정, 2026-08-04). 배치 순서: A(소규모 patch)+B(삭제 컴포넌트 대응)+C(신규 공용
+  컴포넌트)+E(로딩 자리표시자) → D(알림 패널/사이드패널 갱신) → F(완료 처리 되돌리기) →
+  H(기존 4화면 기능 추가) → G(데이터 관리 화면, `PublicDataManagementPage` 신규 포함 확정).
+  - [x] 1차 배치(A+B+C+E, 2026-08-04): `MaterialRiskGaugeGrid`(신규, `features/public/
+    components/`) 이식 — tier1이 `MaterialRiskOverviewSection`/`MaterialRiskOverviewRow`/
+    `MaterialRiskSummaryCard`/`ScoreCardPanel`을 완전히 삭제하고 이 컴포넌트로 대체했으나,
+    이 저장소는 `/purchasing`(구매팀 담당자 범위)의 `PurchasingDashboardPage.tsx`가 여전히
+    `MaterialRiskOverviewSection`을 쓰고 있어(`grep` 확인) 그 4개 파일을 삭제하지 않고
+    이 화면(`PublicDashboardPage.tsx`)만 신규 컴포넌트로 전환했다. `Skeleton`/`SkeletonText`
+    (신규, `components/ui/Skeleton/`) 이식. 7개 컴포넌트에 `isLoading`류 prop patch
+    (`PurchasingKpiRow`/`LatestNewsPanel`/`MaterialRiskSummaryTable`/`SupplierOverviewPanel`/
+    `ImportDependencyRow`+`MaterialPriceDetail`(공유 위젯, 둘 다 선택적 prop이라 `/purchasing`
+    무수정)/`PublicPurchasePriorityPanel`), `PublicErpImpactPanel`은 데이터 품질 라벨을 신규
+    공용 모듈 `lib/dataQuality.ts`로 추출. `PublicPurchasePriorityPanel`은 추가로 "평가 불가
+    자재를 순위에서 빼고 목록 아래 별도 영역으로"(tier1 `2d4f431` 대응, `toPurchasePriority()`
+    반환 타입이 `{ ranked, unavailable }`로 변경). `PublicDashboardPage.tsx`에 패널별
+    `isLoading` state 6종 배선(재조회 시 재점화 포함) — 알림·브리핑 로딩(우측
+    `DashboardSidePanel` 탭 스켈레톤)은 다음 배치(D)로 이연. 구현 중 `react-hooks/
+    set-state-in-effect`(신규 eslint 규칙, tier1 코드엔 없던 제약) 발견 — 재조회 시작을
+    알리는 의도된 동기 setState라 `eslint-disable-next-line` 3곳에 사유와 함께 적용.
+    검증: `npm run typecheck`/`lint`/`build` 통과, Playwright 13/13 PASS(게이지 그리드 토글,
+    패널 표시, `/purchasing` 회귀 — `PurchasingDashboardPage.tsx` 자체는 diff 0, 공유 파일
+    `ImportDependencyRow.tsx`만 +4줄), 콘솔 에러 0건. 상세는 `docs/mock-schemas.md` 10번
+    섹션 참고.
+  - [ ] 2차 배치(D): `AlertsBellButton` `onToggle`→`onOpenAlerts` 전환 + `SidePanelToggleButton`
+    배선 + `DashboardSidePanel` 탭별 스켈레톤·`focusAlertsToken`.
+  - [ ] 3차 배치(F): `AcknowledgedPanel`("완료 처리 항목" 되돌리기) 배선.
+  - [ ] 4차 배치(H): `AiBriefingPage`/`ContractRagPage`/`MaterialRiskPage`/`RiskMonitoringPage`
+    추가 기능(필터·페이징·PDF 다운로드 등), `fetchRecentAiBriefings` 페이징 계약 브레이킹
+    체인지 흡수.
+  - [ ] 5차 배치(G): 데이터 관리 화면(`DataManagementPage`) `PublicDataManagementPage`로 신규
+    이식 — `/public/*` 원칙(완전 공개+mock 폴백) 적용 확정.
 
 ## 재사용 규칙 (Phase 3에서 결정되는 인터페이스는 이후 Phase가 그대로 따른다)
 - `ConfidenceBadge`/`RiskGradeBadge`의 props 타입은 이후 모든 화면에서 동일하게 재사용한다 — 화면별로 별도 배지를 새로 만들지 않는다.

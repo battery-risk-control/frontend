@@ -16,8 +16,10 @@ test.describe('2계층 드릴다운', () => {
 
     await page.getByRole('link', { name: /인도네시아 니켈 수출 관세 인상/ }).click()
     await expect(page).toHaveURL(/\/planning\/briefing\/RISK-/)
-    await expect(page.getByText('AI 브리핑', { exact: true })).toBeVisible()
-    await expect(page.getByText('권고 조치')).toBeVisible()
+    // 제목(heading)으로 좁힌다 — 사이드바에도 "AI 브리핑" 메뉴가 있어 본문 텍스트로 찾으면
+    // 둘이 함께 잡혀 어느 것을 가리키는지 모호해진다(strict 위반).
+    await expect(page.getByRole('heading', { name: 'AI 브리핑' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '권고 조치' })).toBeVisible()
   })
 
   test('계약 현황 탭에서 만료 임박 계약을 클릭하면 상세 화면으로 이동한다', async ({ page }) => {

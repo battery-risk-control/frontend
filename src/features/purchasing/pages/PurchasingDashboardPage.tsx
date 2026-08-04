@@ -45,7 +45,7 @@ import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
 import { PageSectionDots } from '../../../components/ui/PageSectionDots/PageSectionDots'
 import { useAlertsPanelState } from '../../../lib/useAlertsPanelState'
 import { useAuthState } from '../../../lib/useAuthState'
-import { buildDashboardAlerts } from '../../../lib/dashboardAlerts'
+import { buildDashboardAlerts, PURCHASING_ALERT_TARGETS } from '../../../lib/dashboardAlerts'
 import { fromNewsFeedItem, fromRiskBoardItem } from '../../../lib/selectedArticle'
 import { PURCHASING_SIDE_NAV_ITEMS } from '../../../lib/purchasingNav'
 import { DEFAULT_PERIOD, PERIOD_DAYS } from '../../../lib/materialPricePeriods'
@@ -220,7 +220,12 @@ export function PurchasingDashboardPage() {
 
   // 주요 알림은 두 원천이 섞인다 — 멀티에이전트 판정이 심각·주의인 뉴스 + 변동성이 큰 자재(정보).
   // 가격 쪽은 기간 탭(period)에 따라 함께 바뀐다. 같은 구간에서 파생한 값이라 그게 맞다.
-  const alerts = buildDashboardAlerts(monitoringEvents, priceSeries, priceSummaries)
+  const alerts = buildDashboardAlerts(
+    monitoringEvents,
+    priceSeries,
+    priceSummaries,
+    PURCHASING_ALERT_TARGETS,
+  )
 
   const { expanded: alertsExpanded, open: openAlertsPanel } = useAlertsPanelState()
   const [isPreviewing, setIsPreviewing] = useState(false)

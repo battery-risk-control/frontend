@@ -1,101 +1,244 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  fetchPublicAiRecommendations,
   fetchPublicExchangeRates,
   fetchPublicImportDependency,
   fetchPublicNewsFeed,
+  fetchPublicNewsFeedCount,
   fetchPublicPriceSummaries,
   fetchPublicPriceTrends,
   fetchPublicRiskBoard,
 } from '../../../api/public.api'
+import {
+  acknowledgeAssessment,
+  fetchMaterialRiskSummary,
+  fetchPurchasingKpiSummary,
+  fetchSupplierOverview,
+} from '../../../api/publicPurchasingDashboard.api'
+import { fetchMaterialRiskOverview } from '../../../api/publicMaterialRisk.api'
+import { fetchRiskMonitoringEvents } from '../../../api/publicRiskMonitoring.api'
+import { fetchRecentAiBriefings } from '../../../api/publicAiBriefing.api'
 import type {
-  AiRecommendation,
+  AiBriefingListItem,
   ExchangeRateBoard,
   GlobalRiskBoardItem,
   ImportDependencyData,
   MaterialPriceSeries,
   MaterialPriceSummary,
+  MaterialRiskItem,
+  MaterialRiskSummaryItem,
   NewsFeedItem,
+  PurchasingKpiSummary,
+  RiskMonitoringEvent,
+  SelectedArticle,
+  SupplierOverview,
 } from '../../../api/types'
-import { useAuthState } from '../../../lib/useAuthState'
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
+import { SideNav } from '../../../components/layout/SideNav'
+import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
+import { AlertsBellButton } from '../../../components/layout/AlertsBellButton'
 import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
-import { AiPriorityList } from '../components/AiPriorityList'
-import { ExchangeRateBand } from '../components/ExchangeRateBand'
-import { MaterialPriceTrendCard } from '../components/MaterialPriceTrendCard'
-import { ImportDependencyPanel } from '../../purchasing/components/ImportDependencyPanel'
-import { MaterialPriceDetail } from '../../../components/widgets/MaterialPriceDetail'
+import { PageSectionDots } from '../../../components/ui/PageSectionDots/PageSectionDots'
+import { useAlertsPanelState } from '../../../lib/useAlertsPanelState'
+import { useAuthState } from '../../../lib/useAuthState'
+import { buildDashboardAlerts, PUBLIC_ALERT_TARGETS } from '../../../lib/dashboardAlerts'
+import { fromNewsFeedItem, fromRiskBoardItem } from '../../../lib/selectedArticle'
+import { PUBLIC_SIDE_NAV_ITEMS } from '../../../lib/publicNav'
 import { DEFAULT_PERIOD, PERIOD_DAYS } from '../../../lib/materialPricePeriods'
-import { SupplyNewsFeed } from '../components/SupplyNewsFeed'
+import { PurchasingDashboardHeader } from '../components/PurchasingDashboardHeader'
+import { PurchasingKpiRow } from '../components/PurchasingKpiRow'
+import { LiveNewsMarquee } from '../components/LiveNewsMarquee'
+import { LatestNewsPanel } from '../components/LatestNewsPanel'
+import { MaterialRiskGaugeGrid } from '../components/MaterialRiskGaugeGrid'
+import { MaterialRiskSummaryTable } from '../components/MaterialRiskSummaryTable'
+import { SupplierOverviewPanel } from '../components/SupplierOverviewPanel'
+import { ImportDependencyRow } from '../../purchasing/components/ImportDependencyRow'
+import { PublicMaterialRiskStatusPanel } from '../components/PublicMaterialRiskStatusPanel'
+import { PublicErpImpactPanel } from '../components/PublicErpImpactPanel'
+import { PublicPurchasePriorityPanel } from '../components/PublicPurchasePriorityPanel'
+import { DashboardSidePanel } from '../components/DashboardSidePanel'
 import styles from './PublicDashboardPage.module.css'
 
-/** 컴팩트 카드가 보여줄 구간(일). 목업의 x축(07/25~07/31)에 맞춘 한 주다. */
-const TREND_CARD_DAYS = 7
-
 /**
- * 컴팩트 카드가 대표로 보여줄 자재. 목업 기준이며, 데이터에 없으면 첫 자재로 넘어간다 —
- * 백엔드 자재 구성이 바뀌어도 카드가 빈 채로 남지 않게 한다.
+ * 상단 3계층 탭(Seq 23 필수 요구사항 — "상단 탭(구매팀/경영기획팀/경영진)"). tier1
+ * `PurchasingDashboardPage.tsx`(인증된 단일 계층 화면이라 탭이 없음)를 그대로 이식하며
+ * 이 화면 고유의 탭이 함께 빠졌던 것을 복원했다(2026-08-03, 계획에 없던 추가 수정 —
+ * `docs/timeline.md` Phase 12 항목 참고). 이전 `PublicDashboardPage.tsx`(5bfd7db 이전)의
+ * `TIER_TABS`/`handleTierTabClick`를 그대로 가져왔다.
  */
-const TREND_CARD_MATERIAL = '코발트'
-
 const TIER_TABS = [
   { label: '구매팀', path: '/purchasing' },
   { label: '경영기획팀', path: '/planning' },
   { label: '경영진', path: '/executive' },
 ]
 
+/** 미리보기 표시/숨김 디바운스 — 트리거(헤더 벨)와 콘텐츠(우측 패널 미리보기)가 화면상
+ * 떨어져 있어(도트 인디케이터처럼 인접하지 않음) DOM 포함 관계 트릭 대신, 둘 중 하나라도
+ * 호버 중이면 유지하고 둘 다 벗어난 뒤 이 시간만큼 지나야 닫는 디바운스 방식을 쓴다. */
+const PREVIEW_CLOSE_DELAY_MS = 150
+
 /**
- * 비로그인 공개 대시보드 (Seq 23). Figma 공개 대시보드 프레임 기준 —
- * 상단 3계층 탭 + 로그인/회원가입 버튼, 4개 패널 2x2 그리드(760px 미만에서는 1열 4행으로
- * 전환 — 실험적 브레이크포인트, 전체 앱 반응형 Phase 전까지의 임시 대응).
- * 상단 탭 클릭 시 로그인 상태가 있으면 해당 계층 대시보드로, 없으면 /auth로 이동한다.
- * 그리드를 뷰포트 높이보다 살짝 낮게 제한(컷오프)해 다음 행이 하단에 일부 잘려 보이도록
- * 해서 "더 볼 콘텐츠가 있다"를 별도 안내 컴포넌트 없이 레이아웃만으로 전달한다 — 섹션이
- * 적고 간소한 화면에 쓰는 페이지 레벨 콘텐츠 신호(`docs/design-tokens.md` "카드 레이아웃·
- * 스크롤 규칙" a 참고, 폐기된 IntersectionObserver 기반 `ScrollHint`를 대체). 실험적,
- * 전체 반응형 Phase 전까지의 임시 대응이라는 점은 동일.
+ * 마퀴에 흘릴 헤드라인 수. 목업 기준이며 "최신 뉴스" **1페이지** 응답을 잘라 쓴다 —
+ * 목록이 과거 페이지로 넘어가도 마퀴는 최신에 머문다(`marqueeItems` 참고).
+ */
+const MARQUEE_COUNT = 5
+
+/**
+ * "최신 뉴스" 한 페이지 건수. 목업이 5줄이고, 화살표로 과거 기사까지 넘겨 본다.
  *
- * 4개 패널 전부 실 API(②/③단계) 또는 mock(①단계)을 비동기 조회한다 — `fetchPublicRiskBoard`,
- * `fetchPublicAiRecommendations`, `fetchPublicNewsFeed`, `fetchPublicPriceTrends`,
- * `fetchPublicPriceSummaries`. 백엔드에서 지도와 권고 리스트는 같은 분석 집합을, 가격 차트와 요약
- * 카드는 같은 가격 구간을 공유하므로 짝지어진 화면이 서로 어긋나지 않는다. 뉴스 속보만 분석 이전의
- * 수집 원본이라 별개 집합이다.
- * 로딩 중에는 최소 텍스트만 표시(정식 스켈레톤 UI는 Phase 10.2, 미착수).
+ * 마퀴가 1페이지 응답을 잘라 쓰므로 이 값이 `MARQUEE_COUNT` 이상이어야 한다 —
+ * 작아지면 마퀴에 흘릴 헤드라인이 모자란다.
+ */
+const NEWS_FEED_PAGE_SIZE = 5
+
+/** 우측 "브리핑" 탭에 띄울 최근 브리핑 수. */
+const RECENT_BRIEFING_LIMIT = 5
+
+/** 알림 대상을 고를 때 훑을 이벤트 수·기간. 대시보드용이라 최근 것만 본다. */
+const ALERT_EVENT_DAYS = 7
+const ALERT_EVENT_LIMIT = 50
+
+// side-panel-heading(우측 탭 패널)은 항상 뷰포트 밖으로 스크롤되지 않는 별도 영역이라 제외.
+// 순서는 화면 배치와 같아야 도트가 스크롤을 따라간다.
+const SECTION_DOTS_SECTIONS = [
+  { id: '상단 KPI 요약', headingId: 'kpi-summary-heading' },
+  { id: '실시간 헤드라인', headingId: 'live-marquee-heading' },
+  { id: '글로벌 위험 지도', headingId: 'global-risk-board-heading' },
+  { id: '최신 뉴스', headingId: 'latest-news-heading' },
+  { id: '수입 의존도', headingId: 'import-dependency-heading' },
+  { id: '원자재 가격 추이', headingId: 'material-price-detail-heading' },
+  // 이름이 비슷한 두 섹션이 나란히 있다. 위쪽은 최종 합성 점수(7종 표), 아래쪽은 ERP 노출도
+  // 게이지다 — 점수의 뜻이 달라 도트에서도 구분되게 라벨을 나눴다.
+  { id: '원자재별 리스크 점수', headingId: 'material-risk-composite-heading' },
+  { id: '원자재 리스크 개요', headingId: 'material-risk-summary-heading' },
+  { id: '원자재 공급사 리스크 현황', headingId: 'material-risk-heading' },
+  { id: 'ERP 영향', headingId: 'erp-impact-heading' },
+  { id: '구매 대응 우선순위', headingId: 'purchase-priority-heading' },
+  { id: '공급사 현황', headingId: 'supplier-overview-heading' },
+]
+
+/**
+ * 비로그인 대시보드(Seq 23, `/`) — `origin/minji-tier1-dashboard`의 구매팀 1계층
+ * `PurchasingDashboardPage.tsx`(본문 12섹션 + 우측 `DashboardSidePanel`)를 그대로 이식했다
+ * (2026-08-03, 지난 `5bfd7db`가 잘못된 브랜치 `origin/minji` 기준이었던 것을 정정).
+ *
+ * 데이터 원천이 두 갈래다.
+ *
+ * - **공개 API 6종**(`public.api.ts`) — 환율·가격추이·수입의존도·위험지도·뉴스속보·마퀴.
+ *   `/api/v1/public/**`는 permitAll이라 로그인 여부와 무관하게 같은 응답이 온다.
+ * - **인증 API**(`publicPurchasingDashboard.api.ts`/`publicMaterialRisk.api.ts`/
+ *   `publicRiskMonitoring.api.ts`/`publicAiBriefing.api.ts`) — KPI 요약·자재별 위험·알림용
+ *   이벤트·최근 브리핑. 공개 API가 의도적으로 뺀 ERP 내부값(재고일수·의존도·자재코드)은
+ *   여기서만 온다.
+ *
+ * **원본과의 차이**: tier1은 이 4개 API를 `accessToken` 필수·mock 폴백 없음으로 설계했다
+ * ("이 화면의 숫자는 우리 ERP·평가 결과라서 mock을 지어내면 안 된다"는 원칙). 이 화면은
+ * `/public/*` 전체에 적용된 "완전 공개 + mock 폴백"(사용자 결정, 2026-08-03) 원칙을 그대로
+ * 따르므로, tier1 원본에 있던 `if (!accessToken) return` 가드를 빼서 비로그인 상태에서도
+ * 인증 API 4종을 호출한다 — `publicPurchasingDashboard.api.ts` 등이 내부적으로 mock/로그인
+ * 필요/실 API 3단계로 분기한다.
+ *
+ * 조회는 **패널마다 독립적으로** 처리한다. 한쪽이 실패해도 나머지는 그대로 그려야 하기
+ * 때문이다.
+ *
+ * 알림 패널의 펼침/접힘은 `AlertsPanelContext`(페이지 이동 간 유지)로, 접힌 상태에서 헤더 벨
+ * (`AlertsBellButton`) 호버 시 뜨는 미리보기는 이 페이지의 로컬 `isPreviewing` 상태로 관리한다
+ * — 트리거(헤더, 최상단)와 콘텐츠(우측 sticky 컬럼)가 화면상 떨어져 있어 도트 인디케이터의
+ * DOM 포함 관계 트릭 대신, 어느 쪽을 호버해도 유지되고 둘 다 벗어난 뒤
+ * `PREVIEW_CLOSE_DELAY_MS`만큼 지나야 닫히는 디바운스 방식을 쓴다. `Escape`로도 닫힌다.
  */
 export function PublicDashboardPage() {
+  const { accessToken, orgTier } = useAuthState()
   const navigate = useNavigate()
-  const { orgTier } = useAuthState()
+
+  // --- 공개 API 6종 ---
   const [riskBoardItems, setRiskBoardItems] = useState<GlobalRiskBoardItem[]>([])
   const [riskBoardLoading, setRiskBoardLoading] = useState(true)
-  const [recommendations, setRecommendations] = useState<AiRecommendation[]>([])
   const [newsItems, setNewsItems] = useState<NewsFeedItem[]>([])
+  /** "최신 뉴스" 현재 페이지(0부터). 화살표로만 바뀐다. */
+  const [newsPage, setNewsPage] = useState(0)
+  /** 자재 필터를 통과한 뉴스 전체 건수. 마지막 페이지에서 화살표를 잠근다. */
+  const [newsTotal, setNewsTotal] = useState(0)
+  /**
+   * 상단 마퀴에 흘릴 헤드라인. **목록과 분리해서 들고 있는다** — 같은 배열을 쓰면 사용자가
+   * 목록에서 과거 페이지로 넘기는 순간 "실시간 헤드라인" 자막까지 과거 기사로 바뀐다.
+   * 1페이지를 받을 때 함께 채우므로 추가 요청은 없다.
+   */
+  const [marqueeItems, setMarqueeItems] = useState<NewsFeedItem[]>([])
   const [priceSeries, setPriceSeries] = useState<MaterialPriceSeries[]>([])
   const [priceSummaries, setPriceSummaries] = useState<MaterialPriceSummary[]>([])
-  // 컴팩트 카드는 최근 7일만 본다. 30일 응답을 잘라 쓰지 않고 따로 조회하는 이유는 지수 기준일이
-  // 구간에 종속되기 때문이다 — 30일 응답을 7일로 자르면 첫 점이 100이 아니라 105쯤에서 시작해
-  // "기준일=100" 표기와 화면이 어긋난다.
-  const [trendCardSeries, setTrendCardSeries] = useState<MaterialPriceSeries[]>([])
-  // 기간 탭 상태는 페이지가 소유한다 — 탭이 바뀌면 차트와 요약 카드를 같은 days로 함께 다시
-  // 불러야 하고, 그 조회는 이 페이지의 책임이기 때문이다.
-  const [period, setPeriod] = useState(DEFAULT_PERIOD)
   const [importDependency, setImportDependency] = useState<ImportDependencyData>({
     total: 0,
     breakdown: [],
   })
-  // 초기값을 빈 밴드로 둬서, 조회 전·실패 시 모두 ExchangeRateBand의 빈 상태 분기로 수렴한다.
+  // 초기값을 빈 밴드로 둬서, 조회 전·실패 시 모두 "환율 칩 없음" 분기로 수렴한다.
   const [exchangeRates, setExchangeRates] = useState<ExchangeRateBoard>({
     rate_date: null,
     base_currency: 'KRW',
     rates: [],
   })
 
-  // useQuery(TanStack Query) 대신 useState/useEffect로 최소 구현 — 이 화면이 최초의 실제
-  // 비동기 API 연동이라 QueryClientProvider 도입 여부를 별도로 확정하기 전까지는 이렇게
-  // 둔다(docs/roadmap-candidates.md C11 참고). ①단계(mock)에서는 fetchPublicRiskBoard가
-  // 동기 mock을 그대로 Promise로 감싸 반환하므로 로딩 상태가 사실상 즉시 끝난다.
-  // 두 조회는 서로 독립적으로 처리한다 — 한쪽이 실패해도 다른 패널은 그대로 그려야 하기 때문이다.
+  /*
+   * 패널별 로딩 상태. 하나로 묶지 않는 이유는 조회가 **서로 다른 시점에 끝나기** 때문이다 —
+   * 전역 플래그 하나로 두면 가장 느린 응답이 올 때까지 이미 도착한 패널까지 자리표시자로
+   * 붙잡아 둔다. 실패해도 로딩은 끝난 것이므로 `.finally`에서 내린다.
+   *
+   * 알림(모니터링 이벤트)·브리핑 로딩은 우측 DashboardSidePanel 탭 스켈레톤과 함께 다음
+   * 배치에서 배선한다(이번 배치는 본문 패널만).
+   */
+  const [newsLoading, setNewsLoading] = useState(true)
+  const [priceLoading, setPriceLoading] = useState(true)
+  const [kpiLoading, setKpiLoading] = useState(true)
+  const [materialRiskLoading, setMaterialRiskLoading] = useState(true)
+  const [supplierLoading, setSupplierLoading] = useState(true)
+  const [materialsLoading, setMaterialsLoading] = useState(true)
+
+  // --- 인증 API 4종(mock 폴백 있음) ---
+  const [kpi, setKpi] = useState<PurchasingKpiSummary | null>(null)
+  const [materialRiskSummary, setMaterialRiskSummary] = useState<MaterialRiskSummaryItem[]>([])
+  /** 완료 처리 중인 평가 id. 버튼 단위로 잠가 같은 평가를 두 번 보내지 않는다. */
+  const [pendingAssessmentId, setPendingAssessmentId] = useState<string | null>(null)
+  /** 완료 처리 후 KPI·원자재 요약을 다시 부르기 위한 트리거. */
+  const [reloadKey, setReloadKey] = useState(0)
+  const [supplierOverview, setSupplierOverview] = useState<SupplierOverview | null>(null)
+  const [materials, setMaterials] = useState<MaterialRiskItem[]>([])
+  const [monitoringEvents, setMonitoringEvents] = useState<RiskMonitoringEvent[]>([])
+  const [briefings, setBriefings] = useState<AiBriefingListItem[]>([])
+
+  // 기간 탭은 페이지가 소유한다 — 탭이 바뀌면 차트와 요약 카드를 **같은 days로** 함께 다시
+  // 불러야 하고, 그 조회는 페이지 책임이다.
+  const [period, setPeriod] = useState(DEFAULT_PERIOD)
+  // 우측 "뉴스 상세" 탭이 보여줄 항목. 두 곳에서 선택된다 — 최신 뉴스 목록과 위험 지도 마커.
+  const [selectedNews, setSelectedNews] = useState<SelectedArticle | null>(null)
+
+  // 주요 알림은 두 원천이 섞인다 — 멀티에이전트 판정이 심각·주의인 뉴스 + 변동성이 큰 자재(정보).
+  const alerts = buildDashboardAlerts(
+    monitoringEvents,
+    priceSeries,
+    priceSummaries,
+    PUBLIC_ALERT_TARGETS,
+  )
+
+  const { expanded: alertsExpanded, open: openAlertsPanel } = useAlertsPanelState()
+  const [isPreviewing, setIsPreviewing] = useState(false)
+  /** 알림 벨을 누른 횟수. 우측 패널이 "주요 알림" 탭으로 옮겨야 할 때를 알린다. */
+  const [alertsFocusToken, setAlertsFocusToken] = useState(0)
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  /**
+   * 헤더 알림 벨 클릭 — 패널을 열고 "주요 알림" 탭으로 옮긴다(1계층 대시보드와 동일 동작).
+   *
+   * 토글이 아니라 열기다. 브리핑 탭을 보다가 알림을 보려고 눌렀는데 패널이 닫히면 안 된다.
+   * 열고 닫기는 패널 가장자리의 `SidePanelToggleButton`이 맡는다.
+   */
+  const handleOpenAlerts = useCallback(() => {
+    openAlertsPanel()
+    setAlertsFocusToken((previous) => previous + 1)
+    setIsPreviewing(false)
+  }, [openAlertsPanel])
+
+  // 공개 API — 토큰이 필요 없으므로 마운트 시 한 번만 부른다(기간 탭에 반응하는 가격 2종 제외).
   useEffect(() => {
     let cancelled = false
     fetchPublicRiskBoard()
@@ -103,87 +246,233 @@ export function PublicDashboardPage() {
         if (!cancelled) setRiskBoardItems(items)
       })
       .catch((err) => {
-        console.error('공개 리스크 지도 조회 실패', err)
+        console.error('글로벌 위험 지도 조회 실패', err)
       })
       .finally(() => {
         if (!cancelled) setRiskBoardLoading(false)
       })
-    fetchPublicAiRecommendations()
-      .then((items) => {
-        if (!cancelled) setRecommendations(items)
+    fetchPublicNewsFeedCount()
+      .then((total) => {
+        if (!cancelled) setNewsTotal(total)
       })
       .catch((err) => {
-        console.error('공개 권고 조치 리스트 조회 실패', err)
-      })
-    fetchPublicNewsFeed()
-      .then((items) => {
-        if (!cancelled) setNewsItems(items)
-      })
-      .catch((err) => {
-        console.error('공개 뉴스 속보 조회 실패', err)
-      })
-    fetchPublicPriceTrends(TREND_CARD_DAYS)
-      .then((series) => {
-        if (!cancelled) setTrendCardSeries(series)
-      })
-      .catch((err) => {
-        console.error('공개 원자재 가격 추이(단기) 조회 실패', err)
+        console.error('뉴스 건수 조회 실패', err)
       })
     fetchPublicImportDependency()
       .then((data) => {
         if (!cancelled) setImportDependency(data)
       })
       .catch((err) => {
-        console.error('공개 수입 의존도 조회 실패', err)
+        console.error('수입 의존도 조회 실패', err)
       })
-    // 환율은 다른 패널과 원천이 완전히 다르다(한국수출입은행 고시환율). 실패해도 나머지 패널은
-    // 그대로 그려야 하므로 다른 조회와 마찬가지로 분리한다.
     fetchPublicExchangeRates()
       .then((board) => {
         if (!cancelled) setExchangeRates(board)
       })
       .catch((err) => {
-        console.error('공개 환율 조회 실패', err)
+        console.error('환율 조회 실패', err)
       })
     return () => {
       cancelled = true
     }
   }, [])
 
-  // 가격 차트·요약 카드만 기간 탭에 반응한다. 위 마운트 훅과 분리한 이유는 지도·뉴스·환율까지
-  // 탭을 누를 때마다 다시 부를 이유가 없어서다.
-  //
-  // 둘을 반드시 **같은 days로** 부른다 — 백엔드가 "같은 구간에서 파생"을 전제로 만들어져 있어,
-  // 한쪽만 기간이 바뀌면 차트는 6개월인데 요약 카드는 1개월 등락을 말하는 상태가 된다.
+  // 가격 차트·요약 카드만 기간 탭에 반응한다.
   useEffect(() => {
     let cancelled = false
+    // 기간 탭을 바꾸면 다시 불러오므로 로딩을 되켠다 — 초기값 true만으로는 첫 조회에만
+    // 자리표시자가 뜨고, 이후 재조회는 이전 구간 데이터를 띄운 채로 조용히 바뀐다. 탭을
+    // 누른 즉시 자리표시자가 보여야 하므로 fetch 시작 전 동기 호출이 의도된 것이다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 재조회 시작을 알리는 동기 리셋(의도됨)
+    setPriceLoading(true)
     const days = PERIOD_DAYS[period]
     fetchPublicPriceTrends(days)
       .then((series) => {
         if (!cancelled) setPriceSeries(series)
       })
       .catch((err) => {
-        console.error('공개 원자재 가격 추이 조회 실패', err)
+        console.error('원자재 가격 추이 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setPriceLoading(false)
       })
     fetchPublicPriceSummaries(days)
       .then((summaries) => {
         if (!cancelled) setPriceSummaries(summaries)
       })
       .catch((err) => {
-        console.error('공개 원자재 요약 카드 조회 실패', err)
+        console.error('원자재 요약 카드 조회 실패', err)
       })
     return () => {
       cancelled = true
     }
   }, [period])
 
+  // 뉴스 목록은 페이지가 바뀔 때마다 다시 부른다.
+  useEffect(() => {
+    let cancelled = false
+    // 화살표로 페이지를 넘길 때마다 다시 불러오므로 로딩을 되켠다 — 이게 없으면 첫 조회
+    // 이후로는 자리표시자가 영영 안 뜨고, 넘긴 뒤에도 이전 페이지 목록이 그대로 남는다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 재조회 시작을 알리는 동기 리셋(의도됨)
+    setNewsLoading(true)
+    fetchPublicNewsFeed(NEWS_FEED_PAGE_SIZE, newsPage * NEWS_FEED_PAGE_SIZE)
+      .then((items) => {
+        if (cancelled) return
+        setNewsItems(items)
+        if (newsPage === 0) setMarqueeItems(items)
+        setSelectedNews((current) => current ?? (items[0] ? fromNewsFeedItem(items[0]) : null))
+      })
+      .catch((err) => {
+        console.error('뉴스 속보 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setNewsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [newsPage])
+
+  // 인증 API 4종 — mock 폴백이 있어 accessToken 없이도 호출한다(tier1 원본의
+  // `if (!accessToken) return` 가드를 빼서 비로그인 상태에서도 mock이 채워지게 한 부분,
+  // 위 컴포넌트 주석 "원본과의 차이" 참고).
+  useEffect(() => {
+    let cancelled = false
+    // "대응 완료" 후 reloadKey로 다시 부를 때도 자리표시자가 떠야 한다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 재조회 시작을 알리는 동기 리셋(의도됨)
+    setKpiLoading(true)
+    setMaterialRiskLoading(true)
+    setSupplierLoading(true)
+    setMaterialsLoading(true)
+    fetchPurchasingKpiSummary(accessToken)
+      .then((summary) => {
+        if (!cancelled) setKpi(summary)
+      })
+      .catch((err) => {
+        console.error('KPI 요약 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setKpiLoading(false)
+      })
+    fetchMaterialRiskSummary(accessToken)
+      .then((summary) => {
+        if (!cancelled) setMaterialRiskSummary(summary)
+      })
+      .catch((err) => {
+        console.error('원자재 리스크 요약 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setMaterialRiskLoading(false)
+      })
+    fetchSupplierOverview(accessToken)
+      .then((overview) => {
+        if (!cancelled) setSupplierOverview(overview)
+      })
+      .catch((err) => {
+        console.error('공급사 현황 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setSupplierLoading(false)
+      })
+    fetchMaterialRiskOverview(accessToken)
+      .then((overview) => {
+        if (!cancelled) setMaterials(overview.materials)
+      })
+      .catch((err) => {
+        console.error('자재별 위험 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setMaterialsLoading(false)
+      })
+    fetchRiskMonitoringEvents(accessToken, { days: ALERT_EVENT_DAYS, limit: ALERT_EVENT_LIMIT })
+      .then((events) => {
+        if (!cancelled) setMonitoringEvents(events)
+      })
+      .catch((err) => {
+        console.error('리스크 이벤트 조회 실패', err)
+      })
+    fetchRecentAiBriefings(accessToken, RECENT_BRIEFING_LIMIT)
+      .then((items) => {
+        if (!cancelled) setBriefings(items)
+      })
+      .catch((err) => {
+        console.error('최근 브리핑 조회 실패', err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken, reloadKey])
+
+  /**
+   * 평가 1건을 완료 처리하고 두 집계를 다시 부른다. 낙관적 갱신을 하지 않는다 — 완료 처리하면
+   * 그 자재의 다음 평가가 최신으로 올라와 점수·등급·주요 이슈가 통째로 바뀔 수 있어서, 화면에서
+   * 그 결과를 미리 계산할 수 없다.
+   */
+  async function handleAcknowledge(item: MaterialRiskSummaryItem) {
+    if (!item.latest_assessment_id) return
+    setPendingAssessmentId(item.latest_assessment_id)
+    try {
+      await acknowledgeAssessment(accessToken, item.latest_assessment_id)
+      setReloadKey((key) => key + 1)
+    } catch (err) {
+      console.error('완료 처리 실패', err)
+    } finally {
+      setPendingAssessmentId(null)
+    }
+  }
+
   function handleTierTabClick(path: string) {
     navigate(orgTier ? path : '/auth')
   }
 
+  function handlePreviewMouseEnter() {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current)
+      closeTimeoutRef.current = null
+    }
+    setIsPreviewing(true)
+  }
+
+  function handlePreviewMouseLeave() {
+    closeTimeoutRef.current = setTimeout(() => {
+      setIsPreviewing(false)
+      closeTimeoutRef.current = null
+    }, PREVIEW_CLOSE_DELAY_MS)
+  }
+
+  useEffect(() => {
+    if (!isPreviewing) return
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        if (closeTimeoutRef.current) {
+          clearTimeout(closeTimeoutRef.current)
+          closeTimeoutRef.current = null
+        }
+        setIsPreviewing(false)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isPreviewing])
+
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current)
+    }
+  }, [])
+
   return (
     <div className={styles.page}>
-      <Header>
+      <Header
+        accountExtra={
+          <AlertsBellButton
+            count={alerts.length}
+            onOpenAlerts={handleOpenAlerts}
+            onMouseEnter={handlePreviewMouseEnter}
+            onMouseLeave={handlePreviewMouseLeave}
+          />
+        }
+      >
         <div className={styles.tierTabs}>
           {TIER_TABS.map((tab) => (
             <button
@@ -197,39 +486,70 @@ export function PublicDashboardPage() {
           ))}
         </div>
       </Header>
-      {/* 기획서 ②번 줄. 지도(③) 위에 놓이는 가로 띠라 4패널 그리드 바깥에 둔다 —
-          뉴스속보 마퀴가 붙으면 이 줄을 좌우로 나눠 쓰게 된다(마퀴 미구현). */}
-      <div className={styles.band}>
-        <ExchangeRateBand rateDate={exchangeRates.rate_date} rates={exchangeRates.rates} />
+      <div className={styles.body}>
+        <SideNavToggleButton />
+        <SideNav items={PUBLIC_SIDE_NAV_ITEMS} />
+        <main id="main-content" className={styles.main}>
+          {/* ── 목업에 있는 구성 (위) ─────────────────────────────── */}
+          <PurchasingDashboardHeader asOfDate={exchangeRates.rate_date} />
+          <PurchasingKpiRow kpi={kpi} isLoading={kpiLoading} />
+          <LiveNewsMarquee items={marqueeItems.slice(0, MARQUEE_COUNT)} rates={exchangeRates.rates} />
+          {riskBoardLoading ? (
+            <div className={styles.riskBoardLoading}>지도 데이터를 불러오는 중입니다…</div>
+          ) : (
+            <GlobalRiskBoard
+              items={riskBoardItems}
+              onSelectItem={(item) => setSelectedNews(fromRiskBoardItem(item))}
+            />
+          )}
+          <LatestNewsPanel
+            items={newsItems}
+            isLoading={newsLoading}
+            selectedId={selectedNews?.id}
+            onSelect={(item) => setSelectedNews(fromNewsFeedItem(item))}
+            page={newsPage}
+            pageSize={NEWS_FEED_PAGE_SIZE}
+            total={newsTotal}
+            onPageChange={setNewsPage}
+          />
+          <ImportDependencyRow
+            importDependency={importDependency}
+            priceSeries={priceSeries}
+            priceSummaries={priceSummaries}
+            isPriceLoading={priceLoading}
+            period={period}
+            onPeriodChange={setPeriod}
+          />
+
+          {/* 원자재 7종 · 최종 합성 점수(외부신호+ERP노출+계약공백). 아래 게이지 행과 자리가
+              붙어 있지만 **점수의 뜻이 다르다** — 게이지는 ERP 노출도 단독 점수다. */}
+          <MaterialRiskSummaryTable
+            items={materialRiskSummary}
+            isLoading={materialRiskLoading}
+            pendingAssessmentId={pendingAssessmentId}
+            onAcknowledge={handleAcknowledge}
+          />
+
+          {/* ── 목업에 없는 기존 구성 (아래) ───────────────────────
+              목업이 화면 전체를 반영한 것이 아니라, 지우지 않고 아래로 내렸다. */}
+          <MaterialRiskGaugeGrid items={materialRiskSummary} />
+          <PublicMaterialRiskStatusPanel materials={materials} />
+          <PublicErpImpactPanel materials={materials} />
+          <PublicPurchasePriorityPanel materials={materials} isLoading={materialsLoading} />
+          <SupplierOverviewPanel overview={supplierOverview} isLoading={supplierLoading} />
+        </main>
+        <PageSectionDots variant="withAside" sections={SECTION_DOTS_SECTIONS} />
+        <DashboardSidePanel
+          selectedNews={selectedNews}
+          alerts={alerts}
+          briefings={briefings}
+          expanded={alertsExpanded}
+          focusAlertsToken={alertsFocusToken}
+          isPreviewing={isPreviewing}
+          onPreviewMouseEnter={handlePreviewMouseEnter}
+          onPreviewMouseLeave={handlePreviewMouseLeave}
+        />
       </div>
-      <main id="main-content" className={styles.grid}>
-        {riskBoardLoading ? (
-          <div className={styles.riskBoardLoading}>지도 데이터를 불러오는 중입니다…</div>
-        ) : (
-          <GlobalRiskBoard items={riskBoardItems} />
-        )}
-        <AiPriorityList recommendations={recommendations} />
-        <MaterialPriceDetail
-          series={priceSeries}
-          summaries={priceSummaries}
-          period={period}
-          onPeriodChange={setPeriod}
-        />
-        <SupplyNewsFeed items={newsItems} />
-        {/* 기획서 ④번 행(수입 의존도 | 가격추이).
-            비로그인 블러는 검증 편의를 위해 꺼둔 상태다. 되살리려면 blurred={!orgTier}로 바꾼다
-            (ImportDependencyPanel의 blurred 처리는 그대로 살아 있다). 단, 블러는 시각적 구분일 뿐
-            값은 응답에 그대로 담겨 있으므로 실제로 가리려면 백엔드에서 막아야 한다. */}
-        <ImportDependencyPanel data={importDependency} />
-        <MaterialPriceTrendCard
-          series={
-            trendCardSeries.find((s) => s.material === TREND_CARD_MATERIAL) ?? trendCardSeries[0]
-          }
-        />
-      </main>
-      {/* 기획서 ⑨번. 그리드 아래에 붙지만 컷오프 기법(.page의 height:100vh + .grid의 auto 행)을
-          깨지 않는다 — 첫 화면에는 그리드 2행이 잘린 채로 보이고 footer는 스크롤 끝에 있다.
-          외부 데이터 출처 표기 의무(ExchangeRate-API)가 여기서 충족된다. */}
       <Footer />
     </div>
   )

@@ -4,7 +4,6 @@ import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { useScrollOverflowHint } from '../../../lib/useScrollOverflowHint'
-import { Skeleton, SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
 import { toNewsEventRef } from '../../../lib/newsEventRef'
 import { formatCollectedAt } from '../../../lib/formatCollectedAt'
 import type { AiBriefingListItem, DashboardAlert, SelectedArticle } from '../../../api/types'
@@ -37,19 +36,12 @@ interface DashboardSidePanelProps {
   /** 이미 `buildDashboardAlerts`로 걸러지고 정렬된 목록 — 이 컴포넌트는 순서를 바꾸지 않는다. */
   alerts: DashboardAlert[]
   briefings: AiBriefingListItem[]
-  /**
-   * 탭별 로딩. 세 탭의 원천이 달라 각각 다른 시점에 도착하므로 하나로 묶지 않는다 —
-   * 묶으면 이미 온 탭까지 가장 느린 응답을 기다린다.
-   */
-  isNewsLoading?: boolean
-  isAlertsLoading?: boolean
-  isBriefingsLoading?: boolean
   expanded: boolean
   /**
    * 헤더 알림 벨을 누를 때마다 1씩 오르는 값. 오르면 "주요 알림" 탭으로 옮긴다.
    *
    * boolean이 아니라 카운터인 이유: 이미 알림 탭에 있다가 브리핑 탭으로 옮긴 뒤 벨을 다시
-   * 눌러도 알림으로 돌아와야 하는데, boolean은 값이 그대로라 effect가 다시 돌지 않는다.
+   * 눌러도 알림으로 돌아와야 하는데, boolean은 값이 그대로라 전환이 다시 일어나지 않는다.
    * `selectedNews`가 참조 변경으로 같은 일을 하는 것과 같은 방식이다.
    *
    * 0은 "아직 누른 적 없음"이라 첫 렌더에서는 기본 탭(뉴스 상세)을 밀어내지 않는다.
@@ -171,12 +163,12 @@ function NewsDetail({ news }: { news: SelectedArticle | null }) {
         {briefingRef === null ? (
           /* ref를 만들 수 없는 건 수집 원본이 없는 placeholder 폴백뿐이다. 그 항목은 실제
              기사가 아니라 브리핑을 만들 대상이 없으므로 목록 화면으로만 보낸다. */
-          <Link to="/purchasing/risk-monitoring" className={styles.secondaryAction}>
+          <Link to="/public/risk-monitoring" className={styles.secondaryAction}>
             리스크 모니터링에서 브리핑 생성
           </Link>
         ) : (
           <Link
-            to={`/purchasing/ai-briefing?source=NEWS&ref=${encodeURIComponent(briefingRef)}`}
+            to={`/public/ai-briefing?source=NEWS&ref=${encodeURIComponent(briefingRef)}`}
             className={styles.secondaryAction}
           >
             이 기사로 브리핑 생성
@@ -206,7 +198,7 @@ function BriefingList({ briefings }: { briefings: AiBriefingListItem[] }) {
             )}
           </div>
           <Link
-            to={`/purchasing/ai-briefing?briefing=${encodeURIComponent(briefing.briefing_id)}`}
+            to={`/public/ai-briefing?briefing=${encodeURIComponent(briefing.briefing_id)}`}
             className={styles.itemLink}
           >
             {briefing.subject_title ?? briefing.source_ref}
@@ -220,27 +212,23 @@ function BriefingList({ briefings }: { briefings: AiBriefingListItem[] }) {
 /**
  * 데이터 업로드 카드. 목업 우측 하단 자리다.
  *
- * **업로드를 여기서 처리하지 않고 데이터 관리 화면으로 보낸다.** 두 종류 모두 파일을 고르는
- * 것으로 끝나지 않고 검사 → 확인 → 반영 3단계를 거치는데, 좁은 사이드 패널에서 그 과정을
- * 보여줄 수 없다. 같은 기능을 두 곳에 두면 갈라지기도 한다.
- *
- * 링크에 `mode`를 실어 보내 <b>누른 항목에 맞는 탭이 열리게</b> 한다. 그냥 화면만 열면 항상
- * ERP 탭이 뜨는데, "계약서 PDF"를 눌러 CSV 업로드 화면이 나오면 잘못 눌렀나 싶어진다.
+ * **업로드를 여기서 처리하지 않고 기존 화면으로 보낸다.** 계약서는 계약·RAG 화면이 이미
+ * 업로드·재처리·인덱싱 상태까지 다루고 있어 같은 기능을 두 곳에 두면 갈라진다. ERP CSV는
+ * 백엔드에 업로드 엔드포인트 자체가 없어(`contract-rag` 쪽만 있다) 파일 선택창을 띄우면
+ * 고를 수는 있는데 보낼 곳이 없는 상태가 된다.
  */
 function UploadCard() {
   return (
     <ScrollCard headingId="data-upload-heading" title="데이터 업로드">
       <div className={styles.uploadBody}>
-        <Link to="/purchasing/data-management?mode=RAG" className={styles.uploadItem}>
+        <Link to="/public/contract-rag" className={styles.uploadItem}>
           <span className={styles.uploadTitle}>계약서 PDF / TXT</span>
-          <span className={styles.uploadHint}>데이터 관리 화면에서 등록 →</span>
+          <span className={styles.uploadHint}>계약 · RAG 화면에서 업로드 →</span>
         </Link>
-        {/* 예전에는 "업로드 API 준비 중"이라 비활성이었다. /api/v1/erp/imports의 preview·commit이
-            생기면서 데이터 관리 화면이 검사·반영까지 다루므로 이제 보낼 곳이 있다. */}
-        <Link to="/purchasing/data-management?mode=ERP" className={styles.uploadItem}>
+        <div className={`${styles.uploadItem} ${styles.uploadDisabled}`}>
           <span className={styles.uploadTitle}>ERP CSV</span>
-          <span className={styles.uploadHint}>데이터 관리 화면에서 검사 후 반영 →</span>
-        </Link>
+          <span className={styles.uploadHint}>업로드 API 준비 중 — 현재는 DB 적재로 반영됩니다</span>
+        </div>
       </div>
     </ScrollCard>
   )
@@ -266,9 +254,6 @@ export function DashboardSidePanel({
   selectedNews,
   alerts,
   briefings,
-  isNewsLoading = false,
-  isAlertsLoading = false,
-  isBriefingsLoading = false,
   expanded,
   focusAlertsToken = 0,
   isPreviewing,
@@ -278,24 +263,17 @@ export function DashboardSidePanel({
   const [activeTab, setActiveTab] = useState<TabId>('news')
 
   /*
-   * 부모가 보낸 신호에 맞춰 탭을 옮긴다 — **effect가 아니라 렌더 중에** 직전 값과 비교한다.
+   * 부모가 보낸 신호에 맞춰 탭을 옮긴다 — **effect가 아니라 렌더 중에** 직전 값과 비교한다
+   * (1계층 `features/purchasing/components/DashboardSidePanel`과 동일 규칙).
    *
-   * 두 가지 전환이 있다.
    *   1. 기사를 고르면 "뉴스 상세"로 돌아온다. 브리핑 탭을 보던 중에 "최신 뉴스"나 위험
-   *      지도에서 기사를 눌러도 탭이 그대로라 클릭이 먹지 않은 것처럼 보였다.
-   *      id가 아니라 객체 참조를 본다 — 부모가 클릭할 때마다 fromNewsFeedItem/
-   *      fromRiskBoardItem으로 새 객체를 만들어 넣으므로 같은 기사를 다시 눌러도 탭이
-   *      돌아오고, 목록이 주기적으로 갱신돼도 참조는 그대로라 브리핑 탭을 보는 중에
-   *      끌려가지 않는다.
-   *   2. 헤더 알림 벨을 누르면 "주요 알림"으로 옮긴다. 벨을 눌렀는데 뉴스 상세가 열리면
-   *      트리거와 결과가 어긋난다.
+   *      지도에서 기사를 눌러도 탭이 그대로면 클릭이 먹지 않은 것처럼 보인다. id가 아니라
+   *      객체 참조를 보므로 같은 기사를 다시 눌러도 탭이 돌아오고, 목록이 갱신돼도 참조는
+   *      그대로라 브리핑 탭을 보는 중에 끌려가지 않는다.
+   *   2. 헤더 알림 벨을 누르면 "주요 알림"으로 옮긴다.
    *
-   * **알림 검사를 뉴스 검사보다 뒤에 둔다.** 둘이 같은 렌더에서 함께 바뀌면 나중 것이
-   * 이기는데, 벨을 누른 의도가 더 최근이다(예전 effect 두 개의 선언 순서와 같은 규칙).
-   *
-   * effect로 하면 탭이 한 번 잘못 그려진 뒤 다시 그려진다(그리고 react-hooks/
-   * set-state-in-effect에 걸린다). 렌더 중 조정은 React가 그 자리에서 다시 렌더해
-   * 중간 상태가 화면에 나가지 않는다 — "props가 바뀔 때 state 조정"의 표준 패턴이다.
+   * 알림 검사가 뉴스 검사보다 **뒤에** 온다 — 둘이 같은 렌더에서 바뀌면 나중 것이 이기고,
+   * 벨을 누른 의도가 더 최근이다.
    */
   const [prevSelectedNews, setPrevSelectedNews] = useState(selectedNews)
   if (selectedNews !== prevSelectedNews) {
@@ -354,43 +332,21 @@ export function DashboardSidePanel({
               aria-labelledby={`side-panel-tab-${activeTab}`}
               className={styles.tabPanel}
             >
-              {activeTab === 'news' &&
-                (isNewsLoading && !selectedNews ? (
-                  <div className={styles.newsDetail} aria-busy="true">
-                    <Skeleton width="7em" />
-                    <SkeletonText lines={2} lastLineWidth="65%" />
-                    <Skeleton width="45%" />
-                  </div>
-                ) : (
-                  <NewsDetail news={selectedNews} />
-                ))}
+              {activeTab === 'news' && <NewsDetail news={selectedNews} />}
               {activeTab === 'alerts' && (
                 <>
                   <div className={styles.panelHead}>
                     <span className={styles.panelTitle}>주요 알림</span>
                     {/* 목업의 "전체 보기". 이 목록은 심각·주의만 추린 것이라, 전체는 등급 필터가
                         있는 리스크 모니터링 화면에서 본다. */}
-                    <Link to="/purchasing/risk-monitoring" className={styles.panelMore}>
+                    <Link to="/public/risk-monitoring" className={styles.panelMore}>
                       전체 보기
                     </Link>
                   </div>
-                  {isAlertsLoading ? (
-                    <div aria-busy="true">
-                      <SkeletonText lines={5} lastLineWidth="50%" />
-                    </div>
-                  ) : (
-                    <AlertList alerts={alerts} />
-                  )}
+                  <AlertList alerts={alerts} />
                 </>
               )}
-              {activeTab === 'briefings' &&
-                (isBriefingsLoading ? (
-                  <div aria-busy="true">
-                    <SkeletonText lines={6} lastLineWidth="40%" />
-                  </div>
-                ) : (
-                  <BriefingList briefings={briefings} />
-                ))}
+              {activeTab === 'briefings' && <BriefingList briefings={briefings} />}
             </div>
 
             <UploadCard />

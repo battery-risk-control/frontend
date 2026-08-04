@@ -18,6 +18,10 @@ import { DataQualityPage } from '../features/planning/pages/DataQualityPage'
 import { AiBriefingDetailPage } from '../features/planning/pages/AiBriefingDetailPage'
 import { ContractDetailPage } from '../features/planning/pages/ContractDetailPage'
 import { ExecutiveDashboardPage } from '../features/executive/pages/ExecutiveDashboardPage'
+import { ExecutiveRisksPage } from '../features/executive/pages/ExecutiveRisksPage'
+import { ExecutiveSupplyChainPage } from '../features/executive/pages/ExecutiveSupplyChainPage'
+import { ExecutiveBriefingsPage } from '../features/executive/pages/ExecutiveBriefingsPage'
+import { ExecutiveVerificationPage } from '../features/executive/pages/ExecutiveVerificationPage'
 import { useAuthState } from '../lib/useAuthState'
 import { DASHBOARD_PATH_BY_TIER } from '../lib/dashboardPaths'
 import { TIER_LABEL } from '../lib/tierLabels'
@@ -207,6 +211,38 @@ export function AppRoutes() {
         element={
           <RequireAuth tier="executive">
             <ExecutiveDashboardPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/executive/risks"
+        element={
+          <RequireAuth tier="executive">
+            <ExecutiveRisksPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/executive/supply-chain"
+        element={
+          <RequireAuth tier="executive">
+            <ExecutiveSupplyChainPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/executive/briefings"
+        element={
+          <RequireAuth tier="executive">
+            <ExecutiveBriefingsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/executive/verification"
+        element={
+          <RequireAuth tier="executive">
+            <ExecutiveVerificationPage />
           </RequireAuth>
         }
       />

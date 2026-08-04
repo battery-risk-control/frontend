@@ -1,20 +1,143 @@
-.wrapper {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
 .page {
   display: flex;
+  min-height: 100vh;
   flex-direction: column;
-  gap: var(--space-6);
-  flex: 1;
-  padding: var(--space-6);
-  background: var(--color-bg);
+  background: #f4f7fa;
 }
 
-.bottomRow {
+.body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 20px;
+  margin-right: 40px;
+  padding: 24px;
+}
+
+.body > aside:last-child {
+  width: 320px;
+  flex: 0 0 320px;
+  margin: 24px 24px 24px 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.titleRow h1 {
+  margin: 0;
+  color: #102a43;
+  font-size: 26px;
+  line-height: 1.3;
+  letter-spacing: -0.03em;
+}
+
+.eyebrow {
+  margin: 0 0 5px;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.description {
+  max-width: 390px;
+  margin: 0;
+  color: #627d98;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: right;
+}
+
+.mapSection {
+  min-width: 0;
+  scroll-margin-top: 90px;
+}
+
+.message {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-6);
+  min-height: 260px;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 30px;
+  border: 1px dashed #9fb3c8;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #486581;
+  text-align: center;
+}
+
+.message strong {
+  color: #102a43;
+  font-size: 17px;
+}
+
+.message p {
+  max-width: 480px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.errorMessage {
+  border-color: #fca5a5;
+  background: #fff7f7;
+}
+
+.errorMessage strong {
+  color: #b91c1c;
+}
+
+@media (max-width: 1180px) {
+  .body {
+    flex-wrap: wrap;
+  }
+
+  .main {
+    flex-basis: calc(100% - 220px);
+    margin-right: 0;
+  }
+
+  .body > aside:last-child {
+    width: auto;
+    flex: 1 1 100%;
+    margin: 0 24px 24px;
+  }
+}
+
+@media (max-width: 760px) {
+  .main {
+    flex-basis: 100%;
+    padding: 16px;
+  }
+
+  .titleRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .titleRow h1 {
+    font-size: 22px;
+  }
+
+  .description {
+    max-width: none;
+    text-align: left;
+  }
+
+  .body > aside:last-child {
+    margin: 0 16px 16px;
+  }
 }

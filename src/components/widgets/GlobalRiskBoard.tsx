@@ -23,6 +23,14 @@ interface GlobalRiskBoardProps {
    * 우측 패널이 없다.
    */
   onSelectItem?: (item: GlobalRiskBoardItem) => void
+  /** 지도 높이(px). 생략 시 CSS 기본값 유지 — 공유 컴포넌트라 CSS 기본값을 직접 바꾸지 않고
+   * 화면별로 prop으로 override한다(3계층 경영진 대시보드가 확대해 쓴다). */
+  mapHeight?: number
+  /** 마커/국가 클릭 시 선택 묶음(SelectedDetail)째로 알림(3계층 대시보드). 전달되면 카드 안쪽
+   * "마커 클릭 시 정보 표시" 패널을 아예 렌더링하지 않고 클릭 결과를 이 콜백으로만 전달한다 —
+   * 표시는 호출부 몫이다. onSelectItem(대표 이벤트 1건 전달, 패널은 접힌 채 유지)과는 전달
+   * 단위와 패널 처리 방식이 달라 별도 prop으로 둔다. */
+  onSelect?: (detail: SelectedDetail | null) => void
 }
 
 type ViewMode = 'event' | 'country'
@@ -40,7 +48,7 @@ interface CountryGroup {
   representative: LocatedItem
 }
 
-interface SelectedDetail {
+export interface SelectedDetail {
   label: string
   events: GlobalRiskBoardItem[]
 }
@@ -248,7 +256,7 @@ function groupByCountry(items: LocatedItem[]): CountryGroup[] {
  * 사용 예:
  *   <GlobalRiskBoard items={items} />
  */
-export function GlobalRiskBoard({ items, onSelectItem }: GlobalRiskBoardProps) {
+export function GlobalRiskBoard({ items, onSelectItem, mapHeight, onSelect }: GlobalRiskBoardProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('event')
   const [selected, setSelected] = useState<SelectedDetail | null>(null)
   const [panelExpanded, setPanelExpanded] = useState(false)
@@ -262,18 +270,22 @@ export function GlobalRiskBoard({ items, onSelectItem }: GlobalRiskBoardProps) {
   }
 
   function handleSelectEvent(item: LocatedItem) {
-    setSelected({ label: item.material, events: [item] })
+    const detail: SelectedDetail = { label: item.material, events: [item] }
+    setSelected(detail)
     // 상위가 상세를 받아가면 카드 안쪽까지 펼치지 않는다(같은 내용이 두 군데 뜬다).
-    setPanelExpanded(!onSelectItem)
+    setPanelExpanded(!onSelectItem && !onSelect)
     onSelectItem?.(item)
+    onSelect?.(detail)
   }
 
   function handleSelectCountry(group: CountryGroup) {
-    setSelected({ label: group.countryName, events: group.events })
-    setPanelExpanded(!onSelectItem)
+    const detail: SelectedDetail = { label: group.countryName, events: group.events }
+    setSelected(detail)
+    setPanelExpanded(!onSelectItem && !onSelect)
     // 국가뷰 마커는 여러 이벤트를 대표하므로, 색·라벨에 이미 쓰고 있는 대표 이벤트를
     // 그대로 넘긴다 — 여기서 새로운 대표 선정 규칙을 만들지 않는다.
     onSelectItem?.(group.representative)
+    onSelect?.(detail)
   }
 
   return (
@@ -299,7 +311,7 @@ export function GlobalRiskBoard({ items, onSelectItem }: GlobalRiskBoardProps) {
         </div>
       }
       pinnedTop={
-        <div className={styles.mapWrapper}>
+        <div className={styles.mapWrapper} style={mapHeight !== undefined ? { height: mapHeight } : undefined}>
           <MapContainer
             center={[20, 10]}
             zoom={1.4}
@@ -408,44 +420,49 @@ export function GlobalRiskBoard({ items, onSelectItem }: GlobalRiskBoardProps) {
         </div>
       }
     >
-      <div className={styles.panelHeader}>
-        <p className={styles.placeholder}>지도에서 마커를 클릭하면 관련 리스크 정보가 여기에 표시됩니다.</p>
-        <button
-          type="button"
-          className={styles.panelToggleButton}
-          onClick={() => setPanelExpanded((prev) => !prev)}
-          aria-expanded={panelExpanded}
-          aria-label={panelExpanded ? '리스크 정보 패널 접기' : '리스크 정보 패널 펼치기'}
-        >
-          <ChevronIcon expanded={panelExpanded} />
-        </button>
-      </div>
-      <div className={panelExpanded ? `${styles.panelBody} ${styles.panelBodyExpanded}` : styles.panelBody}>
-        <div className={styles.panelBodyInner}>
-          {selected && (
-            <>
-              <div className={styles.detailHeader}>
-                <span className={styles.detailLabel}>{selected.label}</span>
-                <button type="button" className={styles.closeButton} onClick={() => setSelected(null)}>
-                  닫기
-                </button>
-              </div>
-              <ul className={styles.list}>
-                {selected.events.map((item) => (
-                  <li key={item.risk_event_id} className={styles.item}>
-                    <div className={styles.itemHeader}>
-                      <span className={styles.material}>{item.material}</span>
-                      <RiskGradeBadge grade={item.grade} />
-                      <ConfidenceBadge label={item.confidence_label} />
-                    </div>
-                    <p className={styles.summary}>{item.event_summary}</p>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-      </div>
+      {/* onSelect가 있으면(3계층) 표시는 호출부 몫이라 카드 안쪽 패널 자체를 렌더링하지 않는다. */}
+      {!onSelect && (
+        <>
+          <div className={styles.panelHeader}>
+            <p className={styles.placeholder}>지도에서 마커를 클릭하면 관련 리스크 정보가 여기에 표시됩니다.</p>
+            <button
+              type="button"
+              className={styles.panelToggleButton}
+              onClick={() => setPanelExpanded((prev) => !prev)}
+              aria-expanded={panelExpanded}
+              aria-label={panelExpanded ? '리스크 정보 패널 접기' : '리스크 정보 패널 펼치기'}
+            >
+              <ChevronIcon expanded={panelExpanded} />
+            </button>
+          </div>
+          <div className={panelExpanded ? `${styles.panelBody} ${styles.panelBodyExpanded}` : styles.panelBody}>
+            <div className={styles.panelBodyInner}>
+              {selected && (
+                <>
+                  <div className={styles.detailHeader}>
+                    <span className={styles.detailLabel}>{selected.label}</span>
+                    <button type="button" className={styles.closeButton} onClick={() => setSelected(null)}>
+                      닫기
+                    </button>
+                  </div>
+                  <ul className={styles.list}>
+                    {selected.events.map((item) => (
+                      <li key={item.risk_event_id} className={styles.item}>
+                        <div className={styles.itemHeader}>
+                          <span className={styles.material}>{item.material}</span>
+                          <RiskGradeBadge grade={item.grade} />
+                          <ConfidenceBadge label={item.confidence_label} />
+                        </div>
+                        <p className={styles.summary}>{item.event_summary}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </ScrollCard>
   )
 }

@@ -1,0 +1,335 @@
+.sections {
+  display: grid;
+  gap: 20px;
+}
+
+.section {
+  min-width: 0;
+  padding: 20px;
+  scroll-margin-top: 90px;
+  border: 1px solid #d9e2ec;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgb(15 42 68 / 7%);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  color: #102a43;
+  font-size: 20px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.count {
+  color: #627d98;
+  font-size: 13px;
+}
+
+.twoColumn {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.riskGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.riskCard {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #d9e2ec;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.riskRank {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: #dbeafe;
+  color: #1557b0;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.riskBody {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.riskBody strong {
+  overflow: hidden;
+  color: #102a43;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.riskBody span {
+  color: #627d98;
+  font-size: 12px;
+}
+
+.riskCard > span {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.critical,
+.warning,
+.normal,
+.success,
+.neutral {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.critical {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.warning {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.normal,
+.success {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.neutral {
+  background: #e9eff5;
+  color: #486581;
+}
+
+.trendList,
+.dependencyList {
+  display: grid;
+  gap: 14px;
+}
+
+.trendRow,
+.dependencyRow {
+  display: grid;
+  align-items: center;
+  grid-template-columns: 72px minmax(80px, 1fr) 52px;
+  gap: 12px;
+}
+
+.trendRow time,
+.dependencyRow strong {
+  color: #486581;
+  font-size: 12px;
+}
+
+.trendRow > strong,
+.dependencyRow > span {
+  color: #102a43;
+  font-size: 12px;
+  text-align: right;
+}
+
+.barTrack {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9eff5;
+}
+
+.barFill,
+.dependencyFill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.barFill {
+  background:
+    linear-gradient(
+      90deg,
+      #0f766e,
+      #1557b0
+    );
+}
+
+.dependencyFill {
+  background:
+    linear-gradient(
+      90deg,
+      #1557b0,
+      #60a5fa
+    );
+}
+
+.subheading {
+  margin: 0 0 12px;
+  color: #334e68;
+  font-size: 14px;
+}
+
+.list,
+.briefingList {
+  display: grid;
+  gap: 10px;
+}
+
+.listItem,
+.briefingItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #d9e2ec;
+  border-radius: 11px;
+  background: #f8fafc;
+}
+
+.listItem > div,
+.briefingItem > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.listItem strong,
+.briefingItem strong {
+  overflow: hidden;
+  color: #102a43;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listItem div > span,
+.briefingItem p {
+  margin: 0;
+  color: #627d98;
+  font-size: 12px;
+}
+
+.briefingItem div {
+  flex-direction: row;
+  align-items: center;
+}
+
+.briefingItem p {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.verificationGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.verificationItem {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 9px;
+  padding: 14px;
+  border: 1px solid #d9e2ec;
+  border-radius: 11px;
+  background: #f8fafc;
+}
+
+.verificationItem > span {
+  color: #627d98;
+  font-size: 12px;
+}
+
+.verificationItem strong {
+  align-self: flex-start;
+  font-size: 17px;
+}
+
+.empty {
+  display: grid;
+  min-height: 110px;
+  place-items: center;
+  padding: 18px;
+  border: 1px dashed #bcccdc;
+  border-radius: 11px;
+  background: #f8fafc;
+  color: #829ab1;
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 1280px) {
+  .riskGrid {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .verificationGrid {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .twoColumn {
+    grid-template-columns: 1fr;
+  }
+
+  .riskGrid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .riskGrid,
+  .verificationGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .listItem,
+  .briefingItem {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .briefingItem p {
+    text-align: left;
+  }
+}

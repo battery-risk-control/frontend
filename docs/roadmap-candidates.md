@@ -42,10 +42,29 @@ surin에는 `pages/ErpImpact.tsx`(`/erp-impact` 라우트, 네비 라벨 "ERP �
   따라서 C1 해결책(리스크 유형별 분포 차트 구현)으로 이 화면의 부재를 대신 해소할 수 없다.
 - 착수 여부·우선순위는 미결정 상태로 남긴다.
 
-## C3 — SideNav 내비게이션 항목 미기능(placeholder) 및 개념 불일치 (미결정 — 상태 어휘 5종에 미해당, 착수 방향 3안 중 택일 필요, 2026-07-24)
+## C3 — SideNav 내비게이션 항목 미기능(placeholder) 및 개념 불일치 (부분 해결 — 2026-08-02, 나머지 3항목은 여전히 착수 방향 3안 중 택일 필요, 2026-07-24 최초 기록)
 
-`SideNav`(Purchasing/BriefingDetail/Planning 3개 페이지)의 하위 항목이 실제로는 기능하지
-않는 placeholder라는 사실과, 이를 둘러싼 여러 미결정 설계 이슈를 기록한다.
+**부분 해결(2026-08-02)**: `e2e/briefing-detail.spec.ts` CI 실패("브리핑 보기" 링크를 30초
+동안 못 찾음)를 조사하던 중, Phase 11(2026-07-29)에서 본문에서 제거된
+`MaterialRiskStatusPanel`/`ErpImpactPanel`/`PurchasePriorityPanel` 3개 컴포넌트가 SideNav
+연결도 끝나지 않아 앱 어디에도 렌더링되지 않는 상태(파일만 존재, 소비처 0건)로 방치돼
+있었음을 발견. 이 3개만 실제 라우트(`/purchasing/material-risk`·`/purchasing/erp-impact`·
+`/purchasing/priority`, 각각 독립된 `<h1>`)로 연결해 해결 — 위 실측 4번 항목("리스크
+현황판"과 "브리핑 자료" 클릭 결과가 구분 안 됨)과 같은 클래스의 문제가 이 3개 항목에서는
+더 이상 재현되지 않는다. 중복 정의돼 있던 `SIDE_NAV_ITEMS`(PurchasingDashboardPage.tsx/
+BriefingDetailPage.tsx 2곳)도 `lib/purchasingNav.ts`(2계층 `planningNav.ts`와 동일 패턴)로
+통합. **"브리핑"/"문서 관리"/"계약 검색" 3항목은 여전히 해시 placeholder로 남아있고, 아래
+"착수 방향 미결정" 3안 중 택일 문제도 그대로 유효**(대응 컴포넌트 자체가 없어 이번 라운드
+범위 밖).
+
+`SideNav`/`AlertsPanel`은 `/purchasing`·`/planning`·`/executive` 3개 계층의 레이아웃 셸
+레벨에서 적용 여부·내용이 결정된다. `BriefingDetailPage`(`/purchasing/briefing/:riskEventId`)는
+`/purchasing` 셸을 공유하는 하위 라우트일 뿐이며, 계층과 병렬로 나열해 개별 판단할 대상이
+아니다 — 2026-07-24 이 문서 최초 작성 시 'SideNav가 Purchasing/BriefingDetail/Planning
+3개 페이지에 존재한다'는 코드 사실을 그대로 옮기며 계층과 하위 라우트를 같은 레벨처럼
+서술했고, 이 착시가 이후 v6·v7 두 세션에서 반복 발생했다(2026-07-24 v6에서 1차 정정,
+2026-07-29 v7에서 재발 후 이 문서 자체를 정정). 이 절은 SideNav의 하위 항목이 실제로는
+기능하지 않는 placeholder라는 사실과, 이를 둘러싼 여러 미결정 설계 이슈를 기록한다.
 
 - **원래부터 placeholder였음**: `SIDE_NAV_ITEMS`(Purchasing/BriefingDetail:
   "리스크 현황판"/"브리핑 자료", Planning: "노출도 비교"/"협력사 이력")는 Phase 4부터
@@ -236,14 +255,17 @@ README.md의 "기술 스택" 목록 문구는 이 조사 결과를 반영해 "�
 react-query`는 여전히 설치만 된 상태 그대로다 — 이 상태는 유지되고, `QueryClientProvider`
 정식 도입은 별도 작업으로 계속 미뤄진다.
 
-## C12 — Planning 대시보드 필터 pill 줄바꿈 안 됨 (착수 전, 2026-07-27)
+## C12 — Planning 대시보드 필터 pill 줄바꿈 안 됨 (해결됨, 2026-08-02)
 
 460px 이하에서 필터 pill(`.filters`, '사업부 전체'/'2026년 2분기' 등)이 줄바꿈되지 않아
 오버플로 발생. grid 컬럼 문제가 아니라 flex/inline 요소 줄바꿈 부재가 원인 —
 `ImportDependencyRow`(C 근처, 이번 수정 건)와는 다른 원인. `ImportDependencyRow` 조사 중
 우연히 발견, 범위 밖이라 별도 기록만 함.
 
-## C13 — 650px 이하에서 `<main>` 비수축 요소 총합으로 인한 재오버플로 (착수 전, 2026-07-27)
+**해결**: `PlanningDashboardPage.module.css`의 `.filters`에 `flex-wrap: wrap` 추가.
+375px까지 실측(줄바꿈 정상, 겹침 없음).
+
+## C13 — 650px 이하에서 `<main>` 비수축 요소 총합으로 인한 재오버플로 (해결됨, 2026-08-02)
 
 940px 미디어 쿼리(`ImportDependencyRow` 직렬 전환, C12 근처 커밋) 적용 후 정상 확인됐으나,
 SideNav 펼침 상태에서 650px 이하로 좁히면 오버플로가 다시 나타남. 원인은
@@ -254,3 +276,41 @@ SideNav(220px)+PageSectionDots 레일(40px)+AlertsPanel(280px, 기본 펼침)이
 범위를 벗어나는 페이지 레이아웃 셸 문제라 별도 조사·설계 필요(예: 특정 폭 이하에서
 SideNav/AlertsPanel도 자동 접힘, 또는 셸 요소 자체에 최소 폭 이하로는 `<main>`이 안
 줄어들도록 하한 설정 등 — 방향 미정).
+
+**해결**: Phase 12(2계층) QA 중 같은 현상이 2계층에도 재현됨을 확인해 함께 처리. 신규
+공용 훅 `lib/useIsNarrowViewport.ts`(matchMedia 기반) + 상수 `lib/responsiveBreakpoints.ts`의
+`NARROW_SHELL_BREAKPOINT_PX`(650, 이 문서에서 실측한 값 그대로 승격)를 도입해,
+`SideNavProvider`/`AlertsPanelProvider`가 이 폭 이하에서는 사용자의 수동 펼침 여부와
+무관하게 항상 접힘으로 강제하도록 변경(`collapsed || isNarrowViewport` /
+`expanded && !isNarrowViewport`). 수동 토글 버튼(`SideNavToggleButton`/`AlertsBellButton`)은
+이 상태일 때 `disabled` 처리(다시 펼쳐서 오버플로가 재현되는 걸 방지) — 두 Provider가
+전역(App.tsx 최상위)에 있어 구매팀·경영기획팀 양쪽에 한 번의 수정으로 적용됨. 375px/460px/
+550px/650px 전 구간에서 구매팀·경영기획팀(7탭) 전부 재실측(오버플로 0), 1280px에서 기존
+수동 토글 정상 동작(비활성화 안 됨) 확인. 차트 패널(`ComparisonChart`/`RankedBarChart`)에도
+`min-width: 0`이 없어 부모가 좁아져도 recharts SVG가 안 줄어드는 별도 버그를 이 조사 중
+같이 발견·수정.
+
+## C14 — 가격 추이 카드 폭 오버플로(1280px, 페이지 레벨 스크롤바 미발생이라 기존 판정 방식으로는 미검출) (착수 전, 2026-07-29)
+
+`youngjin/2nd-demo-layout` 브랜치 작업(수정 4, ImportDependencyRow 940px 규칙 검증) 중
+발견됐으나, **이 브랜치의 변경과 무관한 기존 drift**다 — `git stash`로 base 브랜치
+(`dev-김영진_merge-test`, 이 브랜치가 갈라지기 전 상태)와 A/B 비교한 결과, 아래 수치가
+완전히 동일하게 나와 이 브랜치가 생기기 전부터 이미 있던 버그임을 확인했다.
+
+- 뷰포트 1280px, SideNav 펼침 기준: `<main>` 폭 664px → `ImportDependencyRow`의 `.row` 폭
+  616px → 고정 340px 컬럼 + `1fr` 컬럼(원자재 가격 추이, `MaterialPriceDetail`)의 실제
+  렌더 폭이 298.86px로, `.row` 우측 경계를 46.86px 초과해 렌더링된다(`MaterialPriceDetail`
+  내부 콘텐츠의 min-content 폭이 이 시점의 "공정 분배" 폭 252px보다 커서 발생 — CSS Grid
+  `1fr` 트랙의 기본 `min-width:auto`가 원인).
+- `.main{min-width:0}`이 이 내부 오버플로가 `.body`/문서 전체로 전파되는 것을 막아
+  `document.documentElement.scrollWidth`가 `window.innerWidth`와 같게 유지된다 — 그래서
+  기존 940px 임계값 판정(C13 이전 원 조사, "페이지 전체 가로 스크롤바 발생 여부"만으로
+  이분 탐색)으로는 애초에 검출될 수 없었던 사각지대다. 실제로는 940px보다 훨씬 넓은
+  뷰포트(1280px 등)에서도 "원자재 가격 추이" 카드 우측(3번째 자재 요약 칸·x축 마지막 라벨
+  등)이 시각적으로 잘려 보인다.
+- `youngjin/2nd-demo-layout` 브랜치의 수정 1(QuickActionsPanel을 AlertsPanel 하위로 통합)이
+  이 브랜치 작업 중 일시적으로 이 문제를 악화시켰던 부분(`<main>` 폭이 388px까지 좁아져
+  거의 항상 클리핑 발생)은 이미 원상 복구했다 — 여기 남은 건 그 복구 이후에도 여전히
+  남아있는, 이 브랜치와 무관한 원래 버그다.
+- 착수 방향(예: `MaterialPriceDetail` 내부 콘텐츠에 `min-width:0` 적용, 또는 940px
+  판정 자체를 "페이지 스크롤바"가 아니라 "카드별 실제 렌더 폭"으로 재정의) 모두 미결정.

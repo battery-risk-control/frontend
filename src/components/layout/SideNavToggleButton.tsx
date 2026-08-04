@@ -12,13 +12,14 @@ import styles from './SideNavToggleButton.module.css'
  *   <SideNav items={...} />
  */
 export function SideNavToggleButton() {
-  const { collapsed, toggle } = useSideNavState()
+  const { collapsed, isNarrowViewport, toggle } = useSideNavState()
 
   return (
     <button
       type="button"
       className={styles.toggleButton}
       onClick={toggle}
+      disabled={isNarrowViewport}
       aria-label={collapsed ? '사이드 메뉴 펼치기' : '사이드 메뉴 접기'}
       aria-expanded={!collapsed}
     >

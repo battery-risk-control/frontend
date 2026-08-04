@@ -9,6 +9,13 @@
 
 ## 1. 2계층 — 경영기획팀 대시보드
 
+> **2026-08-03부터**: 이 절의 7개 엔드포인트(전략 대시보드/자재 위험/수입 의존도/공급사
+> 분석/계약 현황/AI 브리핑/데이터 품질) + 드릴다운 상세 2개(AI 브리핑/계약, 아래 1-7/1-8)
+> 총 9개가 실 백엔드(`PlanningDashboardController`)에 연결됐다 — 연결 검증 상세는
+> `docs/backend-api-contracts.md` "3. 2계층 경영기획팀 대시보드" 참고. 응답 필드 스키마
+> 자체는 이 문서에 있는 그대로 변경 없이 유지된다. 아래 mock 파생 로직 설명은
+> `VITE_API_BASE_URL` 미설정 시(①단계) 폴백 동작으로 계속 유효하다.
+
 `GET /api/planning/dashboard?business_unit={id}&period={yyyyQn}`
 
 ```json
@@ -39,6 +46,181 @@
 - `kpi_summary`는 배열 — 카드 개수가 바뀌어도 프론트 컴포넌트 수정 없이 대응 가능하도록 설계.
 - `vendor_risk_history[].confidence_label`은 1계층 `risk_event.confidence_label`과 동일한 값 집합(확정/참고/경고) 사용 — 신뢰도 라벨 규칙(Seq 20)을 전 계층에 일관 적용.
 - FE 구현 시 이 응답을 1계층 `risk_event` mock 배열에서 실제로 파생시켰다. `risk_exposure_by_unit`은 `risk_event`에 없는 사업부(business_unit) 개념이 필요해 자재(니켈/리튬→배터리셀사업부, 코발트→양극재사업부) → 사업부 매핑을 임시로 가정했고, `exposure_score`는 사업부별 평균 등급(정상=1/주의=2/심각=3)을 72점 만점으로 환산해 계산한다. `vendor_risk_history`는 `risk_event.erp_view.alt_sourcing_candidates`에 등장하는 공급사명을 집계(`risk_count_90d`)하고 최신 이벤트의 등급·신뢰도를 가져와 채운다 — `vendor_id`만 데모용 고정 매핑(`SUP-01xx`)이다. `kpi_summary`의 "탐지된 리스크"·"평균 대응 소요"는 `risk_event` mock 7건으로 대표하기엔 규모가 작아(실제 "이번 분기" 규모를 표현할 수 없음) 이 문서의 예시값을 그대로 사용했고, "심각 등급 비중"만 `risk_event` 배열에서 직접 계산한다.
+
+### 1-1. 자재 위험 탭 (`fetchMaterialRiskDashboard()`)
+
+```json
+{
+  "kpi_summary": [
+    { "label": "평가 자재", "value": 3, "unit": "종" },
+    { "label": "심각 자재", "value": 1, "unit": "건" },
+    { "label": "평균 재고일수", "value": 34, "unit": "일" },
+    { "label": "최고 위험 점수", "value": 70, "unit": "점" }
+  ],
+  "ranking": [
+    { "material": "코발트", "score": 70, "rank": 1, "grade": "심각" }
+  ],
+  "top_material_unit_exposure": [
+    { "business_unit": "양극재사업부", "exposure_score": 70 }
+  ],
+  "quarter_change_label": "지난 분기 대비 위험 점수 상승"
+}
+```
+- `ranking`/`score`는 `risk_exposure_by_unit`과 동일한 GRADE_SEVERITY×24 환산을 자재 단위로
+  재계산한 것 — 같은 산식을 두 축(사업부/자재)에 재사용해 숫자 체계를 통일했다.
+- `평균 재고일수`/`quarter_change_label`은 `risk_event`에 대응 필드가 없어 예시값 —
+  mock 임시값, 후속 검증 필요.
+
+### 1-2. 수입 의존도 탭 (`fetchImportDependencyDashboard()`)
+
+```json
+{
+  "kpi_summary": [
+    { "label": "전체 수입 의존도", "value": 82.3, "unit": "%" },
+    { "label": "단일국가 과의존", "value": 0, "unit": "건" },
+    { "label": "대체 후보", "value": 1, "unit": "곳" },
+    { "label": "다변화 진행률", "value": 40, "unit": "%" }
+  ],
+  "by_country": [{ "country": "중국", "share_ratio": 54.1 }],
+  "by_unit": [{ "business_unit": "배터리셀사업부", "country": "중국", "share_ratio": 84 }],
+  "alternative_suppliers": [
+    { "id": "SUP-0101", "primary": "공급사A", "secondary": "전환 시 의존도 개선 추정", "badge": { "label": "APPROVED", "tone": "success" } }
+  ]
+}
+```
+- `by_country`는 1계층 `fetchImportDependency()`(`purchasing.api.ts`)의 국가별 breakdown을
+  그대로 재사용한 실제 파생값이다. `by_unit`/`다변화 진행률`은 사업부×국가 실측 데이터가
+  없어 상위 2개 사업부만 고정값으로 채운 mock 임시값 — 후속 검증 필요.
+
+### 1-3. 공급사 분석 탭 (`fetchSupplierAnalysisDashboard()`)
+
+```json
+{
+  "kpi_summary": [
+    { "label": "전체 공급사", "value": 6, "unit": "곳" },
+    { "label": "REVIEW 상태", "value": 3, "unit": "곳" },
+    { "label": "90일 이벤트", "value": 7, "unit": "건" },
+    { "label": "대체 검토 진행", "value": 2, "unit": "/3" }
+  ],
+  "ranking": [
+    { "vendor_id": "SUP-0101", "vendor_name": "공급사A", "risk_count_90d": 2, "approved_status": "REVIEW", "linked_units": ["배터리셀사업부"] }
+  ],
+  "recommended": [
+    { "id": "SUP-0103", "primary": "공급사C", "secondary": "최근 90일 이력 1건", "badge": { "label": "APPROVED", "tone": "success" } }
+  ]
+}
+```
+- `ranking`은 위 §1의 `vendor_risk_history`를 이력 건수 내림차순으로 재정렬 + `approved_status`/
+  `linked_units` 필드를 확장한 것 — 최신 등급이 '심각'이면 REVIEW로 파생한다.
+  `linked_units`는 공급사-사업부 연결 실측 데이터가 없어 고정값 — mock 임시값, 후속 검증 필요.
+
+### 1-4. 계약 현황 탭 (`fetchContractStatusDashboard()`)
+
+```json
+{
+  "kpi_summary": [
+    { "label": "ACTIVE", "value": 24, "unit": "건" },
+    { "label": "만료 임박", "value": 3, "unit": "건" },
+    { "label": "문서 적재", "value": 28, "unit": "건" },
+    { "label": "RAG 검색 가능", "value": 28, "unit": "건" }
+  ],
+  "coverage_by_unit": [{ "business_unit": "배터리셀사업부", "contract_count": 14 }],
+  "expiring": [
+    { "id": "BA-2025-0014", "primary": "BA-2025-0014", "secondary": "양극재사업부", "badge": { "label": "D-12", "tone": "warning" } }
+  ]
+}
+```
+- risk_event/ERP 어느 쪽에도 계약-사업부 매핑이 없어 **전 필드 mock 임시값** — 아래
+  "임시 mock 값" 표에 등재.
+
+### 1-5. AI 브리핑 탭 (`fetchAiBriefingSummaryDashboard()`)
+
+```json
+{
+  "kpi_summary": [
+    { "label": "이번 분기 브리핑", "value": 32, "unit": "건" },
+    { "label": "CRITICAL 비중", "value": 33.3, "unit": "%" },
+    { "label": "평균 대응 소요", "value": 2.3, "unit": "일" },
+    { "label": "임원 보고 지정", "value": 4, "unit": "건" }
+  ],
+  "by_unit": [{ "name": "배터리셀사업부", "value": 2, "tone": "neutral" }],
+  "recent": [
+    { "risk_event_id": "RISK-2026-0721-001", "material": "니켈", "grade": "심각", "headline": "인도네시아 니켈 수출 관세 인상 발표로 현물가 18% 급등", "business_unit": "배터리셀사업부" }
+  ]
+}
+```
+- `by_unit`/`recent`는 `risk_event` mock을 사업부·최신순으로 취합한 실제 파생값.
+  "이번 분기 브리핑"/"임원 보고 지정"은 표본(7건)이 작아 예시값 — mock 임시값, 후속 검증 필요.
+
+### 1-6. 데이터 품질 탭 (`fetchDataQualityStatus()`)
+
+```json
+{
+  "erp_sync_status": "정상",
+  "rag_index_status": "정상",
+  "material_coverage_count": 3,
+  "material_coverage_total": 8,
+  "last_updated_label": "10분 전",
+  "confidence_distribution": [
+    { "label": "확정", "ratio": 42 },
+    { "label": "참고", "ratio": 41 },
+    { "label": "경고", "ratio": 17 }
+  ]
+}
+```
+- **전 필드 mock 임시값** — 실제 파이프라인 모니터링 연동 전. 아래 "임시 mock 값" 표에 등재.
+
+### 1-7. AI 브리핑 드릴다운 상세 (`fetchAiBriefingDetail()`, 2026-08-03 신규)
+
+`GET /api/v1/planning/ai-briefing/{analysisId}`
+
+```json
+{
+  "analysis_id": "RISK-2026-0721-001",
+  "material": "니켈",
+  "business_unit": "배터리셀사업부",
+  "grade": "심각",
+  "headline": "인도네시아 니켈 수출 관세 인상 발표로 현물가 18% 급등",
+  "event_content": "인도네시아 니켈 수출 관세 인상 발표로 현물가 18% 급등",
+  "briefing": "LLM이 생성한 브리핑 본문",
+  "recommended_actions": ["대체 공급사 컨택 검토", "안전재고 확대 검토"],
+  "contract_findings": [],
+  "warnings": [],
+  "assessed_at": null
+}
+```
+
+- 실 백엔드는 `procurement_risk_assessments`의 LLM 브리핑 본문·근거를 반환하지만(1-5 §AI
+  브리핑 탭 `recent` 목록엔 없는 상세 필드), mock은 그런 상세 필드가 없어 화면 확인용으로
+  1-5의 `recent` 목록에서 `risk_event_id`로 찾아 `briefing`/`recommended_actions`(고정
+  문구)를 합성한다 — 목록에 없는 id는 "찾을 수 없음" 오류로 처리(§5 `BriefingDetailPage`와
+  동일 관례). `contract_findings`/`warnings`는 항상 빈 배열 — mock 임시값, 아래 "임시 mock
+  값" 표에 등재.
+
+### 1-8. 계약 상세 드릴다운 (`fetchContractDetail()`, 2026-08-03 신규)
+
+`GET /api/v1/planning/contracts/{contractNumber}`
+
+```json
+{
+  "contract_number": "BA-2025-0014",
+  "contract_name": "BA-2025-0014 공급 계약",
+  "supplier_name": "공급사A",
+  "material_name": null,
+  "business_unit": "양극재사업부",
+  "status": "ACTIVE",
+  "start_date": null,
+  "end_date": null,
+  "documents": []
+}
+```
+
+- 실 백엔드는 `contracts`⨝`suppliers`⨝`materials`⨝`business_units` 조인 + 별도 문서 목록
+  조회(`contract_documents`)로 실제 공급사·자재·적재 문서를 반환하지만, mock은 1-4의
+  `expiring` 목록에서 `id`로 찾아 `contract_name`/`supplier_name`(고정값 "공급사A")을
+  합성한다 — 목록에 없는 id는 "찾을 수 없음" 오류로 처리. `material_name`/`start_date`/
+  `end_date`/`documents`는 1-4 목록에 대응 필드가 없어 항상 `null`/빈 배열 — mock 임시값,
+  아래 "임시 mock 값" 표에 등재.
 
 ## 2. 3계층 — 경영진 대시보드
 
@@ -166,6 +348,26 @@
   없고 대신 **코발트**가 있다 — 두 영역의 자재 구성이 서로 다르다는 뜻이며, 아래 "임시 mock 값"
   표에도 등재해 둔다.
 
+## 7. 1계층 — 구매팀 대시보드 확장(뉴스속보·환율정보 티커, 2차 데모)
+
+`risk_event` 스키마를 원천으로 하지 않는, 2차 데모(UX-01-DB, `NewsExchangeTicker`) 전용
+mock — `api/purchasing.api.ts`의 `fetchExchangeRates()`. `NewsExchangeTicker`의 "뉴스속보"
+행은 신규 mock이 아니라 기존 `fetchNewsFeed()`를 표현만 다르게(세로 롤링) 재사용한다.
+
+```json
+// fetchExchangeRates()
+[
+  { "currency_code": "USD", "currency_name": "미국 달러", "rate": 1391.5, "change_label": "▲ 0.3%" },
+  { "currency_code": "CNY", "currency_name": "중국 위안", "rate": 191.2, "change_label": "▼ 0.1%" },
+  { "currency_code": "EUR", "currency_name": "유로", "rate": 1508.7, "change_label": "▲ 0.5%" }
+]
+```
+
+- `risk_event` 계열과 무관한 완전 신규 개념(환율)이라 원천 데이터에서 파생하지 않고 주요
+  통화 3종(USD/CNY/EUR)을 그대로 하드코딩했다 — `rate`/`change_label` 모두 실제 계산
+  로직 없는 mock 임시값이다. 필드 구성(`currency_code`/`currency_name`/`rate`/
+  `change_label`)은 `api/types.ts`의 `ExchangeRateItem` 타입 정의를 그대로 옮겼다.
+
 ## 임시 mock 값 (후속 정리 필요)
 
 Phase 9.3(원자재 가격 추이 "상세보기", surin `RiskMonitoring.tsx` 시각 이식)에서 시각 구성을 우선하기 위해 실제 계산 로직 없이 하드코딩한 필드 목록. 각 필드는 코드에도 `// mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요` 주석이 달려 있다. 앞으로도 실제 계산 로직 없이 mock 값으로 구현하는 필드가 생기면, 이 섹션에 반드시 등재하고 코드에도 `// mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요` 주석을 남긴다.
@@ -180,6 +382,16 @@ Phase 9.3(원자재 가격 추이 "상세보기", surin `RiskMonitoring.tsx` 시
 | `MaterialRiskGaugeItem`(전체 필드) | `api/types.ts`, `api/purchasing.api.ts`의 `fetchMaterialRiskGauges()`(Phase 9.4, surin `materialRiskGauges` 이식) | `features/purchasing/components/MaterialRiskOverviewRow.tsx` 게이지 카드 3장 | surin 값을 그대로 가져왔다. 자재 구성이 리튬/니켈/**흑연**인데, 같은 페이지의 `risk_event` mock 6건(다른 패널이 쓰는 원천 데이터)에는 흑연이 없고 코발트가 있어 — 이 5칸 그리드만 다른 패널과 자재 구성이 어긋난다. `grade`도 surin 4단계를 3단계 `RiskGrade`로 매핑(경고→심각)한 값이라 실제 계산 로직은 없다. |
 | `ScoreCardItem`(전체 필드) | `api/types.ts`, `api/purchasing.api.ts`의 `fetchScoreCards()`(Phase 9.4, surin `summaryScores` 이식) | `features/purchasing/components/MaterialRiskOverviewRow.tsx` 점수 카드 2장 | surin `summaryScores`(외부 리스크 종합 점수 72/ERP 영향 점수 65)를 그대로 가져왔다. `grade`도 surin 원본 문구("높음"/"주의")를 3단계 `RiskGrade`로 매핑(높음→심각)한 값이라 실제 계산 로직은 없다. |
 | `ImportDependencyData`(전체 필드) | `api/types.ts`, `api/purchasing.api.ts`의 `fetchImportDependency()`(Phase 9.4, surin `importDependency` 이식) | `features/purchasing/components/ImportDependencyPanel.tsx` 도넛차트+범례 | `risk_event` 스키마에는 없는 개념(국가별 수입 비중)이라 surin 값을 그대로 가져왔다. 국가별 `color`(hex)도 surin 원본을 그대로 썼다. |
+| `ExchangeRateItem`(전체 필드) | `api/types.ts`, `api/purchasing.api.ts`의 `fetchExchangeRates()`(2차 데모 신규) | `features/purchasing/components/NewsExchangeTicker.tsx` | 실제 환율 API 연동 전 mock — 통화 3종(USD/CNY/EUR)을 하드코딩했다. |
+| `NewsFeedItem.publisher` | `api/types.ts`, `api/purchasing.api.ts`의 `fetchNewsFeed()`(`MOCK_NEWS_PUBLISHER_BY_RISK_EVENT_ID`, 2차 데모 신규) | `components/widgets/SupplyNewsFeed.tsx` 카드 상단 뱃지 | "데이터_활용_및_모델_학습_기획정의서" 1단계의 GDELT 메타데이터 `domain` 필드(기사 게재 언론사 도메인)를 반영한 필드이나, 실제 GDELT 연동 전이라 risk_event_id별로 도메인풍 예시값(`reuters.com`/`bloomberg.com`/`mining.com`/`nikkei.com`/`ft.com`/`spglobal.com`)을 하드코딩했다 — 실제 언론사 소속과 무관. 기존 `NewsFeedItem.source`(데이터 출처 계층, `'data_ingestion_layer'`)를 화면에 언론사명처럼 잘못 노출하던 매핑 오류를 발견해 이 필드를 신설, `source`는 의미 불변으로 유지하되 화면에는 더 이상 쓰지 않는다. |
+| `MaterialRiskDashboardResponse.평균 재고일수`/`quarter_change_label` | `api/types.ts`, `api/planning.api.ts`의 `fetchMaterialRiskDashboard()`(2계층 자재 위험 탭 신규) | `features/planning/pages/MaterialRiskPage.tsx` | `risk_event`에는 재고일수·분기 추이 필드가 없어 예시값을 직접 지정했다. `ranking`/`score`(GRADE_SEVERITY×24 환산)는 실제 파생값과 동일 산식이라 임시값이 아니다. |
+| `ImportDependencyDashboardResponse.by_unit`/`다변화 진행률` | `api/types.ts`, `api/planning.api.ts`의 `fetchImportDependencyDashboard()`(2계층 수입 의존도 탭 신규) | `features/planning/pages/ImportDependencyPage.tsx` | 사업부×국가 실측 데이터가 없어 상위 2개 사업부만 고정값(84%/31%)으로 채웠다. `by_country`는 1계층 `fetchImportDependency()`를 그대로 재사용한 실제 파생값이라 임시값이 아니다. |
+| `SupplierRiskRankItem.linked_units` | `api/types.ts`, `api/planning.api.ts`의 `fetchSupplierAnalysisDashboard()`(2계층 공급사 분석 탭 신규) | `features/planning/pages/SupplierAnalysisPage.tsx` | 공급사-사업부 연결 실측 데이터가 없어 전 공급사에 `['배터리셀사업부']` 고정값을 채웠다. `ranking`/`approved_status`는 기존 `vendor_risk_history`를 재정렬·파생한 실제 값이라 임시값이 아니다. |
+| `ContractStatusDashboardResponse`(전체 필드) | `api/types.ts`, `api/planning.api.ts`의 `fetchContractStatusDashboard()`(2계층 계약 현황 탭 신규) | `features/planning/pages/ContractStatusPage.tsx` | risk_event/ERP 어느 쪽에도 계약-사업부 매핑이 없어 전 필드를 고정값으로 하드코딩했다. |
+| `AiBriefingSummaryDashboardResponse.이번 분기 브리핑`/`임원 보고 지정` | `api/types.ts`, `api/planning.api.ts`의 `fetchAiBriefingSummaryDashboard()`(2계층 AI 브리핑 탭 신규) | `features/planning/pages/AiBriefingSummaryPage.tsx` | `risk_event` 표본(7건)은 "이번 분기" 규모를 대표하기엔 작아 예시값을 사용했다. `by_unit`/`recent`는 `risk_event`를 사업부·최신순으로 취합한 실제 파생값이라 임시값이 아니다. |
+| `DataQualityStatus`(전체 필드) | `api/types.ts`, `api/planning.api.ts`의 `fetchDataQualityStatus()`(2계층 데이터 품질 탭 신규) | `features/planning/pages/DataQualityPage.tsx` | 실제 파이프라인 모니터링(ERP 연동 상태/RAG 인덱스 상태/자재 커버리지/신뢰도 라벨 분포) 연동 전이라 전 필드가 고정값이다. |
+| `AiBriefingDetailResponse.briefing`/`recommended_actions`/`contract_findings`/`warnings` | `api/types.ts`, `api/planning.api.ts`의 `fetchAiBriefingDetail()`(드릴다운 상세, 2026-08-03 신규) | `features/planning/pages/AiBriefingDetailPage.tsx` | mock은 1-5의 `recent` 목록에 없는 LLM 브리핑 본문·근거 필드를 화면 확인용으로 고정 문구/빈 배열로 합성한다 — 실제 백엔드는 `procurement_risk_assessments`의 실제 값을 반환. |
+| `ContractDetailResponse.material_name`/`start_date`/`end_date`/`documents` | `api/types.ts`, `api/planning.api.ts`의 `fetchContractDetail()`(드릴다운 상세, 2026-08-03 신규) | `features/planning/pages/ContractDetailPage.tsx` | mock은 1-4의 `expiring` 목록에 없는 자재/기간/문서 필드를 `null`/빈 배열로 채운다 — 실제 백엔드는 `contracts`⨝`materials`⨝`contract_documents` 조인으로 실측값을 반환. |
 
 ## 확장 원칙
 - 새 화면·지표가 추가되면 기존 필드를 변경하지 말고 옆에 새 필드를 추가한다 (breaking change 최소화).

@@ -262,7 +262,16 @@ export interface MaterialPriceSummary {
   grade: RiskGrade
 }
 
-/** 실시간 뉴스 속보. risk_event_id(RISK-YYYY-MMDD-NNN)에서 날짜를 추출해 최신순으로 정렬한다. */
+/**
+ * 실시간 뉴스 속보. risk_event_id(RISK-YYYY-MMDD-NNN)에서 날짜를 추출해 최신순으로 정렬한다.
+ *
+ * `source`(데이터 출처 계층, 예: 'data_ingestion_layer')와 `publisher`(보도 언론사 도메인)는
+ * 서로 다른 개념이다 — `source`는 CLAUDE.md 원 `risk_event.market_context.source` 스키마
+ * 그대로(의미 불변, 화면에는 더 이상 노출하지 않음), `publisher`는 "데이터_활용_및_모델_학습_
+ * 기획정의서" 1단계에 명시된 GDELT 메타데이터의 `domain` 필드(기사 게재 언론사 도메인)를
+ * 반영한 신규 필드다(2026-07-29) — 새로운 개념이 아니라 원래 파이프라인에 있던 값을 그제야
+ * 스키마에 반영한 것.
+ */
 export interface NewsFeedItem {
   risk_event_id: string
   /**
@@ -336,6 +345,18 @@ export interface ExchangeRateBoard {
   rates: ExchangeRateItem[]
 }
 
+/**
+ * 환율정보 롤링 티커용(2차 데모, `NewsExchangeTicker`). risk_event 계열과 무관한 완전
+ * 신규 개념이라 대응 스키마가 없다 — rate/change_label 모두 실제 계산 로직 없는
+ * mock 임시값이다. docs/mock-schemas.md "임시 mock 값" 표 참고.
+ */
+export interface ExchangeRateItem {
+  currency_code: string
+  currency_name: string
+  rate: number
+  change_label: string
+}
+
 /** 2계층 경영기획팀 대시보드 — mock-schemas.md "2. 2계층" 참고. */
 export interface KpiSummaryItem {
   label: string
@@ -363,6 +384,154 @@ export interface PlanningDashboardResponse {
   kpi_summary: KpiSummaryItem[]
   risk_exposure_by_unit: RiskExposureByUnit[]
   vendor_risk_history: VendorRiskHistoryItem[]
+}
+
+/**
+ * 2계층 사이드바 7탭 확장(전략 대시보드 외 6탭). `RankedBarChart`/`EntityBadgeList` 공용
+ * 컴포넌트 입력 타입 + 탭별 응답 타입 — mock-schemas.md "1. 2계층" 갱신본 참고.
+ */
+
+/** RankedBarChart 공용 입력 항목 — "이름+막대+값" 패턴(자재 순위/국가 의존도/공급사 랭킹 등)에 재사용. */
+export interface RankedBarItem {
+  name: string
+  value: number
+  value_suffix?: string
+  tone?: 'critical' | 'warning' | 'normal' | 'neutral' | 'reference'
+}
+
+/** EntityBadgeList 공용 입력 항목 — 공급사/계약/브리핑 리스트에 재사용(VendorRiskHistory 패턴 일반화). */
+export interface EntityBadgeItem {
+  id: string
+  primary: string
+  secondary?: string
+  badge?: { label: string; tone: 'success' | 'warning' | 'neutral' }
+}
+
+/** 자재 위험 탭. */
+export interface MaterialRiskRankItem {
+  material: string
+  score: number
+  rank: number
+  grade: RiskGrade
+}
+
+export interface MaterialRiskDashboardResponse {
+  kpi_summary: KpiSummaryItem[]
+  ranking: MaterialRiskRankItem[]
+  top_material_unit_exposure: RiskExposureByUnit[]
+  quarter_change_label: string
+}
+
+/** 수입 의존도 탭. */
+export interface CountryDependencyItem {
+  country: string
+  share_ratio: number
+}
+
+export interface UnitDependencyItem {
+  business_unit: string
+  country: string
+  share_ratio: number
+}
+
+export interface ImportDependencyDashboardResponse {
+  kpi_summary: KpiSummaryItem[]
+  by_country: CountryDependencyItem[]
+  by_unit: UnitDependencyItem[]
+  alternative_suppliers: EntityBadgeItem[]
+}
+
+/** 공급사 분석 탭. */
+export interface SupplierRiskRankItem {
+  vendor_id: string
+  vendor_name: string
+  risk_count_90d: number
+  approved_status: 'APPROVED' | 'REVIEW'
+  linked_units: string[]
+}
+
+export interface SupplierAnalysisDashboardResponse {
+  kpi_summary: KpiSummaryItem[]
+  ranking: SupplierRiskRankItem[]
+  recommended: EntityBadgeItem[]
+}
+
+/** 계약 현황 탭. */
+export interface ContractCoverageItem {
+  business_unit: string
+  contract_count: number
+}
+
+export interface ContractStatusDashboardResponse {
+  kpi_summary: KpiSummaryItem[]
+  coverage_by_unit: ContractCoverageItem[]
+  expiring: EntityBadgeItem[]
+}
+
+/** AI 브리핑 탭. */
+export interface BriefingSummaryItem {
+  risk_event_id: string
+  material: string
+  grade: RiskGrade
+  headline: string
+  business_unit: string
+}
+
+export interface AiBriefingSummaryDashboardResponse {
+  kpi_summary: KpiSummaryItem[]
+  by_unit: RankedBarItem[]
+  recent: BriefingSummaryItem[]
+}
+
+/** 데이터 품질 탭 — 전 필드 mock 임시값(docs/mock-schemas.md "임시 mock 값" 표 참고). */
+export interface DataQualityStatus {
+  erp_sync_status: string
+  rag_index_status: string
+  material_coverage_count: number
+  material_coverage_total: number
+  last_updated_label: string
+  confidence_distribution: { label: ConfidenceLabel; ratio: number }[]
+}
+
+/**
+ * AI 브리핑 드릴다운 상세(`/planning/briefing/:analysisId`). `analysis_id`는 1계층
+ * risk_event_id("RISK-YYYY-MMDD-NNN")와 형식이 다르다 — 실 백엔드에서는
+ * `analyses.analysis_id`(UUID) 문자열이 그대로 온다(parseRiskEventDate로 파싱 불가,
+ * 이 화면에서는 날짜 파싱을 쓰지 않는다).
+ */
+export interface AiBriefingDetailResponse {
+  analysis_id: string
+  material: string
+  business_unit: string | null
+  grade: RiskGrade
+  headline: string
+  event_content: string
+  briefing: string | null
+  recommended_actions: string[] | null
+  /** 백엔드 procurement_risk_assessments.contract_findings 그대로 — 구조가 고정돼 있지 않아 임의 객체 배열. */
+  contract_findings: Record<string, unknown>[] | null
+  warnings: string[] | null
+  assessed_at: string | null
+}
+
+export interface ContractDocumentItem {
+  document_id: string
+  original_file_name: string
+  processing_status: string
+  chunk_count: number
+}
+
+/** 계약 현황 드릴다운 상세(`/planning/contract/:contractNumber`). */
+export interface ContractDetailResponse {
+  contract_number: string
+  contract_name: string
+  supplier_name: string
+  material_name: string | null
+  business_unit: string | null
+  status: string
+  start_date: string | null
+  end_date: string | null
+  documents: ContractDocumentItem[]
 }
 
 /**

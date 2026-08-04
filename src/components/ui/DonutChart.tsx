@@ -44,7 +44,7 @@ export function DonutChart({ data, centerLabel, centerValue }: DonutChartProps) 
               <Cell key={d.label} fill={d.color} />
             ))}
           </Pie>
-          <Tooltip formatter={(value) => `${value}%`} />
+          <Tooltip isAnimationActive={false} formatter={(value) => `${value}%`} />
         </PieChart>
       </ResponsiveContainer>
       {centerValue && (

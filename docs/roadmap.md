@@ -70,6 +70,76 @@
     구현했고, 이 상태-분리 원칙(무엇을 Context로 올리고 무엇을 로컬로 둘지)은
     `docs/design-tokens.md` "카드 레이아웃·스크롤 규칙" e항에 일반 원칙으로 남겼다.
 
+- [x] Phase 11 — 구매팀 대시보드 2차 데모 재배치 (UX-01-DB, `youngjin/2nd-demo-layout` 브랜치, 2026-07-29)
+  본문 순서 재배치(KPI 요약 → 뉴스속보·환율정보 세로 롤링 티커(`NewsExchangeTicker` 신규)
+  → 글로벌 리스크 관제 맵(1.5배 확대, `GlobalRiskBoard`에 선택적 `mapHeight` prop 추가) →
+  실시간 뉴스 목록(승격된 `SupplyNewsFeed`, 카드 형식 변경) → 수입 의존도+가격 추이 →
+  원자재 리스크 요약(맨 아래로 이동)), 원자재 공급사 리스크 현황/ERP 영향/구매 대응
+  우선순위는 본문에서 제거하고 SideNav 전용으로 이동 예정(라벨 5종 갱신, 실제 라우트
+  연결은 다음 단계, 컴포넌트 파일은 유지)(`eb162bf`).
+  - 수정 1 — `QuickActionsPanel`("빠른 작업": 구매대응순위·마커뉴스·데이터 업데이트 상태
+    프레임만)을 별도 최상위 형제로 두지 않고 `AlertsPanel`의 "빠른 작업" 서브섹션으로
+    통합("주요 알림 및 빠른 작업"이라는 기존 패널 제목이 이미 두 개념을 포괄).
+  - 수정 2 — 뉴스속보/환율정보 롤링을 가로 마퀴에서 세로 캐러셀로 재구현. 구현 중
+    `translateY(-N%)`가 트랙 전체 높이 기준으로 계산돼 인덱스 1 이상에서 콘텐츠가
+    통째로 사라지는 버그를 발견해 px 고정값(`ROW_HEIGHT_PX`) 이동으로 수정.
+  - 수정 3 — 실시간 뉴스 목록을 카드 형식(상단 source뱃지+date / 중간 headline 굵게 2줄
+    클램프 / 하단 material 태그+ConfidenceBadge)으로 변경.
+  - 수정 4 — `ImportDependencyRow`의 940px 반응형 규칙이 "이번 작업 중 깨졌다"는 전제로
+    조사했으나, `git stash`로 base 브랜치(`dev-김영진_merge-test`)와 A/B 비교한 결과
+    회귀가 아니라 이 브랜치 이전부터 있던 기존 버그(1280px 등 940px보다 넓은 뷰포트에서도
+    "원자재 가격 추이" 카드 우측이 잘리는 현상, `.main{min-width:0}`이 문서 레벨 스크롤바로
+    전파되는 걸 막아 기존 판정 방식으로는 검출 불가능했던 사각지대)임을 확인 — 940px
+    규칙 자체는 미변경. 이 사전 발견 버그는 `docs/roadmap-candidates.md` C14로 별도
+    커밋(`8943260`)에 등재(레이아웃 수정 커밋과 분리).
+  - 수정 5 — `GlobalRiskBoard`가 자체 렌더링하던 "마커 클릭 시 정보 표시" 패널을
+    `AlertsPanel`의 "빠른 작업 > 마커뉴스" 서브섹션으로 이양. `GlobalRiskBoard`에 선택적
+    `onSelect` 콜백 prop 추가(전달 시 자체 표시 생략, 미전달 시 — 공개 대시보드 — 기존
+    그대로 유지, `mapHeight`와 동일한 공유 컴포넌트 override 원칙), 마커 클릭 시 접혀있던
+    `AlertsPanel`이 자동으로 펼쳐지도록 `AlertsPanelContext`에 `toggle`과 별도인 `expand`
+    (강제 펼침) 액션 추가. 구현 중 "주요 알림" 서브섹션(수정 1에서 만든 것)을 마저
+    제거하는 걸 누락했다가 검증 단계에서 발견해 별도 커밋으로 수정 — 제거 후 "주요 알림
+    상위 4건"을 따로 하드코딩해 보여주던 접힘 상태 hover 미리보기 로직도 함께 정리하고
+    펼침 패널과 동일한 `QuickActionsPanel`을 재사용하도록 통일(두 상태가 항상 같은
+    콘텐츠를 보여줌). 상세 이력은 `docs/timeline.md` 참고(2026-07-29 두 라운드에 걸쳐 진행).
+  - QA: docs/qa-checklist.md E(mock-schemas.md 반영)는 이 Phase 완료 후 별도 확인 후
+    진행, 나머지 A~H 특이사항 없음. tsc/eslint/build 통과.
+
+- [x] Phase 12 — 2계층 경영기획팀 대시보드 7탭 확장 (`feat/planning-tier-dashboard` 브랜치, 2026-08-02)
+  기존 `PlanningDashboardPage`(사이드바 2항목 해시 placeholder, 단일 페이지 3섹션)를
+  사이드바 7탭(전략 대시보드/자재 위험/수입 의존도/공급사 분석/계약 현황/AI 브리핑/데이터
+  품질/설정) 구조로 확장. 프론트엔드 mock 전용(사업부 개념이 백엔드에 없어 백엔드 연동은
+  별도 라운드). 신규 공용 컴포넌트 2개(`RankedBarChart`/`EntityBadgeList`, 기존
+  `ComparisonChart`/`VendorRiskHistory` 패턴 일반화) + 신규 페이지 6개 + `lib/planningNav.ts`
+  (7탭 공용 사이드바, 처음부터 실제 라우트로 연결 — 1계층의 "SideNav 해시 placeholder로
+  남아 미기능" 문제 반복 안 함). 상세는 `docs/timeline.md` "Phase 12" 참고.
+  - [x] Phase 12.1 — 2계층 반응형 대응 + C13(구매팀 대시보드 650px 이하 오버플로) 해결
+    (2026-08-02): C12(필터 pill 줄바꿈) 수정, 차트 패널 `min-width:0` 누락 버그 수정,
+    `SideNav`/`AlertsPanel` 자동 접힘(`NARROW_SHELL_BREAKPOINT_PX=650`)으로 구매팀·
+    경영기획팀 양쪽의 좁은 뷰포트 오버플로를 공용 Provider 레벨에서 해결. 상세는
+    `docs/timeline.md` "Phase 12.1", `docs/roadmap-candidates.md` C12/C13 참고.
+  - [ ] Phase 13(후보) — 2계층 백엔드 연동: **미착수**. 사업부(business_unit) 개념이
+    ERP/백엔드 스키마에 아예 없어(현재 `BUSINESS_UNIT_BY_MATERIAL` 프론트 임시 매핑으로만
+    존재) 실 데이터 연동 전 사업부 마스터 데이터 설계가 선행 필요.
+  - [x] Phase 12.2 — 2계층 실 백엔드 검증 후 발견된 화면 일관성/색상 개선(2026-08-03):
+    실 Spring 백엔드(격리 Docker 검증 스택)로 2계층 7탭을 전부 검증하는 과정에서 사용자가
+    지적한 3가지를 반영. (1) "전략 대시보드"에 1계층/공개 대시보드와 동일한
+    `GlobalRiskBoard`(글로벌 리스크 관제 맵)를 `useGlobalRiskBoard()` 신규 훅(공개
+    엔드포인트 `GET /api/v1/public/risk-board` 재사용, 인증 불필요)으로 추가 — 새 백엔드
+    작업 없음. (2) `RankedBarChart`에 선택적 `legend` prop 신설(색점+텍스트 칩) —
+    "공급사 분석" 탭 "리스크 이력 랭킹"(REVIEW/APPROVED)에 적용. (3) "데이터 품질" 탭
+    "신뢰도 라벨 분포"가 리스크 등급 색상(`--color-risk-*`)을 신뢐도 라벨 색상(확정/참고/
+    경고)에 잘못 재사용하던 문제 발견(`design-tokens.md`가 이미 "서로 다른 축"이라 명시한
+    원칙 위반) — `RankedBarItem['tone']`에 `'reference'` 추가, 참고 항목만
+    `--color-confidence-reference`로 교체하고 범례도 함께 추가. 전수 스캔 결과 `tone` 사용처
+    중 이 유형의 문제는 이 1건뿐이었다. 또한 이번 세션에서 "사업부별 리스크 노출도" 쿼리를
+    최근 1건 스냅샷 → 이번 분기 누적 평균으로 변경(`PlanningDashboardRepository.
+    loadRiskExposureByUnit()`), RAG 상태 조회 Jackson snake_case 역직렬화 버그
+    (`fastApiRestClient`가 전역 SNAKE_CASE 설정을 안 타는 문제, `@JsonProperty` 추가로 수정),
+    KG 게이트 미배선 시 ERP/계약 분석이 통째로 스킵되는 버그(`kg_service` 호스트 프로세스로
+    기동 + `KG_SERVICE_BASE_URL` 배선)도 함께 발견·수정됨 — 전부 백엔드(`빅프로젝트/backend`)
+    변경.
+
 ## 재사용 규칙 (Phase 3에서 결정되는 인터페이스는 이후 Phase가 그대로 따른다)
 - `ConfidenceBadge`/`RiskGradeBadge`의 props 타입은 이후 모든 화면에서 동일하게 재사용한다 — 화면별로 별도 배지를 새로 만들지 않는다.
 - `Header`/`Footer`/`SideNav`는 `components/layout/`에서 한 번만 구현하고, `features/*`는 이를 import해서 쓰기만 한다.

@@ -36,12 +36,24 @@
 .link {
   display: block;
   padding: var(--space-2) var(--space-6);
+  border-left: 3px solid transparent;
   font-size: var(--font-size-sm);
   color: var(--color-text);
   text-decoration: none;
 }
 
 .link:hover {
+  background: var(--color-bg);
+}
+
+.linkActive {
+  background: var(--color-bg);
+  border-left-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.linkActive:hover {
   background: var(--color-bg);
 }
 

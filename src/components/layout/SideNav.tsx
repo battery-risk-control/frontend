@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useSideNavState } from '../../lib/useSideNavState'
 import { useScrollOverflowHint } from '../../lib/useScrollOverflowHint'
 import styles from './SideNav.module.css'
@@ -11,6 +11,19 @@ export interface SideNavItem {
 
 interface SideNavProps {
   items: SideNavItem[]
+}
+
+/**
+ * `item.href`가 현재 위치와 일치하는지 판단한다. 해시가 있는 href(`/purchasing#briefing`처럼
+ * 아직 실제 라우트로 연결 안 된 placeholder, C3 참고)는 경로와 해시 둘 다 일치해야 활성으로
+ * 본다 — 그래야 실제 라우트(Planning 7탭)와 해시 placeholder(Purchasing)를 하나의 로직으로
+ * 같이 처리하면서도, 해시 placeholder 항목들이 같은 페이지라는 이유만으로 전부 동시에
+ * 활성 표시되는 걸 막는다.
+ */
+function isSideNavItemActive(pathname: string, hash: string, href: string): boolean {
+  const [path, itemHash] = href.split('#')
+  if (itemHash) return pathname === path && hash === `#${itemHash}`
+  return pathname === path
 }
 
 /**
@@ -30,6 +43,7 @@ interface SideNavProps {
  */
 export function SideNav({ items }: SideNavProps) {
   const { collapsed } = useSideNavState()
+  const location = useLocation()
   const navRef = useRef<HTMLElement>(null)
   const { hasOverflowTop, hasOverflowBottom } = useScrollOverflowHint(navRef, !collapsed)
 
@@ -42,13 +56,21 @@ export function SideNav({ items }: SideNavProps) {
         aria-hidden={collapsed}
       >
         <ul className={styles.list}>
-          {items.map((item) => (
-            <li key={item.href}>
-              <Link to={item.href} className={styles.link} tabIndex={collapsed ? -1 : undefined}>
-                {item.label}
-              </Link>
-            </li>
-          ))}
+          {items.map((item) => {
+            const active = isSideNavItemActive(location.pathname, location.hash, item.href)
+            return (
+              <li key={item.href}>
+                <Link
+                  to={item.href}
+                  className={active ? `${styles.link} ${styles.linkActive}` : styles.link}
+                  aria-current={active ? 'page' : undefined}
+                  tabIndex={collapsed ? -1 : undefined}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       </nav>
       {hasOverflowTop && (

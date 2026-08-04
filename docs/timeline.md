@@ -632,3 +632,304 @@ CLAUDE.md/qa-checklist.md/roadmap-candidates.md에 반영했다.
   유지하고 괄호로 사유를 남김.
 
 코드 변경 없음 — 문서 전용 라운드.
+
+## Phase 11 — 구매팀 대시보드 2차 데모 재배치 (UX-01-DB, `youngjin/2nd-demo-layout`, 2026-07-29)
+
+`dev-김영진_merge-test`에서 새 브랜치 `youngjin/2nd-demo-layout`을 파서 진행. 데모(화면ID
+UX-01-DB) 2차 명세에 맞춰 구매팀 대시보드 본문을 재배치하고, 사용자 재검토로 발견된 4건의
+수정사항을 반영했다.
+
+- **1~3단계(조사→설계→구현, `eb162bf`)**: 본문 순서를 KPI 요약 → 뉴스속보·환율정보 세로
+  롤링 티커(`NewsExchangeTicker` 신규, `fetchNewsFeed()` 재사용+신규 `fetchExchangeRates()`
+  mock) → 글로벌 리스크 관제 맵(`GlobalRiskBoard`에 선택적 `mapHeight` prop 추가, 구매팀만
+  330px로 1.5배 확대 — 공개 대시보드와 공유하는 컴포넌트라 CSS 기본값은 안 건드림) →
+  실시간 뉴스 목록(`SupplyNewsFeed`를 `features/public/components/`→`components/widgets/`로
+  승격) → 수입 의존도+가격 추이 → 원자재 리스크 요약(2번 위치→맨 아래)으로 재배치.
+  원자재 공급사 리스크 현황/ERP 영향/구매 대응 우선순위는 본문에서 제거(SideNav 전용 이동
+  예정, 컴포넌트 파일은 유지 — 실제 라우트 연결은 다음 단계). `SIDE_NAV_ITEMS`를
+  브리핑/문서 관리/계약 검색/원자재 공급사 리스크 현황/ERP 영향 5개로 갱신
+  (`PurchasingDashboardPage.tsx`/`BriefingDetailPage.tsx` 양쪽). `fetchNewsFeed`는
+  `public.api.ts`→`purchasing.api.ts`로 이동(원천 데이터 허브 컨벤션, 재수출만 유지).
+- **4단계(사용자 재검토 후 수정 1~4, `eb162bf`)**:
+  - 수정 1 — `QuickActionsPanel`(구매대응순위·마커뉴스·데이터 업데이트 상태 프레임만)을
+    `AlertsPanel`과 나란한 별도 최상위 형제로 뒀던 최초 구현을 `AlertsPanel`의 "빠른 작업"
+    서브섹션으로 통합(기존 패널 제목 "주요 알림 및 빠른 작업"이 이미 두 개념을 포괄).
+    `QuickActionsPanel`은 자체 sticky/폭 wrapper를 제거하고 `ScrollCard`만 반환.
+  - 수정 2 — 가로 마퀴로 처음 구현했던 뉴스속보/환율정보 롤링을 세로 캐러셀로 재구현하는
+    과정에서 버그 발견: `translateY(-${index*100}%)`는 트랙 "자기 자신의 전체 높이" 기준
+    으로 계산돼, 인덱스가 1 이상이 되면 한 줄이 아니라 트랙 전체 높이만큼 이동해 콘텐츠가
+    통째로 뷰포트 밖으로 사라짐(Playwright로 t0/t1 스크린샷 비교하다 발견). `ROW_HEIGHT_PX`
+    (22px, CSS와 동일 값) 기준 px 고정값 이동으로 교체해 해결, 재검증 스크린샷으로 확인.
+  - 수정 3 — `SupplyNewsFeed` 카드를 상단 source뱃지+date / 중간 headline(굵게, 2줄
+    클램프) / 하단 material 태그+`ConfidenceBadge` 형식으로 변경. 썸네일은 스키마에
+    필드가 없어 범위 밖으로 제외.
+  - 수정 4 — `ImportDependencyRow`의 940px 반응형 규칙이 "이번 작업 중 깨졌다"는 사용자
+    전제로 조사를 시작했으나, 실측(1280px에서 가격 추이 카드가 `.row` 우측 경계를
+    46.86px 초과해 렌더링) 후 `git stash`로 base 브랜치(`dev-김영진_merge-test`)와
+    동일 지점을 A/B 비교한 결과 완전히 동일한 수치가 나와 **이 브랜치와 무관한 기존
+    버그**임을 확인했다. `.main{min-width:0}`이 이 내부 오버플로가 문서 레벨
+    스크롤바(`docScrollWidth`)로 전파되는 것을 막아, 기존 940px 임계값 판정("페이지
+    전체 가로 스크롤바 발생 여부"만으로 이분 탐색)으로는 애초에 검출 불가능했던
+    사각지대였다는 점도 함께 확인. 940px 규칙 자체는 미변경(정상 동작 재확인). 이번
+    브랜치의 첫 라운드(`QuickActionsPanel`을 별도 276px 컬럼으로 뒀을 때, `<main>`이
+    388px까지 좁아져 이 기존 버그가 악화됐던 부분)는 수정 1이 이미 원상 복구했다.
+  - 범위 밖 확인 — 모바일(375px) `<main>` 붕괴(C13/Phase 10 트랙)는 이번에 손대지
+    않되, `QuickActionsPanel` 통합으로 더 나빠지지 않았는지만 실측: `docScrollHeight`가
+    오히려 개선(약 7017px → 4751px), `mainWidth`(48px)는 그대로 — 악화 없음 확인.
+- **문서(별도 커밋, `8943260`)**: 사전 발견된 무관 기존 버그를
+  `docs/roadmap-candidates.md` C14로 등재(레이아웃 수정 커밋과 분리) — "이 브랜치와
+  무관한 기존 drift는 발견 즉시 보고 후 별도 확인·별도 커밋" CLAUDE.md 원칙 적용.
+- **QA 체크리스트(A~H)**: B(공용 컴포넌트 `GlobalRiskBoard`/`SupplyNewsFeed` 변경 시
+  전체 소비처 grep 확인 — 공개 대시보드는 `mapHeight` 미전달로 기존 동작 유지) 확인.
+  E(mock-schemas.md 반영)는 5단계로 분리해 별도 확인 후 진행. 나머지 특이사항 없음.
+  tsc/eslint/build 전부 통과.
+
+## Phase 11 후속 — GlobalRiskBoard 마커뉴스 연동 + AlertsPanel "주요 알림" 정리 (`youngjin/2nd-demo-layout`, 2026-07-29)
+
+같은 브랜치에서 이어진 후속 라운드. 1단계 조사(코드 경로 확인) → 2단계 설계 제안(A/B/C
+확인점) → 승인 → 3단계 구현 → 4단계 검증 순으로 진행, 검증 단계에서 사용자가 지적한
+구현 누락(아래) 때문에 실제로는 두 차례 커밋으로 나뉨.
+
+- **1단계 조사**: "주요 알림"과 `GlobalRiskBoard`가 같은 원본(`fetchRiskEvents`)에서
+  파생됨을 grep으로 확인(표시 코드만 지우면 됨, 데이터는 안전). `GlobalRiskBoard`의
+  마커 클릭 정보 패널이 컴포넌트 내부에 완전히 캡슐화돼 있어 공개 대시보드와 공유하는
+  이상 "완전히 삭제" 요구가 그대로는 성립하지 않음을 발견 — 설계 단계로 이관.
+  `SideNavProvider`/`AlertsPanelProvider` 둘 다 이미 기본값이 펼침(`collapsed:false`/
+  `DEFAULT_ALERTS_EXPANDED:true`)이라 "기본 펼침으로 변경" 요구는 코드 변경 불필요임을
+  확인. `MaterialRiskOverviewSection`의 "더보기" 기본값(`useState(true)`)은 변경 필요로
+  확인.
+- **2단계 설계(A/B/C 확인 후 승인)**:
+  - A — `GlobalRiskBoard`에 선택적 `onSelect?: (detail: SelectedDetail | null) => void`
+    prop 추가. 전달 시(구매팀) 자체 표시(.panelHeader/.panelBody) 렌더링을
+    `{!onSelect && (...)}`로 생략하고 콜백만 호출, 미전달 시(공개 대시보드) 기존 100%
+    동일 — `mapHeight`와 동일한 "공유 컴포넌트는 CSS/구조 기본값을 직접 안 바꾸고 prop
+    으로 화면별 override" 원칙 재사용. `SelectedDetail`을 `export`로 전환.
+  - B — 2-5(SideNav/AlertsPanel 기본 펼침)는 1단계 조사대로 스킵.
+  - C — `AlertsPanelContext`에 `toggle`과 별도인 `expand()`(강제 펼침) 액션 신규 —
+    이미 펼쳐진 상태에서 마커를 또 클릭해도 접히지 않아야 하므로 토글로는 불가능.
+- **3단계 구현**: `AlertsPanelProvider`에 `expand` 구현,
+  `GlobalRiskBoard`의 `handleSelectEvent`/`handleSelectCountry`/닫기 클릭에 `onSelect`
+  호출 추가, `PurchasingDashboardPage`에 `markerNews` 상태+`handleMarkerSelect`(선택 시
+  `expandAlerts()` 호출)+`GlobalRiskBoard onSelect`/`AlertsPanel markerNews`/
+  `onCloseMarkerNews` 배선, `QuickActionsPanel`의 "마커뉴스" 서브섹션을 surin 패턴
+  ("주요 뉴스/이벤트 · {label}" 부제+닫기+리스트)으로 실제 연동. **네트워크 중단 발생** —
+  재개 시 `git diff --stat`/`git status`/`npm run typecheck`로 실제 상태 재확인(이
+  과정에서 `npx tsc --noEmit`이 이 repo의 `tsconfig.json`(`files:[]`+`references`
+  프로젝트 참조 구조)에서는 아무것도 검사하지 않고 조용히 통과하는 함정을 발견 —
+  올바른 명령은 `npm run typecheck`=`tsc -b`. 이후 이 문서를 포함해 앞으로도 이 repo의
+  타입 검증은 항상 `tsc -b` 기준으로 보고한다).
+- **4단계 검증 1차 — 사용자가 지적한 구현 누락 발견**: 4-1~4-6 검증 보고에서 "주요 알림
+  서브섹션이 정상 표시됨"이라는 문구가 2-1(주요 알림 표시 코드 제거) 요구와 모순된다는
+  사용자 지적. 코드 재확인 결과 (b) — 이전 라운드("수정 1", AlertsPanel 통합)에서 만든
+  `<section aria-labelledby="alerts-subsection-heading">`(제목 "주요 알림"+리스트)를
+  이번 라운드(2-1)에서 다시 빼는 작업 자체를 빠뜨렸음을 확인. 즉시 제거 후 재검증
+  (heading 목록이 `["주요 알림 및 빠른 작업","빠른 작업"]`로 바뀜, 스크린샷 확인) —
+  이제 쓰이지 않는 CSS(`.subsection`/`.subsectionTitle`)도 함께 정리.
+- **4단계 검증 2차 — 미리보기 통일**: 위 수정 직후 접힘 상태 hover 미리보기가 여전히
+  "주요 알림 상위 4건"을 별도 하드코딩(`AlertItem`/`PREVIEW_COUNT`/`alerts` prop)해
+  보여주고 있어 펼침 패널(이제 "빠른 작업"만 있음)과 콘텐츠가 어긋나는 비대칭을 발견,
+  보고 후 사용자 확정: "미리보기는 펼침 상태와 같은 내용을 보여주면 된다"는 지시에 따라
+  `AlertItem`/`PREVIEW_COUNT`/`alerts` prop을 전부 제거하고 미리보기가 펼침 패널과
+  동일한 `<QuickActionsPanel markerNews={...} onCloseMarkerNews={...} />`를 그대로
+  재사용하도록 통일(래퍼 `ScrollCard`도 제거 — 이중 타이틀바 방지). 이제 `alerts`가
+  `AlertsPanel`에서 완전히 빠지며 `PurchasingDashboardPage`의 `<AlertsPanel>` 호출에서도
+  `alerts` prop 제거(단, `alerts` 변수 자체는 `AlertsBellButton`의 배지 숫자용으로
+  계속 필요해 유지). 이제 쓰이지 않는 CSS(`.empty`/`.list`/`.item`/`.badges`/`.summary`)
+  정리. tsc -b/eslint/build 재통과, hover 미리보기 스크린샷으로 "빠른 작업" 콘텐츠 노출
+  확인. 위 3단계~4단계 전체(onSelect/expand 배선부터 미리보기 통일까지)가 커밋 시점
+  이전에 한 번에 완료돼 **단일 커밋(`5f53cf8`)**으로 반영됐다.
+- **검증 요약**: (1) 마커 클릭 → `AlertsPanel` 자동 펼침(실측: 0px→280px)+마커뉴스
+  갱신, (2) 공개 대시보드 마커 클릭 시 기존 자체 패널 회귀 없음(`onSelect` 미전달
+  경로), (3) hover 미리보기가 펼침 패널과 동일한 콘텐츠 표시, (4) 모바일(375px) 기존
+  붕괴는 그대로(`docScrollWidth 664 vs 375`) — 악화 없음(범위 밖, 손대지 않음).
+  QA A~H: B(GlobalRiskBoard 소비처 전수 grep, 공개 대시보드 회귀 스크린샷으로 확인)/
+  D(마커뉴스 닫기 버튼에 `text-decoration:underline`)/G(`.scratch/` 임시 스크립트,
+  git status 정상) 확인. E(mock-schemas.md)는 5단계로 분리.
+
+## Phase 12 — 2계층 경영기획팀 대시보드 7탭 확장 (`feat/planning-tier-dashboard`, 2026-08-02)
+조원과 파트를 나눠(비로그인/1~3계층) 사용자가 2계층을 맡음. 기존 `PlanningDashboardPage`는
+사이드바 2항목(해시 placeholder)뿐인 단일 페이지였는데, 사용자가 제시한 목표 캡처
+(사이드바 "BATTERY RISK CONTROL" + 7탭: 전략 대시보드/자재 위험/수입 의존도/공급사 분석/
+계약 현황/AI 브리핑/데이터 품질/설정)를 기준으로 실제 코드를 확장했다. Figma 없이
+`mcp__visualize__show_widget`으로 러프 초안 → 사용자 피드백("부족하다, 각 탭 더 자세하게")
+→ 캡처와 동일한 카드 스타일로 재작업(v3) → 승인 → 실제 구현 계획 승인, 3라운드에 걸쳐
+시각 초안을 다듬은 뒤 실제 코드로 옮겼다.
+- **범위 확정**: 1계층 관례(mock-schemas.md "API 계약 확정 전 mock 함수 우선 구현")를 따라
+  이번 라운드는 **프론트엔드 mock 전용** — 사업부(business_unit) 개념 자체가 ERP/백엔드
+  스키마에 없어(기존 `BUSINESS_UNIT_BY_MATERIAL` 임시 매핑이 이미 그 한계를 문서화) 백엔드
+  연동은 별도 라운드로 미룸.
+- **기존 자산 재사용**: `KpiSummaryCards`(수정 없이 7탭 전부의 KPI 4칸에 재사용),
+  `ComparisonChart`의 Recharts 단일 계열 막대 패턴(→ 필드명 일반화한 신규
+  `RankedBarChart`의 참고 구현), `VendorRiskHistory`의 뱃지+리스트 패턴(→ 신규
+  `EntityBadgeList`로 일반화). `minji` 브랜치의 1계층 "필터바+목록/상세 2단" 패턴은 참고만
+  하고 이식하지 않음(2계층은 비교·집계 중심이라 승인된 초안이 카드형으로 확정됨).
+- **신규 공용 컴포넌트 2개**: `RankedBarChart`("이름+막대+값", `tone`으로 리스크 색상 매핑),
+  `EntityBadgeList`("이름+보조텍스트+상태뱃지"). 둘 다 `features/planning/components/`에
+  추가, 7탭 전체가 공유.
+- **6개 신규 페이지 + 라우팅**: `MaterialRiskPage`/`ImportDependencyPage`/
+  `SupplierAnalysisPage`/`ContractStatusPage`/`AiBriefingSummaryPage`/`DataQualityPage`
+  (`/planning/materials`·`/import-dependency`·`/suppliers`·`/contracts`·`/briefings`·
+  `/data-quality`, 전부 `RequireAuth tier="planning"`). 사이드바를 페이지별 중복 정의 대신
+  `lib/planningNav.ts`의 `PLANNING_SIDE_NAV_ITEMS`(7탭 공용, 1계층 `SIDE_NAV_ITEMS` 추출
+  전례와 동일 목적)로 통합 — **1계층이 겪은 "SideNav가 해시 placeholder로 남아 미기능"
+  문제를 반복하지 않기 위해 처음부터 전부 실제 라우트로 연결**("설정"만 상세 미정이라
+  의도적으로 해시 유지).
+- **mock 데이터**: `api/planning.api.ts`에 6개 `fetchXxxDashboard()`/`fetchDataQualityStatus()`
+  함수 추가 — 자재 위험/AI 브리핑은 `risk_event` mock에서 실제 파생, 수입 의존도는 1계층
+  `fetchImportDependency()` 재사용, 공급사 분석은 기존 `vendor_risk_history` 확장, 계약
+  현황/데이터 품질은 대응하는 실측 데이터 자체가 없어 전 필드 mock 임시값(`docs/mock-schemas.md`
+  "임시 mock 값" 표에 등재).
+- **DataQualityPage 설계 조정**: ERP 연동/RAG 인덱스/마지막 갱신은 숫자가 아닌 상태 텍스트라
+  숫자 전용인 `KpiSummaryCards`에 안 맞아, 별도 상태 카드(`grid3`)로 분리하고 자재 커버리지만
+  `KpiSummaryCards`로 유지 — 억지로 끼워 맞추지 않고 컴포넌트 계약을 지켰다.
+- **검증**: `npx tsc -b`/`eslint`/`vite build` 통과(중간에 Recharts `LabelList` formatter
+  타입 에러 1건 발견·수정 — `RenderableText`가 `string|number|null|undefined`를 포함해
+  `unknown`으로 완화). `npm run dev`(mock)로 `planning@test.local` 로그인 후 사이드바 7탭
+  전부 클릭해 실제 라우트 이동 + 승인된 초안과 일치하는 콘텐츠 렌더링 확인, 콘솔 에러 없음.
+- QA A~H: B(`KpiSummaryCards`/`RankedBarChart`/`EntityBadgeList` 소비처 전수 확인 후
+  7탭에 일관 적용)/E(요구사항 Seq 25 "2계층 경영기획팀 대시보드"에 대응하는 확장,
+  mock-schemas.md 동시 갱신)/F(신규 카드형 UI 전부 지정 공용 컴포넌트 사용, 자체 `.panel`
+  스타일 신규 작성 없음)/G(임시 스크립트 없음, `git status` 의도한 파일만 표시) 확인.
+  A/C/D/H는 해당 없음(접근 제어·클릭 요소·레이아웃 수치 변경 없음, 번호 매긴 지시문 아님).
+
+## Phase 12.1 — 2계층 반응형 대응 + C12/C13 셸 오버플로 해결 (2026-08-02)
+
+Phase 12 완료 직후, 사용자 지시로 신규 7탭이 실제 좁은 뷰포트에서 검증된 적이 없다는
+점(Phase 12 QA에서 "A/C/D/H 해당없음"으로만 처리)을 이어서 점검했다.
+
+- **C12 수정**: `PlanningDashboardPage.module.css`의 `.filters`에 `flex-wrap: wrap` 추가
+  (460px 이하에서 필터 pill 4개가 줄바꿈 안 되던 문제).
+- **차트 패널 min-width 버그 발견·수정**: `ComparisonChart`/`RankedBarChart`의 `.panel`에
+  `min-width: 0`이 없어, 부모(`<main>`)가 좁아져도 recharts SVG가 전혀 안 줄어들고 넘치는
+  버그(375px에서 `.recharts-wrapper`가 927px로 렌더링됨을 실측). 두 컴포넌트 `.panel`에
+  `min-width: 0` 추가.
+- **C13(구매팀 대시보드 650px 이하 오버플로)가 2계층에서도 재현됨을 확인** — 근본 원인이
+  같은 공용 컴포넌트(`SideNav`/`AlertsPanel`, 둘 다 `flex-shrink:0` 고정폭)라 사용자 확인 후
+  두 계층을 한 번에 해결하기로 방향 결정. 신규 공용 훅 `lib/useIsNarrowViewport.ts`
+  (matchMedia 기반, `change` 이벤트 구독) + 상수 `lib/responsiveBreakpoints.ts`의
+  `NARROW_SHELL_BREAKPOINT_PX = 650`(C13에서 실측한 값을 그대로 승격) 도입.
+  `SideNavProvider`/`AlertsPanelProvider`가 이 폭 이하에서는 사용자의 수동 펼침 여부와
+  무관하게 항상 접힘으로 강제(`collapsed || isNarrowViewport` / `expanded &&
+  !isNarrowViewport`). 두 Context 모두 App.tsx 최상위 Provider라 구매팀·경영기획팀 양쪽에
+  한 번의 수정으로 적용됨(설계상 공유, 중복 구현 아님).
+  - 수동 토글 버튼(`SideNavToggleButton`/`AlertsBellButton`)은 이 강제 접힘 상태일 때
+    `disabled` 처리 — 펼쳐도 시각적으로 아무 변화가 없어 혼란을 주는 대신, 다시 펼쳐서
+    오버플로가 재현되는 것 자체를 막았다.
+- **검증**: `npx tsc -b`/`eslint`/`vite build` 통과(중간에 `useIsNarrowViewport`가 이펙트
+  안에서 동기 `setState`를 호출하던 `react-hooks/set-state-in-effect` 위반 1건 발견·수정 —
+  초기값은 `useState` lazy initializer로 이미 계산되므로 이펙트 안 중복 호출 제거).
+  Playwright/Browser 자동화 환경이 실제 `window.resize`/`matchMedia change` 이벤트를
+  발생시키지 않는 한계를 발견해(라이브 `matches` 값은 갱신되나 이벤트 미발생), 폭 변경 후
+  새로고침(재마운트)으로 우회 검증 — 실제 사용자 브라우저의 창 크기 조절은 표준 이벤트라
+  영향 없음. 375/460/550/650/700/1280px 전 구간에서 구매팀(`purchasing@test.local`)·
+  경영기획팀 7탭(`planning@test.local`) 전부 재실측(`document.documentElement.scrollWidth`
+  == `body` 폭, 오버플로 0), 1280px에서 기존 수동 토글 정상 동작(`disabled: false`) 확인.
+- QA A~H: B(`SideNav`/`AlertsPanel`을 쓰는 모든 화면 — 구매팀/경영기획팀 7탭/브리핑 상세 —
+  전수 확인 후 동일 로직 적용)/C(해당 없음, 접근 제어 변경 아님)/F(기존 지정 컴포넌트
+  범위 내 수정, 신규 `.panel` 스타일 없음)/G(임시 스크립트 없음) 확인. A/D/H는 해당 없음.
+  `docs/roadmap-candidates.md`의 C12/C13을 해결됨으로 갱신.
+
+## SideNav 활성 탭 표시 (2026-08-02)
+
+Phase 12.1 직후 사용자가 "사이드 메뉴 전 항목이 흰색이라 현재 어느 탭에 있는지 알 수
+없다"고 지적 — `SideNav.tsx`가 그동안 `collapsed` 상태만 반영할 뿐, 현재 경로와 항목을
+비교하는 로직 자체가 없었음(신규 구현, 회귀 아님).
+
+- `SideNav.tsx`에 `useLocation()` + `isSideNavItemActive(pathname, hash, href)` 신규 함수로
+  현재 위치와 각 항목의 `href`를 비교, 일치하면 `linkActive` 클래스 + `aria-current="page"`
+  적용. 해시가 있는 `href`(`/purchasing#briefing`처럼 아직 실제 라우트로 안 연결된
+  placeholder, C3)는 경로와 해시 둘 다 일치해야 활성으로 판단 — 그렇지 않으면 같은
+  페이지(`/purchasing`)를 가리키는 해시 placeholder 5개가 전부 동시에 활성으로 보이는
+  잘못된 결과가 나온다.
+- `SideNav.module.css`: `.link`에 `border-left: 3px solid transparent` 기본값을 두고
+  `.linkActive`에서 `var(--color-primary)`로 채움 + 배경 `var(--color-bg)` + 텍스트
+  `var(--color-primary)` + bold. `border-box`가 전역 적용돼 있어(`index.css`) border 유무와
+  무관하게 레이아웃 이동 없음.
+- **검증**: `tsc`/`eslint`/`vite build` 통과. Planning 7탭 전부 실제 클릭 이동 후
+  `linkActive`가 정확히 현재 탭 하나에만 붙는 것 확인(전환 시 이전 탭은 즉시 해제).
+  Purchasing 대시보드(해시 placeholder 5개)는 URL에 해시가 없는 기본 상태에서 아무 항목도
+  거짓 활성화되지 않음을 확인 — 새 로직이 기존 C3(SideNav 미기능) 상태를 악화시키지
+  않았다.
+
+## CI 실패 조사 → C3 부분 해결: 구매팀 SideNav 3항목 실제 라우트 연결 (2026-08-02)
+
+`feat/planning-tier-dashboard` push 후 GitHub Actions CI에서
+`e2e/briefing-detail.spec.ts`가 "브리핑 보기" 링크를 30초 동안 못 찾고 타임아웃 실패.
+조사 결과 **이번 세션 변경과 무관한, Phase 11(2026-07-29)부터 잠재해 있던 버그**로 확인—
+`git show origin/youngjin/2nd-demo-layout:...PurchasingDashboardPage.tsx | grep
+MaterialRiskStatusPanel`이 base 브랜치에서도 이미 0건이었다. Phase 11이 "원자재 공급사
+리스크 현황/ERP 영향/구매 대응 우선순위는 SideNav 전용으로 이동 예정(컴포넌트 파일은
+유지)"이라고 기록했으나 실제로는 본문 제거만 되고 SideNav 연결이 끝나지 않아, 세 컴포넌트
+(`MaterialRiskStatusPanel`/`ErpImpactPanel`/`PurchasePriorityPanel`)가 파일만 존재하고
+앱 어디에도 렌더링되지 않는 상태로 방치돼 있었다(CLAUDE.md "무관한 발견 drift는 보고 후
+확인받아 별도 커밋으로 반영" 원칙에 따라 사용자에게 보고 후 처리 범위 확인).
+
+- 사용자가 3개 패널 전부 연결을 선택(C3 완전 해결이 아니라 부분 해결 — "브리핑"/"문서
+  관리"/"계약 검색" 3항목은 대응 컴포넌트 자체가 없어 범위 밖으로 유지).
+- **신규**: `lib/purchasingNav.ts`(`PURCHASING_SIDE_NAV_ITEMS`, 2계층 `planningNav.ts`와
+  동일 패턴 — 그동안 `PurchasingDashboardPage.tsx`/`BriefingDetailPage.tsx` 2곳에 중복
+  정의돼 있던 배열을 통합), `MaterialRiskStatusPage`/`ErpImpactPage`/`PurchasePriorityPage`
+  (각각 `/purchasing/material-risk`·`/purchasing/erp-impact`·`/purchasing/priority`,
+  `RequireAuth tier="purchasing"`), 공용 셸 CSS `PurchasingSubPage.module.css`
+  (`BriefingDetailPage.module.css`의 page/body/main/heading 패턴 재사용). "구매 대응
+  우선순위"는 Phase 11 당시 SideNav 항목 자체에서도 빠져 있었던 것을 이번에 신규 추가.
+- `e2e/briefing-detail.spec.ts` 수정 — 로그인 직후 `/purchasing`에서 바로 링크를 찾던
+  기존 흐름을, SideNav "원자재 공급사 리스크 현황" 클릭 → `/purchasing/material-risk`
+  진입 → "브리핑 보기" 링크 클릭 순서로 갱신.
+- **검증**: `tsc`/`eslint`/`vite build` 통과, Playwright e2e 전체 24/24 통과(로컬 재현 →
+  수정 → 재실행). `purchasing@test.local` 로그인 후 SideNav 6항목(신규 3개는 실제 라우트,
+  기존 3개는 해시 placeholder 그대로) 확인, ERP 영향 페이지 실제 데이터 렌더링 확인.
+- `docs/roadmap-candidates.md` C3를 "부분 해결(2026-08-02)"로 갱신(완전 해결 아님 — 표제에
+  명시).
+
+## Phase 13 — 2계층 실 백엔드 연동 + TanStack Query + 로딩 UI + 필터 + 드릴다운 (2026-08-03)
+
+사용자가 2계층 고도화 항목 6개 중 "설정 탭"을 제외한 5개(실 백엔드 연동/TanStack Query
+도입/로딩·스켈레톤 UI/사업부 필터 실기능화/AI 브리핑·계약 현황 드릴다운)를 승인. 조사
+중 로그인 성공 시 백엔드가 내려주는 JWT(`access_token`)를 프론트가 아예 버리고 있던
+선행 결함(`AuthPage.tsx`가 `signIn()`에 토큰을 안 넘김)을 발견해 먼저 수정 — 이것 없이는
+인증이 필요한 API를 하나도 실제로 호출할 수 없었다.
+
+- **JWT 보존**: `AuthContext`/`AuthProvider`에 `accessToken` 필드 추가, `AuthPage.tsx`가
+  `signIn(org_tier, email, access_token)`로 3번째 인자 전달하도록 수정.
+- **백엔드**: `PlanningDashboardController`에 상세 드릴다운 2개 신규 —
+  `GET /api/v1/planning/ai-briefing/{analysisId}`/`GET /api/v1/planning/contracts/{contractNumber}`.
+  `ErrorCode`에 `ANALYSIS_BRIEFING_NOT_FOUND`/`CONTRACT_NOT_FOUND`(404) 추가. 도중
+  `AiBriefingDetail.contract_findings`를 처음엔 `List<String>`로 잘못 선언했다가
+  `ProcurementRiskRepository`의 실제 JSONB 파싱 패턴(`List<Map<String,Object>>`)과
+  대조해 발견·수정. 격리 Docker(`planning-verify-*`, 별도 포트)로 존재/미존재 id 양쪽
+  응답 코드 확인. 상세는 `docs/backend-api-contracts.md` "3. 2계층 경영기획팀 대시보드".
+- **`App.tsx`**: `QueryClientProvider` 최상위 도입(`retry:false`,
+  `refetchOnWindowFocus:false` — 실패를 값으로 반환/예외로 던지는 기존 `fetchWithAuth`
+  모델과 일관, 탭 전환마다 재요청되는 걸 방지).
+- **`planning.api.ts`**: 기존 7개 함수 전부 `fetchWithAuth(path, token)` 기반 async로
+  전환, mock 본문은 `fetchXxxMock()`으로 보존. 신규 2개(`fetchAiBriefingDetail`/
+  `fetchContractDetail`)와 그 mock 합성 로직 추가. `executive.api.ts`가 옛 동기 시그니처를
+  직접 호출하던 것도 함께 발견해 `fetchPlanningDashboardMock()` 참조로 수정(3계층은 이번
+  라운드 범위 밖이라 mock 유지).
+- **`features/planning/hooks/usePlanningQueries.ts`** 신규 — 쿼리키 팩토리 `planningKeys`
+  + 탭당 훅 9개(`useAuthState()`의 `accessToken`으로 `enabled` 가드).
+  **`features/planning/components/QueryState.tsx`** 신규 — `isPending`이면 CSS pulse
+  스켈레톤, `isError`면 안내 텍스트, 성공 시 `children(data)`. 7탭 페이지 전부 기존 동기
+  `fetchXxx()` 호출을 훅+`QueryState`로 교체.
+- **사업부 필터**: `PlanningDashboardPage`의 정적 "사업부 전체" 텍스트를 실제 `<select>`로
+  교체, `risk_exposure_by_unit`만 클라이언트 측 필터(`vendor_risk_history`엔 사업부 필드가
+  없어 필터 대상에서 제외 — 억지로 안 맞는 필터링 흉내 안 냄). 기간/달력/알림 pill은
+  배경/테두리를 빼 인터랙티브한 드롭다운과 시각적으로 구분.
+- **드릴다운**: `AiBriefingDetailPage`/`ContractDetailPage` 신규(`BriefingDetailPage`와
+  동일 골격), 라우트 `/planning/briefing/:analysisId`·`/planning/contract/:contractNumber`
+  추가. `EntityBadgeList`에 선택적 `linkTo?: (item) => string` prop 추가(제공 시에만
+  `<li>` 내용을 `<Link>`로 감쌈 — 기존 소비처는 prop 미전달로 동작 불변),
+  `ContractStatusPage`의 `expiring` 목록에 전달. `AiBriefingSummaryPage`의 `recent`
+  목록도 `<Link>`로 감쌈.
+- **`e2e/planning-drilldown.spec.ts`** 신규(3개: AI 브리핑 드릴다운, 계약 드릴다운,
+  미로그인 직접 접속 리다이렉트).
+- **검증**: `tsc -b`/`eslint` 클린, `vite build` 통과, Playwright e2e 27/27 통과(기존 24 +
+  신규 3). `npm run dev`(mock)로 로그인 후 7탭 전부 실제 렌더링·콘솔 에러 없음을 Browser
+  자동화로 확인, 사업부 드롭다운 선택 시 전략 대시보드 차트가 실제로 필터링되는 것과
+  AI 브리핑/계약 현황 드릴다운 클릭이 실제로 상세 페이지로 이동하는 것도 확인.
+  `docs/mock-schemas.md`(1절 상단 안내 + 1-7/1-8 신규 절 + "임시 mock 값" 표 2행 추가)와
+  `docs/backend-api-contracts.md`(3절 신규) 갱신.
+- QA A~H: F(신규 드릴다운 페이지는 기존 `BriefingDetailPage` 셸 패턴 재사용, 자체 `.panel`
+  스타일 신규 작성 안 함)/G(임시 스크립트 없음) 확인. B/C/D/E/H는 이번 변경 범위에 직접
+  해당 없음(공용 컴포넌트 변경은 `EntityBadgeList`의 하위 호환 prop 추가뿐).

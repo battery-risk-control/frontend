@@ -1,12 +1,14 @@
-import { fetchPlanningDashboard } from './planning.api'
+import { fetchPlanningDashboardMock } from './planning.api'
 import type { CumulativeRiskKpi, EnterpriseRiskSummaryItem, ExecutiveDashboardResponse, SavingsSimulation } from './types'
 
 /** exposure_score가 이 값 이상이면 전분기 대비 "상승"으로 표기(데모용 임계값). */
 const TREND_UP_THRESHOLD = 50
 
 /**
- * 3계층 경영진 대시보드 mock 함수. enterprise_risk_summary는 2계층 fetchPlanningDashboard()의
+ * 3계층 경영진 대시보드 mock 함수. enterprise_risk_summary는 2계층 fetchPlanningDashboardMock()의
  * risk_exposure_by_unit을 그대로 압축 인용해 같은 근원 데이터에서 파생한다(mock-schemas.md 확장 원칙).
+ * 2026-08-03부터 2계층이 실 백엔드에 연결됐지만, 3계층은 이번 작업 범위 밖이라 계속 mock
+ * 함수를 직접 참조한다(인증 토큰 없이도 동작해야 하므로 실 연동 버전은 쓸 수 없음).
  *
  * 사용 예:
  *   const dashboard = fetchExecutiveDashboard()
@@ -30,7 +32,7 @@ export function fetchExecutiveDashboard(period = '2026Q3'): ExecutiveDashboardRe
     baseline_assumption: '조기 대응 없이 최초 감지가로 구매 지속 가정',
   }
 
-  const { risk_exposure_by_unit } = fetchPlanningDashboard(undefined, period)
+  const { risk_exposure_by_unit } = fetchPlanningDashboardMock()
   const enterprise_risk_summary: EnterpriseRiskSummaryItem[] = risk_exposure_by_unit.map((unit) => ({
     business_unit: unit.business_unit,
     exposure_score: unit.exposure_score,

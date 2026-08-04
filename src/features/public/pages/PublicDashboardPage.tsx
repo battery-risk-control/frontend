@@ -14,8 +14,6 @@ import {
   fetchMaterialRiskSummary,
   fetchPurchasingKpiSummary,
   fetchSupplierOverview,
-  toMaterialRiskGauges,
-  toScoreCards,
 } from '../../../api/publicPurchasingDashboard.api'
 import { fetchMaterialRiskOverview } from '../../../api/publicMaterialRisk.api'
 import { fetchRiskMonitoringEvents } from '../../../api/publicRiskMonitoring.api'
@@ -52,7 +50,7 @@ import { PurchasingDashboardHeader } from '../components/PurchasingDashboardHead
 import { PurchasingKpiRow } from '../components/PurchasingKpiRow'
 import { LiveNewsMarquee } from '../components/LiveNewsMarquee'
 import { LatestNewsPanel } from '../components/LatestNewsPanel'
-import { MaterialRiskOverviewSection } from '../../purchasing/components/MaterialRiskOverviewSection'
+import { MaterialRiskGaugeGrid } from '../components/MaterialRiskGaugeGrid'
 import { MaterialRiskSummaryTable } from '../components/MaterialRiskSummaryTable'
 import { SupplierOverviewPanel } from '../components/SupplierOverviewPanel'
 import { ImportDependencyRow } from '../../purchasing/components/ImportDependencyRow'
@@ -181,6 +179,21 @@ export function PublicDashboardPage() {
     rates: [],
   })
 
+  /*
+   * 패널별 로딩 상태. 하나로 묶지 않는 이유는 조회가 **서로 다른 시점에 끝나기** 때문이다 —
+   * 전역 플래그 하나로 두면 가장 느린 응답이 올 때까지 이미 도착한 패널까지 자리표시자로
+   * 붙잡아 둔다. 실패해도 로딩은 끝난 것이므로 `.finally`에서 내린다.
+   *
+   * 알림(모니터링 이벤트)·브리핑 로딩은 우측 DashboardSidePanel 탭 스켈레톤과 함께 다음
+   * 배치에서 배선한다(이번 배치는 본문 패널만).
+   */
+  const [newsLoading, setNewsLoading] = useState(true)
+  const [priceLoading, setPriceLoading] = useState(true)
+  const [kpiLoading, setKpiLoading] = useState(true)
+  const [materialRiskLoading, setMaterialRiskLoading] = useState(true)
+  const [supplierLoading, setSupplierLoading] = useState(true)
+  const [materialsLoading, setMaterialsLoading] = useState(true)
+
   // --- 인증 API 4종(mock 폴백 있음) ---
   const [kpi, setKpi] = useState<PurchasingKpiSummary | null>(null)
   const [materialRiskSummary, setMaterialRiskSummary] = useState<MaterialRiskSummaryItem[]>([])
@@ -201,8 +214,6 @@ export function PublicDashboardPage() {
 
   // 주요 알림은 두 원천이 섞인다 — 멀티에이전트 판정이 심각·주의인 뉴스 + 변동성이 큰 자재(정보).
   const alerts = buildDashboardAlerts(monitoringEvents, priceSeries, priceSummaries)
-  const gauges = toMaterialRiskGauges(materials)
-  const scoreCards = toScoreCards(kpi)
 
   const { expanded: alertsExpanded, toggle: toggleAlertsExpanded } = useAlertsPanelState()
   const [isPreviewing, setIsPreviewing] = useState(false)
@@ -250,6 +261,11 @@ export function PublicDashboardPage() {
   // 가격 차트·요약 카드만 기간 탭에 반응한다.
   useEffect(() => {
     let cancelled = false
+    // 기간 탭을 바꾸면 다시 불러오므로 로딩을 되켠다 — 초기값 true만으로는 첫 조회에만
+    // 자리표시자가 뜨고, 이후 재조회는 이전 구간 데이터를 띄운 채로 조용히 바뀐다. 탭을
+    // 누른 즉시 자리표시자가 보여야 하므로 fetch 시작 전 동기 호출이 의도된 것이다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 재조회 시작을 알리는 동기 리셋(의도됨)
+    setPriceLoading(true)
     const days = PERIOD_DAYS[period]
     fetchPublicPriceTrends(days)
       .then((series) => {
@@ -257,6 +273,9 @@ export function PublicDashboardPage() {
       })
       .catch((err) => {
         console.error('원자재 가격 추이 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setPriceLoading(false)
       })
     fetchPublicPriceSummaries(days)
       .then((summaries) => {
@@ -273,6 +292,10 @@ export function PublicDashboardPage() {
   // 뉴스 목록은 페이지가 바뀔 때마다 다시 부른다.
   useEffect(() => {
     let cancelled = false
+    // 화살표로 페이지를 넘길 때마다 다시 불러오므로 로딩을 되켠다 — 이게 없으면 첫 조회
+    // 이후로는 자리표시자가 영영 안 뜨고, 넘긴 뒤에도 이전 페이지 목록이 그대로 남는다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 재조회 시작을 알리는 동기 리셋(의도됨)
+    setNewsLoading(true)
     fetchPublicNewsFeed(NEWS_FEED_PAGE_SIZE, newsPage * NEWS_FEED_PAGE_SIZE)
       .then((items) => {
         if (cancelled) return
@@ -282,6 +305,9 @@ export function PublicDashboardPage() {
       })
       .catch((err) => {
         console.error('뉴스 속보 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setNewsLoading(false)
       })
     return () => {
       cancelled = true
@@ -293,12 +319,21 @@ export function PublicDashboardPage() {
   // 위 컴포넌트 주석 "원본과의 차이" 참고).
   useEffect(() => {
     let cancelled = false
+    // "대응 완료" 후 reloadKey로 다시 부를 때도 자리표시자가 떠야 한다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 재조회 시작을 알리는 동기 리셋(의도됨)
+    setKpiLoading(true)
+    setMaterialRiskLoading(true)
+    setSupplierLoading(true)
+    setMaterialsLoading(true)
     fetchPurchasingKpiSummary(accessToken)
       .then((summary) => {
         if (!cancelled) setKpi(summary)
       })
       .catch((err) => {
         console.error('KPI 요약 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setKpiLoading(false)
       })
     fetchMaterialRiskSummary(accessToken)
       .then((summary) => {
@@ -307,6 +342,9 @@ export function PublicDashboardPage() {
       .catch((err) => {
         console.error('원자재 리스크 요약 조회 실패', err)
       })
+      .finally(() => {
+        if (!cancelled) setMaterialRiskLoading(false)
+      })
     fetchSupplierOverview(accessToken)
       .then((overview) => {
         if (!cancelled) setSupplierOverview(overview)
@@ -314,12 +352,18 @@ export function PublicDashboardPage() {
       .catch((err) => {
         console.error('공급사 현황 조회 실패', err)
       })
+      .finally(() => {
+        if (!cancelled) setSupplierLoading(false)
+      })
     fetchMaterialRiskOverview(accessToken)
       .then((overview) => {
         if (!cancelled) setMaterials(overview.materials)
       })
       .catch((err) => {
         console.error('자재별 위험 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setMaterialsLoading(false)
       })
     fetchRiskMonitoringEvents(accessToken, { days: ALERT_EVENT_DAYS, limit: ALERT_EVENT_LIMIT })
       .then((events) => {
@@ -430,7 +474,7 @@ export function PublicDashboardPage() {
         <main id="main-content" className={styles.main}>
           {/* ── 목업에 있는 구성 (위) ─────────────────────────────── */}
           <PurchasingDashboardHeader asOfDate={exchangeRates.rate_date} />
-          <PurchasingKpiRow kpi={kpi} />
+          <PurchasingKpiRow kpi={kpi} isLoading={kpiLoading} />
           <LiveNewsMarquee items={marqueeItems.slice(0, MARQUEE_COUNT)} rates={exchangeRates.rates} />
           {riskBoardLoading ? (
             <div className={styles.riskBoardLoading}>지도 데이터를 불러오는 중입니다…</div>
@@ -442,6 +486,7 @@ export function PublicDashboardPage() {
           )}
           <LatestNewsPanel
             items={newsItems}
+            isLoading={newsLoading}
             selectedId={selectedNews?.id}
             onSelect={(item) => setSelectedNews(fromNewsFeedItem(item))}
             page={newsPage}
@@ -453,6 +498,7 @@ export function PublicDashboardPage() {
             importDependency={importDependency}
             priceSeries={priceSeries}
             priceSummaries={priceSummaries}
+            isPriceLoading={priceLoading}
             period={period}
             onPeriodChange={setPeriod}
           />
@@ -461,17 +507,18 @@ export function PublicDashboardPage() {
               붙어 있지만 **점수의 뜻이 다르다** — 게이지는 ERP 노출도 단독 점수다. */}
           <MaterialRiskSummaryTable
             items={materialRiskSummary}
+            isLoading={materialRiskLoading}
             pendingAssessmentId={pendingAssessmentId}
             onAcknowledge={handleAcknowledge}
           />
 
           {/* ── 목업에 없는 기존 구성 (아래) ───────────────────────
               목업이 화면 전체를 반영한 것이 아니라, 지우지 않고 아래로 내렸다. */}
-          <MaterialRiskOverviewSection gauges={gauges} scoreCards={scoreCards} />
+          <MaterialRiskGaugeGrid items={materialRiskSummary} />
           <PublicMaterialRiskStatusPanel materials={materials} />
           <PublicErpImpactPanel materials={materials} />
-          <PublicPurchasePriorityPanel materials={materials} />
-          <SupplierOverviewPanel overview={supplierOverview} />
+          <PublicPurchasePriorityPanel materials={materials} isLoading={materialsLoading} />
+          <SupplierOverviewPanel overview={supplierOverview} isLoading={supplierLoading} />
         </main>
         <PageSectionDots variant="withAside" sections={SECTION_DOTS_SECTIONS} />
         <DashboardSidePanel

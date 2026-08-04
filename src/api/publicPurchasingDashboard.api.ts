@@ -1,11 +1,9 @@
 import { fetchWithAuth } from './http'
 import type {
-  MaterialRiskGaugeItem,
   MaterialRiskItem,
   MaterialRiskSummaryItem,
   PurchasingKpiSummary,
   RiskGrade,
-  ScoreCardItem,
   SupplierOverview,
 } from './types'
 
@@ -143,60 +141,37 @@ const GRADE_SEVERITY: Record<RiskGrade, number> = {
   정상: 1,
 }
 
-/** 게이지 카드로 세울 자재 수. surin 이식 당시의 3장 구성을 유지한다. */
-const GAUGE_COUNT = 3
-
 /**
- * 자재별 위험 목록에서 게이지 카드 3장을 고른다. 평가하지 못한 자재(`grade === null`)는
- * 제외한다 — 그런 자재는 `PublicMaterialRiskStatusPanel`이 "평가 불가"로 따로 보여준다.
+ * 구매 대응 우선순위. **평가 가능한 자재만 순위를 매기고**, 평가하지 못한 자재는 순위 없이
+ * 목록 맨 뒤로 보낸다.
+ *
+ * 예전에는 평가 불가를 심각과 주의 사이(2.5)에 끼워 눈에 띄게 했는데, 그러면 "2위"라는 숫자가
+ * **두 가지 뜻을 갖는다** — "두 번째로 위험하다"와 "확인이 안 됐다". 순위 목록에서 숫자는 급한
+ * 정도로 읽히므로 후자를 그 자리에 두면 오독된다. 미확인은 순위가 아니라 별도 영역과
+ * "평가 불가" 라벨로 드러낸다.
+ *
+ * 사용 예:
+ *   const { ranked, unavailable } = toPurchasePriority(overview.materials)
  */
-export function toMaterialRiskGauges(materials: MaterialRiskItem[]): MaterialRiskGaugeItem[] {
-  return materials
-    .filter((material): material is MaterialRiskItem & { grade: RiskGrade } => material.grade !== null)
-    .sort((a, b) => {
-      const severityDiff = GRADE_SEVERITY[b.grade] - GRADE_SEVERITY[a.grade]
-      if (severityDiff !== 0) return severityDiff
-      return (b.score ?? 0) - (a.score ?? 0)
-    })
-    .slice(0, GAUGE_COUNT)
-    .map((material) => ({
-      name: material.material_name,
-      basis: `(${material.erp_material_id})`,
-      grade: material.grade,
-    }))
-}
+export function toPurchasePriority(materials: MaterialRiskItem[]): PurchasePriority {
+  const assessable = materials.filter((item) => item.grade !== null && item.score !== null)
+  const unavailable = materials.filter((item) => item.grade === null || item.score === null)
 
-/**
- * KPI 요약에서 점수 카드 2장(외부 리스크 종합 / ERP 영향)을 만든다. 평가가 0건이면 카드
- * 자체를 만들지 않는다 — 0점 카드를 띄우면 "위험이 없다"로 읽히는데 실제로는 "아직
- * 평가하지 않았다"이기 때문이다.
- */
-export function toScoreCards(kpi: PurchasingKpiSummary | null): ScoreCardItem[] {
-  if (!kpi) return []
-  const cards: ScoreCardItem[] = []
-  if (kpi.external_signal_score_avg !== null) {
-    cards.push({ label: '외부 리스크 종합 점수', score: Math.round(kpi.external_signal_score_avg) })
-  }
-  if (kpi.erp_exposure_score_avg !== null) {
-    cards.push({ label: 'ERP 영향 점수', score: Math.round(kpi.erp_exposure_score_avg) })
-  }
-  return cards
-}
-
-/**
- * 구매 대응 우선순위 정렬 — 등급(심각 > 주의 > 정상) → 재고일수(적을수록 긴급) 순.
- * 평가하지 못한 자재를 맨 뒤로 보내지 않는다(심각 바로 다음, 주의보다 앞).
- */
-export function toPurchasePriority(materials: MaterialRiskItem[]): MaterialRiskItem[] {
-  return [...materials].sort((a, b) => {
-    const severityDiff = priorityRank(b) - priorityRank(a)
+  const ranked = [...assessable].sort((a, b) => {
+    const severityDiff = GRADE_SEVERITY[b.grade as RiskGrade] - GRADE_SEVERITY[a.grade as RiskGrade]
     if (severityDiff !== 0) return severityDiff
+    // 재고일수가 없는 자재는 비교 불가라 뒤로 보낸다(Infinity) — 0으로 두면 "재고 소진 임박"으로
+    // 잘못 올라온다.
     return (a.inventory_days ?? Infinity) - (b.inventory_days ?? Infinity)
   })
+
+  return { ranked, unavailable }
 }
 
-/** 심각(3) > 평가 불가(2.5) > 주의(2) > 정상(1). */
-function priorityRank(material: MaterialRiskItem): number {
-  if (material.grade === null) return 2.5
-  return GRADE_SEVERITY[material.grade]
+/** {@link toPurchasePriority} 결과. 순위가 붙는 목록과 붙지 않는 목록을 분리해 돌려준다. */
+export interface PurchasePriority {
+  /** 등급·점수가 있는 자재. 화면이 배열 순서대로 1위부터 번호를 붙인다. */
+  ranked: MaterialRiskItem[]
+  /** 평가하지 못한 자재. 순위를 붙이지 않고 목록 아래 별도 영역에 둔다. */
+  unavailable: MaterialRiskItem[]
 }

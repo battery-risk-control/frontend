@@ -1,9 +1,12 @@
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
+import { Skeleton, SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
 import type { SupplierOverview } from '../../../api/types'
 import styles from './SupplierOverviewPanel.module.css'
 
 interface SupplierOverviewPanelProps {
   overview: SupplierOverview | null
+  /** 아직 조회가 끝나지 않았는지. "발주 데이터가 없어…"와 구분해야 한다. */
+  isLoading?: boolean
 }
 
 /** ERP 상태 코드 → 화면 표기. 표에 없는 값은 코드를 그대로 보여준다(지어내지 않는다). */
@@ -50,7 +53,10 @@ function StatusChip({ status }: { status: string | null }) {
  * 사용 예:
  *   <SupplierOverviewPanel overview={supplierOverview} />
  */
-export function SupplierOverviewPanel({ overview }: SupplierOverviewPanelProps) {
+export function SupplierOverviewPanel({
+  overview,
+  isLoading = false,
+}: SupplierOverviewPanelProps) {
   const current = overview?.current ?? null
   const alternatives = overview?.alternatives ?? []
 
@@ -63,7 +69,13 @@ export function SupplierOverviewPanel({ overview }: SupplierOverviewPanelProps) 
       <div className={styles.columns}>
         <section className={styles.currentColumn} aria-label="현재 공급사">
           <h3 className={styles.columnTitle}>현재 공급사</h3>
-          {current === null ? (
+          {isLoading ? (
+            <div className={styles.currentCard} aria-busy="true">
+              <Skeleton width="6em" />
+              <Skeleton variant="title" width="10em" />
+              <SkeletonText lines={2} lastLineWidth="70%" />
+            </div>
+          ) : current === null ? (
             <p className={styles.empty}>발주 데이터가 없어 주 공급사를 정할 수 없습니다.</p>
           ) : (
             <div className={styles.currentCard}>
@@ -86,7 +98,11 @@ export function SupplierOverviewPanel({ overview }: SupplierOverviewPanelProps) 
 
         <section className={styles.altColumn} aria-label="추천 대체 공급사">
           <h3 className={styles.columnTitle}>추천 대체 공급사</h3>
-          {alternatives.length === 0 ? (
+          {isLoading ? (
+            <div aria-busy="true">
+              <SkeletonText lines={4} lastLineWidth="45%" />
+            </div>
+          ) : alternatives.length === 0 ? (
             <p className={styles.empty}>
               저장된 추천이 없습니다. 대체 공급사 추천은 분석 등급이 심각·주의이고 자재가
               특정됐을 때 저장됩니다.

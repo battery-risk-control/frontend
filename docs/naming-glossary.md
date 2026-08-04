@@ -18,7 +18,7 @@
 | `api/publicAiBriefing.api.ts` | 비로그인 `/public/ai-briefing` API(신규, 2026-08-03, minji `aiBriefing.api.ts` 이식) — accessToken을 `string \| null`로 받아 ①단계는 항상 mock, 로그인 없는 ②/③단계는 LOGIN_REQUIRED_MESSAGE를 던지는 3단계 분기. **2026-08-03(tier1 재동기화)** — generateAiBriefing에 5번째 인자 `analysisId` 추가(프리필 분석으로 고정), mock context에 `latest_briefing_id` 추가 |
 | `api/publicContractRag.api.ts` | 비로그인 `/public/contract-rag` API(신규, 2026-08-03, minji `contractRag.api.ts` 이식) — 업로드/재처리는 mock 모드에서 "준비 중" 에러 |
 | `api/publicMaterialRisk.api.ts` | 비로그인 `/public/materials` API(신규, 2026-08-03, minji `materialRisk.api.ts` 이식). **2026-08-03(tier1 재동기화)** — fetchMaterialRiskOverview에 `refresh` 2번째 인자 추가("새로고침" 버튼용) |
-| `api/publicPurchasingDashboard.api.ts` | 비로그인 대시보드(`/`) 인증 API 3종(신규, 2026-08-03, tier1 `purchasingDashboard.api.ts` 이식) — KPI 요약/원자재별 리스크 점수/공급사 현황. 원저자는 mock 폴백 없음 원칙이었으나 `/public/*` 공통 원칙("완전 공개+mock 폴백")을 적용, 다른 `publicX.api.ts`와 동일한 3단계 분기. `toMaterialRiskGauges`/`toScoreCards`/`toPurchasePriority` 순수 함수도 포함 |
+| `api/publicPurchasingDashboard.api.ts` | 비로그인 대시보드(`/`) 인증 API 3종(신규, 2026-08-03, tier1 `purchasingDashboard.api.ts` 이식) — KPI 요약/원자재별 리스크 점수/공급사 현황. 원저자는 mock 폴백 없음 원칙이었으나 `/public/*` 공통 원칙("완전 공개+mock 폴백")을 적용, 다른 `publicX.api.ts`와 동일한 3단계 분기. `toPurchasePriority` 순수 함수 포함(`toMaterialRiskGauges`/`toScoreCards`는 2026-08-04 제거, 아래 상세 섹션 참고) |
 | `api/publicRiskMonitoring.api.ts` | 비로그인 `/public/risk-monitoring` API(신규, 2026-08-03, minji `riskMonitoring.api.ts` 이식) — 4개 `publicX.api.ts` 공통 3단계 분기(①mock/②③비로그인=LOGIN_REQUIRED/②③로그인=fetchWithAuth) 규칙을 이 파일 최상단 주석에 정의, 나머지 3개가 참조. **2026-08-03(tier1 재동기화)** — mock procurement_risk에 representative_material_id/valid_material_count/target_material_count/material_assessments 추가 |
 | `api/purchasing.api.ts` | 1계층 구매팀 대시보드 mock API — risk_event 원천 데이터 + Phase 9.4에서 이동된 글로벌 리스크 맵/가격 추이 mock + 신규 원자재 리스크 개요/수입 의존도 mock |
 | `api/types.ts` | 전 화면 공용 API 응답 타입 정의 |
@@ -38,8 +38,9 @@
 | `components/ui/RiskGauge.tsx` | 3단계 리스크 게이지(Phase 9.4 신규, surin RiskStepGauge 이식) |
 | `components/ui/RiskGradeBadge.tsx` | 리스크 등급 배지 |
 | `components/ui/ScrollCard/ScrollCard.tsx` | 카드형 UI 공통 컨테이너(스크롤 캡슐화) |
+| `components/ui/Skeleton/Skeleton.tsx` | 로딩 자리표시자 컴포넌트(신규, 2026-08-04, tier1 재동기화 1차 배치) — `Skeleton`(단일 조각, `variant` line/title/block/circle) + `SkeletonText`(여러 줄, 마지막 줄만 짧게) |
 | `components/widgets/GlobalRiskBoard.tsx` | 글로벌 리스크 관제 맵(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용). **2026-08-03(tier1 재동기화)** — `onSelectItem?` 선택적 prop 추가, 넘기면 마커 클릭 시 카드 내부 상세 패널 대신 콜백만 호출(우측 `DashboardSidePanel`용, 넘기지 않는 기존 소비처는 무수정 동작) |
-| `components/widgets/MaterialPriceDetail.tsx` | 원자재 가격 추이(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용). **2026-08-03(minji 이식)** — `period`/`onPeriodChange`가 필수 prop으로 전환(내부 `useState` 제거, 조회는 호출부 소유), 국가·지역 필터가 `countries` 응답 기반 실동작으로 전환 |
+| `components/widgets/MaterialPriceDetail.tsx` | 원자재 가격 추이(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용). **2026-08-03(minji 이식)** — `period`/`onPeriodChange`가 필수 prop으로 전환(내부 `useState` 제거, 조회는 호출부 소유), 국가·지역 필터가 `countries` 응답 기반 실동작으로 전환. **2026-08-04(tier1 재동기화 1차 배치)** — `isLoading?` 선택 prop 추가, 차트 영역에 `Skeleton` 자리표시자 |
 | `features/auth/components/AuthTabs.tsx` | 로그인/권한 신청 탭 토글 |
 | `features/auth/components/LoginForm.tsx` | 로그인 폼 |
 | `features/auth/components/PendingApprovalScreen.tsx` | 승인 대기 보안 락 화면 |
@@ -58,6 +59,7 @@
 | `features/public/components/DashboardSidePanel.tsx` | 비로그인 대시보드 우측 패널 — 탭 3개(뉴스 상세/주요 알림/브리핑)+데이터 업로드 카드(신규, 2026-08-03, tier1 `DashboardSidePanel.tsx` 이식) — 기존 `AlertsBellButton` 배선(펼침/접힘 `AlertsPanelContext`, 호버 미리보기) 재사용 |
 | `features/public/components/LatestNewsPanel.tsx` | 최신 뉴스 페이징 목록(신규, 2026-08-03, tier1 이식) — 우측 "뉴스 상세" 탭과 짝을 이루는 선택 가능한 목록, `ScrollCard` 사용 |
 | `features/public/components/LiveNewsMarquee.tsx` | 실시간 뉴스 헤드라인 마퀴+환율 칩(신규, 2026-08-03, tier1 이식) — 최신 뉴스와 같은 `/public/news-feed`를 `limit`으로 줄여 재사용 |
+| `features/public/components/MaterialRiskGaugeGrid.tsx` | 원자재별 리스크 게이지 그리드(신규, 2026-08-04, tier1 재동기화 1차 배치) — `MaterialRiskSummaryTable`과 같은 배열을 게이지 7장으로 재표현, 기본 접힘+더보기 |
 | `features/public/components/MaterialRiskSummaryTable.tsx` | 원자재별 리스크 점수 7종 테이블(신규, 2026-08-03, tier1 이식) — 최종 합성 점수(외부신호+ERP노출+계약공백), "대응 완료" 버튼 포함 |
 | `features/public/components/PublicErpImpactPanel.tsx` | ERP 영향 자재 재고 계약 분석 패널(신규, 2026-08-03, tier1 `ErpImpactPanel.tsx` 이식) — `features/purchasing/components/ErpImpactPanel.tsx`(Phase 4 MVP, `events` 배열 prop)와 이름이 겹쳐 `Public` 접두로 분리, `materials` 배열 prop 기반 |
 | `features/public/components/PublicMaterialRiskStatusPanel.tsx` | 원자재 공급사 리스크 현황 패널(신규, 2026-08-03, tier1 `MaterialRiskStatusPanel.tsx` 이식) — 이름 충돌로 `Public` 접두 분리, `materials` 배열 prop 기반 |
@@ -85,6 +87,7 @@
 | `features/purchasing/pages/BriefingDetailPage.tsx` | 1계층 브리핑 자료 열람 페이지 |
 | `features/purchasing/pages/PurchasingDashboardPage.tsx` | 1계층 구매팀 대시보드 페이지 |
 | `lib/dashboardAlerts.ts` | 비로그인 대시보드 우측 "주요 알림" 목록 생성 함수(`buildDashboardAlerts`, 신규, 2026-08-03, tier1 이식) — 멀티에이전트 완료된 심각·주의 뉴스 + 가격 변동성(정보)을 병합, 뉴스 최신순→정보 순 정렬 |
+| `lib/dataQuality.ts` | ERP 데이터 품질 코드 라벨·색 등급 공용 함수(`dataQualityLabel`/`dataQualityTone`, 신규, 2026-08-04, tier1 재동기화 1차 배치) — 원자재 위험 화면과 `PublicErpImpactPanel`이 `VALID`/`STALE`/`INCOMPLETE`/`INVALID`/`UNKNOWN` 코드를 같은 말로 부르도록 한곳에 둠 |
 | `lib/formatCollectedAt.ts` | 수집 시각 `MM-DD HH:mm`(24시간) 포맷 함수(신규, 2026-08-03, tier1 이식) — `toLocale*`의 12시간제/로케일 구분자 문제 회피 |
 | `lib/newsEventRef.ts` | 선택 기사 → AI 브리핑 `ref` 변환 함수(`toNewsEventRef`, 신규, 2026-08-03, tier1 이식) — `event_id`→`RAW-{id}`→분석 UUID 순으로 시도 |
 | `lib/selectedArticle.ts` | 뉴스·지도 마커 → 공통 `SelectedArticle` 변환 함수(`fromNewsFeedItem`/`fromRiskBoardItem`, 신규, 2026-08-03, tier1 이식) |
@@ -189,9 +192,12 @@
 | `fetchMaterialRiskSummary` | 원자재별 리스크 점수 7종 조회 함수 | 〃 |
 | `fetchSupplierOverview` | 공급사 현황+대체 공급사 추천 조회 함수 | 〃 |
 | `acknowledgeAssessment` | 평가 완료 처리 함수 | mock 모드에서는 서버 반영 없이 호출부가 로컬로만 갱신 |
-| `toMaterialRiskGauges` | 자재별 위험 목록 → 게이지 카드 3장 변환 함수 | 평가 없는 자재(`grade===null`) 제외 |
-| `toScoreCards` | KPI 요약 → 점수 카드 2장 변환 함수 | 평가 0건이면 카드 자체를 만들지 않음 |
-| `toPurchasePriority` | 자재별 위험 목록 → 구매 대응 우선순위 정렬 함수 | 등급→재고일수 순, 평가 불가 자재는 심각 다음(주의보다 앞) |
+| `toPurchasePriority` | 자재별 위험 목록 → 구매 대응 우선순위 정렬 함수 | **2026-08-04(tier1 재동기화 1차 배치) 갱신**: 반환 타입이 `MaterialRiskItem[]`(평가 불가를 심각·주의 사이 2.5로 끼워 정렬)에서 `PurchasePriority`(`{ ranked, unavailable }`, 평가 불가는 순위 없이 별도 배열)로 변경 |
+
+> **정정(2026-08-04)**: `toMaterialRiskGauges`/`toScoreCards`는 이 파일에서 제거했다 — tier1이
+> `MaterialRiskOverviewSection`(이 두 함수의 유일한 소비처)을 삭제하며 이 화면(`PublicDashboardPage.tsx`)이
+> `MaterialRiskGaugeGrid`로 전환됐고, 다른 소비처가 없어 함께 정리했다(`docs/mock-schemas.md`
+> 10번 섹션 참고).
 
 ### `api/purchasing.api.ts`
 | physical | logical | 역할 |
@@ -465,7 +471,12 @@
 ### `features/public/components/LatestNewsPanel.tsx`(신규, 2026-08-03, tier1 이식)
 | physical | logical | 역할 |
 |---|---|---|
-| `LatestNewsPanel` | 최신 뉴스 목록 컴포넌트 | 번호 매긴 페이징 목록, 제목 클릭 시 우측 "뉴스 상세" 탭 전환·원문 링크는 별도 |
+| `LatestNewsPanel` | 최신 뉴스 목록 컴포넌트 | 번호 매긴 페이징 목록, 제목 클릭 시 우측 "뉴스 상세" 탭 전환·원문 링크는 별도 — `isLoading` prop 추가(2026-08-04, tier1 재동기화 1차 배치, 목록 모양 그대로의 `Skeleton` 자리표시자 5줄) |
+
+### `features/public/components/MaterialRiskGaugeGrid.tsx`(신규, 2026-08-04, tier1 재동기화 1차 배치)
+| physical | logical | 역할 |
+|---|---|---|
+| `MaterialRiskGaugeGrid` | 원자재별 리스크 게이지 그리드 컴포넌트 | `MaterialRiskSummaryTable`과 같은 배열(`MaterialRiskSummaryItem[]`)을 게이지 7장으로 다시 그림, 기본 접힘+더보기(Disclosure). tier1이 삭제한 `MaterialRiskOverviewSection`을 이 화면에서 대체(`/purchasing`의 동명 컴포넌트는 그대로 유지, `docs/mock-schemas.md` 10번 섹션 참고) |
 
 ### `features/public/components/LiveNewsMarquee.tsx`(신규, 2026-08-03, tier1 이식)
 | physical | logical | 역할 |
@@ -475,12 +486,12 @@
 ### `features/public/components/MaterialRiskSummaryTable.tsx`(신규, 2026-08-03, tier1 이식)
 | physical | logical | 역할 |
 |---|---|---|
-| `MaterialRiskSummaryTable` | 원자재별 리스크 점수 테이블 컴포넌트 | 자재 7종 고정, 최종 합성 점수·24시간 대비·주요 이슈·"대응 완료" 버튼 |
+| `MaterialRiskSummaryTable` | 원자재별 리스크 점수 테이블 컴포넌트 | 자재 7종 고정, 최종 합성 점수·24시간 대비·주요 이슈·"대응 완료" 버튼 — `isLoading` prop 추가(2026-08-04, tier1 재동기화 1차 배치, 7줄 `Skeleton` 자리표시자) |
 
 ### `features/public/components/PublicErpImpactPanel.tsx`(신규, 2026-08-03, tier1 이식)
 | physical | logical | 역할 |
 |---|---|---|
-| `PublicErpImpactPanel` | ERP 영향 자재 재고 계약 분석 패널 컴포넌트 | `features/purchasing/components/ErpImpactPanel.tsx`(이름 충돌)와 분리, `materials` prop |
+| `PublicErpImpactPanel` | ERP 영향 자재 재고 계약 분석 패널 컴포넌트 | `features/purchasing/components/ErpImpactPanel.tsx`(이름 충돌)와 분리, `materials` prop — 데이터 품질 라벨·색 등급을 신규 공용 모듈 `lib/dataQuality.ts`로 추출(2026-08-04, tier1 재동기화 1차 배치) |
 
 ### `features/public/components/PublicMaterialRiskStatusPanel.tsx`(신규, 2026-08-03, tier1 이식)
 | physical | logical | 역할 |
@@ -490,7 +501,7 @@
 ### `features/public/components/PublicPurchasePriorityPanel.tsx`(신규, 2026-08-03, tier1 이식)
 | physical | logical | 역할 |
 |---|---|---|
-| `PublicPurchasePriorityPanel` | 구매 대응 우선순위 패널 컴포넌트 | `features/purchasing/components/PurchasePriorityPanel.tsx`(이름 충돌)와 분리, `materials` prop |
+| `PublicPurchasePriorityPanel` | 구매 대응 우선순위 패널 컴포넌트 | `features/purchasing/components/PurchasePriorityPanel.tsx`(이름 충돌)와 분리, `materials` prop — `isLoading` prop 추가 + **평가 불가 자재를 순위에서 빼고 목록 아래 별도 영역으로**(2026-08-04, tier1 재동기화 1차 배치) — `toPurchasePriority()` 반환 타입이 `MaterialRiskItem[]`에서 `{ ranked, unavailable }`로 바뀜 |
 
 ### `features/public/components/PurchasingDashboardHeader.tsx`(신규, 2026-08-03, tier1 이식)
 | physical | logical | 역할 |
@@ -500,12 +511,12 @@
 ### `features/public/components/PurchasingKpiRow.tsx`(신규, 2026-08-03, tier1 이식)
 | physical | logical | 역할 |
 |---|---|---|
-| `PurchasingKpiRow` | 상단 KPI 5칸 컴포넌트 | 심각·주의 건수/ERP 영향도/외부 위험/검증 브리핑, 각 칸 24시간 전 대비 보조 값(증감 기호 없음) |
+| `PurchasingKpiRow` | 상단 KPI 5칸 컴포넌트 | 심각·주의 원자재 종수/ERP 영향도/외부 위험/검증 브리핑, 각 칸 24시간 전 대비 보조 값(증감 기호 없음, 24시간 줄만 단위가 `건`으로 갈림) — `isLoading` prop 추가(2026-08-04, tier1 재동기화 1차 배치, `Skeleton` 자리표시자) |
 
 ### `features/public/components/SupplierOverviewPanel.tsx`(신규, 2026-08-03, tier1 이식)
 | physical | logical | 역할 |
 |---|---|---|
-| `SupplierOverviewPanel` | 공급사 현황 및 대체 공급사 추천 패널 컴포넌트 | 좌: 현재 공급사(ERP 발주 실적), 우: 추천 대체 공급사(분석 저장 결과) — 원천이 다른 두 시점 병기 |
+| `SupplierOverviewPanel` | 공급사 현황 및 대체 공급사 추천 패널 컴포넌트 | 좌: 현재 공급사(ERP 발주 실적), 우: 추천 대체 공급사(분석 저장 결과) — 원천이 다른 두 시점 병기, `isLoading` prop 추가(2026-08-04, tier1 재동기화 1차 배치) |
 
 ### `features/public/components/SupplyNewsFeed.tsx`
 | physical | logical | 역할 |
@@ -557,7 +568,7 @@
 ### `features/purchasing/components/ImportDependencyRow.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `ImportDependencyRow` | 수입 의존도+원자재 가격 추이 2컬럼 행 컴포넌트 | Phase 9.4 신규. `340px 1fr` grid(surin 비율 그대로) — `ImportDependencyPanel` + 승격된 `components/widgets/MaterialPriceDetail`. 2026-07-27 — 신설 이후 반응형 브레이크포인트가 없어(회귀 아님, 미구현) `940px`(SideNav 펼침 기준 실측) 이하에서 `1fr`(1컬럼)로 전환하는 미디어 쿼리 추가, 카드 순서(수입 의존도→원자재 가격 추이)는 그대로 유지. `docs/design-tokens.md` "카드 레이아웃·스크롤 규칙" f항(고정 px 컬럼 병렬 그리드 규칙) 신설 계기 |
+| `ImportDependencyRow` | 수입 의존도+원자재 가격 추이 2컬럼 행 컴포넌트 | Phase 9.4 신규. `340px 1fr` grid(surin 비율 그대로) — `ImportDependencyPanel` + 승격된 `components/widgets/MaterialPriceDetail`. 2026-07-27 — 신설 이후 반응형 브레이크포인트가 없어(회귀 아님, 미구현) `940px`(SideNav 펼침 기준 실측) 이하에서 `1fr`(1컬럼)로 전환하는 미디어 쿼리 추가, 카드 순서(수입 의존도→원자재 가격 추이)는 그대로 유지. `docs/design-tokens.md` "카드 레이아웃·스크롤 규칙" f항(고정 px 컬럼 병렬 그리드 규칙) 신설 계기. `isPriceLoading?` 선택 prop 추가(2026-08-04, tier1 재동기화 1차 배치) — `MaterialPriceDetail`에 `isLoading`으로 그대로 전달, 두 곳 모두 선택적이라 이 컴포넌트를 무수정으로 호출하는 `/purchasing` 쪽에 영향 없음 |
 
 ### `features/purchasing/components/KpiSummaryPanel.tsx`
 | physical | logical | 역할 |

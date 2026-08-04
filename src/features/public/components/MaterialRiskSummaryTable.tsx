@@ -1,10 +1,16 @@
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
+import { Skeleton } from '../../../components/ui/Skeleton/Skeleton'
 import type { MaterialRiskSummaryItem, RiskGrade } from '../../../api/types'
 import styles from './MaterialRiskSummaryTable.module.css'
 
+/** 로딩 중 잡아둘 줄 수. 이 표는 배터리 원자재 7종이 항상 같은 자리에 선다. */
+const MATERIAL_SKELETON_ROWS = 7
+
 interface MaterialRiskSummaryTableProps {
   items: MaterialRiskSummaryItem[]
+  /** 아직 조회가 끝나지 않았는지. 빈 표 대신 자리표시자 줄을 보여준다. */
+  isLoading?: boolean
   /**
    * 완료 처리 중인 `latest_assessment_id`. 버튼을 비활성화해 같은 평가를 두 번 보내지 않는다.
    * 전역 로딩이 아니라 id 단위라, 한 줄을 처리하는 동안 다른 줄은 그대로 누를 수 있다.
@@ -54,6 +60,7 @@ function toDeltaLabel(delta: number | null): { text: string; className: string }
  */
 export function MaterialRiskSummaryTable({
   items,
+  isLoading = false,
   pendingAssessmentId,
   onAcknowledge,
 }: MaterialRiskSummaryTableProps) {
@@ -85,7 +92,29 @@ export function MaterialRiskSummaryTable({
               </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody aria-busy={isLoading || undefined}>
+            {isLoading &&
+              /* 원자재 7종이 항상 같은 자리에 서는 표라 도착 전에도 그만큼 줄을 잡아둔다 —
+                 값이 들어올 때 표 높이가 튀지 않는다. */
+              Array.from({ length: MATERIAL_SKELETON_ROWS }, (_, index) => (
+                <tr key={`skeleton-${index}`}>
+                  <th scope="row" className={styles.material}>
+                    <Skeleton width="7em" />
+                  </th>
+                  <td className={styles.numeric}>
+                    <Skeleton width="3em" />
+                  </td>
+                  <td className={styles.numeric}>
+                    <Skeleton width="3em" />
+                  </td>
+                  <td>
+                    <Skeleton width="80%" />
+                  </td>
+                  <td>
+                    <Skeleton width="5em" height="24px" />
+                  </td>
+                </tr>
+              ))}
             {items.map((item) => {
               const delta = toDeltaLabel(item.score_delta)
               const grade = item.risk_level ? GRADE_BY_LEVEL[item.risk_level] : null

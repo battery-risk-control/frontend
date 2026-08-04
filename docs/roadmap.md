@@ -154,6 +154,42 @@
     `ScoreCardPanel.tsx` 외 무수정 확인), `docs/qa-checklist.md` A~H 순회 — 상세는
     `docs/timeline.md` Phase 12 항목 참고.
 
+- [ ] Phase 13 — `origin/minji-tier1-dashboard` 후속 27커밋 재동기화 (`feat/public-tier`,
+  2026-08-04~). Phase 12 조사 기준점(`309bd1c`) 이후 그 브랜치에 27개 커밋이 추가로 쌓인 것을
+  확인(`git fetch`, HEAD `c2dbe67`) — 규모가 커 A~I로 성격별 분류해 배치로 나눠 반영한다
+  (사용자 결정, 2026-08-04). 배치 순서: A(소규모 patch)+B(삭제 컴포넌트 대응)+C(신규 공용
+  컴포넌트)+E(로딩 자리표시자) → D(알림 패널/사이드패널 갱신) → F(완료 처리 되돌리기) →
+  H(기존 4화면 기능 추가) → G(데이터 관리 화면, `PublicDataManagementPage` 신규 포함 확정).
+  - [x] 1차 배치(A+B+C+E, 2026-08-04): `MaterialRiskGaugeGrid`(신규, `features/public/
+    components/`) 이식 — tier1이 `MaterialRiskOverviewSection`/`MaterialRiskOverviewRow`/
+    `MaterialRiskSummaryCard`/`ScoreCardPanel`을 완전히 삭제하고 이 컴포넌트로 대체했으나,
+    이 저장소는 `/purchasing`(구매팀 담당자 범위)의 `PurchasingDashboardPage.tsx`가 여전히
+    `MaterialRiskOverviewSection`을 쓰고 있어(`grep` 확인) 그 4개 파일을 삭제하지 않고
+    이 화면(`PublicDashboardPage.tsx`)만 신규 컴포넌트로 전환했다. `Skeleton`/`SkeletonText`
+    (신규, `components/ui/Skeleton/`) 이식. 7개 컴포넌트에 `isLoading`류 prop patch
+    (`PurchasingKpiRow`/`LatestNewsPanel`/`MaterialRiskSummaryTable`/`SupplierOverviewPanel`/
+    `ImportDependencyRow`+`MaterialPriceDetail`(공유 위젯, 둘 다 선택적 prop이라 `/purchasing`
+    무수정)/`PublicPurchasePriorityPanel`), `PublicErpImpactPanel`은 데이터 품질 라벨을 신규
+    공용 모듈 `lib/dataQuality.ts`로 추출. `PublicPurchasePriorityPanel`은 추가로 "평가 불가
+    자재를 순위에서 빼고 목록 아래 별도 영역으로"(tier1 `2d4f431` 대응, `toPurchasePriority()`
+    반환 타입이 `{ ranked, unavailable }`로 변경). `PublicDashboardPage.tsx`에 패널별
+    `isLoading` state 6종 배선(재조회 시 재점화 포함) — 알림·브리핑 로딩(우측
+    `DashboardSidePanel` 탭 스켈레톤)은 다음 배치(D)로 이연. 구현 중 `react-hooks/
+    set-state-in-effect`(신규 eslint 규칙, tier1 코드엔 없던 제약) 발견 — 재조회 시작을
+    알리는 의도된 동기 setState라 `eslint-disable-next-line` 3곳에 사유와 함께 적용.
+    검증: `npm run typecheck`/`lint`/`build` 통과, Playwright 13/13 PASS(게이지 그리드 토글,
+    패널 표시, `/purchasing` 회귀 — `PurchasingDashboardPage.tsx` 자체는 diff 0, 공유 파일
+    `ImportDependencyRow.tsx`만 +4줄), 콘솔 에러 0건. 상세는 `docs/mock-schemas.md` 10번
+    섹션 참고.
+  - [ ] 2차 배치(D): `AlertsBellButton` `onToggle`→`onOpenAlerts` 전환 + `SidePanelToggleButton`
+    배선 + `DashboardSidePanel` 탭별 스켈레톤·`focusAlertsToken`.
+  - [ ] 3차 배치(F): `AcknowledgedPanel`("완료 처리 항목" 되돌리기) 배선.
+  - [ ] 4차 배치(H): `AiBriefingPage`/`ContractRagPage`/`MaterialRiskPage`/`RiskMonitoringPage`
+    추가 기능(필터·페이징·PDF 다운로드 등), `fetchRecentAiBriefings` 페이징 계약 브레이킹
+    체인지 흡수.
+  - [ ] 5차 배치(G): 데이터 관리 화면(`DataManagementPage`) `PublicDataManagementPage`로 신규
+    이식 — `/public/*` 원칙(완전 공개+mock 폴백) 적용 확정.
+
 ## 재사용 규칙 (Phase 3에서 결정되는 인터페이스는 이후 Phase가 그대로 따른다)
 - `ConfidenceBadge`/`RiskGradeBadge`의 props 타입은 이후 모든 화면에서 동일하게 재사용한다 — 화면별로 별도 배지를 새로 만들지 않는다.
 - `Header`/`Footer`/`SideNav`는 `components/layout/`에서 한 번만 구현하고, `features/*`는 이를 import해서 쓰기만 한다.

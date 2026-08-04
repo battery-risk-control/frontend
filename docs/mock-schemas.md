@@ -302,9 +302,15 @@ minji 원본은 로그인이 없으면 화면이 비어 있었지만(의도적 �
 **본문 12섹션(순서 고정)**: `PurchasingDashboardHeader`(기준일) → `PurchasingKpiRow`(KPI
 5칸) → `LiveNewsMarquee`(실시간 헤드라인+환율 칩) → `GlobalRiskBoard`(재사용, `onSelectItem`
 콜백 신규 추가) → `LatestNewsPanel`(최신 뉴스 페이징) → `ImportDependencyRow`(재사용) →
-`MaterialRiskSummaryTable`(원자재 7종 최종 합성 점수) → `MaterialRiskOverviewSection`(재사용,
-게이지 3장+점수 카드 2장) → `PublicMaterialRiskStatusPanel`/`PublicErpImpactPanel`/
+`MaterialRiskSummaryTable`(원자재 7종 최종 합성 점수) → `MaterialRiskGaugeGrid`(신규, 게이지
+7장 접기/펼치기) → `PublicMaterialRiskStatusPanel`/`PublicErpImpactPanel`/
 `PublicPurchasePriorityPanel`(신규, 아래 참고) → `SupplierOverviewPanel`(공급사 현황).
+> **정정(2026-08-04, 10번 섹션 1차 배치)**: 이 문단이 최초 작성될 당시엔
+> `MaterialRiskOverviewSection`(게이지 3장+점수 카드 2장, 기존 재사용)이었으나, tier1이
+> `309bd1c` 이후 이 컴포넌트를 완전히 삭제하고 `MaterialRiskGaugeGrid`(게이지 7장, 위 표와
+> 같은 배열을 다르게 읽는 형태)로 대체했다 — 10번 섹션 참고. `MaterialRiskOverviewSection`
+> 자체는 삭제하지 않고 그대로 남아있다(`/purchasing` 쪽 `PurchasingDashboardPage.tsx`의
+> 유일한 소비처).
 
 **데이터 원천 2갈래**:
 - **공개 API 6종**(`public.api.ts`, 이미 존재) — `fetchPublicNewsFeed()`가 `limit`/`offset`
@@ -352,9 +358,11 @@ minji 원본은 로그인이 없으면 화면이 비어 있었지만(의도적 �
 컴포넌트로 분리했다. 기존 `/purchasing` 쪽 컴포넌트·`PurchasingDashboardPage.tsx`는 건드리지
 않았다.
 
-**재사용(수정 없음)**: `MaterialRiskOverviewSection`(tier1의 `toMaterialRiskGauges()`/
-`toScoreCards()` 출력 타입이 기존 `MaterialRiskGaugeItem[]`/`ScoreCardItem[]`과 동일),
-`ImportDependencyRow`(단, 아래 breaking-change 흡수 참고).
+**재사용(당시 기준, 수정 없음)**: `ImportDependencyRow`(단, 아래 breaking-change 흡수 참고).
+> **정정(2026-08-04)**: `MaterialRiskOverviewSection`(tier1의 `toMaterialRiskGauges()`/
+> `toScoreCards()` 출력 타입이 당시 기존 `MaterialRiskGaugeItem[]`/`ScoreCardItem[]`과 동일해
+> "재사용, 수정 없음"으로 적었던 항목)은 10번 섹션 1차 배치에서 `MaterialRiskGaugeGrid`로
+> 교체됐다 — 더 이상 이 화면의 재사용 대상이 아니다.
 
 **`ImportDependencyRow.tsx`(기존 파일) 수정** — 계획 단계에서는 "수정 불필요"로 잘못 판단했으나
 (0단계 조사 오류), tier1이 `period`/`onPeriodChange`를 필수 외부 prop으로 요구해 구현 중 발견해
@@ -363,7 +371,9 @@ minji 원본은 로그인이 없으면 화면이 비어 있었지만(의도적 �
 그대로 쓴다(제어형, 이 화면). `ScoreCardItem.grade`도 tier1 기준으로 필수→선택 완화했고,
 이를 렌더하는 `ScoreCardPanel.tsx`도 `grade`가 없을 때 배지를 생략하도록 조건부 렌더로
 바꿨다(`/planning`·`/executive` 등 다른 소비처에 영향 없음, 기존 mock은 `grade`를 계속 채워
-보낸다).
+보낸다). **이 단락(`ScoreCardItem`/`ScoreCardPanel.tsx` 부분)도 10번 섹션 1차 배치 시점엔
+이미 이 화면의 소비 경로에서 빠졌다** — `ScoreCardPanel.tsx`/`ScoreCardItem` 타입 자체는
+`/purchasing`이 계속 쓰므로 삭제하지 않고 남아있다.
 
 **`GlobalRiskBoard.tsx`(공유 위젯) 수정** — `onSelectItem?: (item: GlobalRiskBoardItem) => void`
 선택적 prop 신규 추가. 넘기면 마커 클릭 시 카드 내부 상세 패널이 자동으로 펼쳐지지 않고
@@ -378,6 +388,64 @@ minji 원본은 로그인이 없으면 화면이 비어 있었지만(의도적 �
 (`fromNewsFeedItem`/`fromRiskBoardItem` — 뉴스·지도 마커를 공통 `SelectedArticle`로 변환),
 `newsEventRef.ts`(`toNewsEventRef` — `event_id`→`RAW-{id}`→분석 UUID 순으로 브리핑 `ref` 생성),
 `formatCollectedAt.ts`(수집 시각 `MM-DD HH:mm` 24시간 표기).
+
+## 10. 구매팀 대시보드 tier1 재동기화 1차 배치 — 게이지·로딩 자리표시자 (2026-08-04)
+
+9번 섹션 이식 기준점(`origin/minji-tier1-dashboard` `309bd1c`) 이후 그 브랜치에 27개 커밋이
+추가로 쌓였다(`git fetch` 확인, HEAD `c2dbe67`). 이 27개 커밋을 A~I로 분류해 여러 배치로
+나눠 반영하기로 했고(사용자 결정, 2026-08-04), 이번은 그중 1차 배치(A+B+C+E, 소규모
+prop patch + 게이지 컴포넌트 교체 + 신규 `Skeleton` 공용 컴포넌트 + 로딩 상태 배선)다.
+
+**B. `MaterialRiskGaugeGrid` 신규 이식** — tier1이 `309bd1c` 이후 `MaterialRiskOverviewSection`/
+`MaterialRiskOverviewRow`/`MaterialRiskSummaryCard`/`ScoreCardPanel`을 완전히 삭제하고
+`MaterialRiskGaugeGrid`(위 `MaterialRiskSummaryTable`과 **같은 배열**을 받아 7종을 게이지로
+다시 그리는 컴포넌트, 기본 접힘)로 대체했다 — tier1 주석: "게이지가 ERP 자재 단위라 대분류
+단위인 표와 자재 구성이 어긋났고, 상위 3개만 보여줘 나머지는 사라졌으며, 하드코딩
+placeholder 6종이 실데이터와 섞여 있었다." **이 저장소에서는 해당 4개 파일을 삭제하지
+않았다** — `grep` 확인 결과 `/purchasing`(구매팀 담당자 별도 진행 범위)의
+`PurchasingDashboardPage.tsx`가 여전히 `MaterialRiskOverviewSection`을 import·사용 중이라,
+tier1처럼 삭제하면 그 화면이 깨진다. 대신 이 비로그인 대시보드(`PublicDashboardPage.tsx`)
+만 `MaterialRiskGaugeGrid`(신규, `features/public/components/`)로 전환하고
+기존 4개 파일(`MaterialRiskOverviewSection`/`MaterialRiskOverviewRow`/
+`MaterialRiskSummaryCard`/`ScoreCardPanel`, 전부 `features/purchasing/components/`)은
+그대로 남겨 `/purchasing`이 계속 쓰게 했다 — Phase 12부터 유지해 온 "`/purchasing` 쪽 파일은
+건드리지 않는다" 경계와 일관. `publicPurchasingDashboard.api.ts`의 `toMaterialRiskGauges`/
+`toScoreCards`(이 화면 전용 API 파일)는 다른 소비처가 없어 함께 제거했다 — `/purchasing`이
+쓰는 동명 함수는 별도 파일(`purchasingDashboard.api.ts`)이라 무관하다.
+
+**A. 소규모 patch(prop 추가, 7개 컴포넌트)** — `PurchasingKpiRow`(`isLoading` prop + 라벨
+"심각"/"주의"→"심각 원자재"/"주의 원자재" 정정, 24시간 줄 단위 분리 `종`↔`건`),
+`LatestNewsPanel`(`isLoading`), `MaterialRiskSummaryTable`(`isLoading`),
+`SupplierOverviewPanel`(`isLoading`), `ImportDependencyRow`+`MaterialPriceDetail`(공유 위젯,
+`isPriceLoading`/`isLoading` — 둘 다 선택적 prop이라 `/purchasing` 호출부는 무수정),
+`PublicErpImpactPanel`(데이터 품질 라벨·색 등급을 신규 공용 모듈 `lib/dataQuality.ts`로
+추출 — 원자재 위험 화면과 같은 코드를 같은 말로 부르기 위함, tier1의 `9ff7e02` 대응),
+`PublicPurchasePriorityPanel`(`isLoading` + **평가 불가 자재를 순위에서 빼고 목록 아래 별도
+영역으로**, tier1 `2d4f431` 대응 — `toPurchasePriority()`가 `MaterialRiskItem[]`이 아니라
+`{ ranked, unavailable }`를 돌려주도록 반환 타입이 바뀌었다. 예전에는 평가 불가를 심각과
+주의 사이(2.5)에 끼워 순위표에 함께 나열했는데, 그러면 "2위"라는 숫자가 "두 번째로
+위험하다"와 "확인이 안 됐다" 두 뜻을 갖게 돼 오독 소지가 있었다).
+
+**C. `Skeleton`/`SkeletonText` 신규 공용 컴포넌트**(`components/ui/Skeleton/`) — 위 A의
+`isLoading` prop들이 공통으로 쓰는 로딩 자리표시자. tier1 그대로 이식. `AcknowledgedPanel`/
+`SidePanelToggleButton`(tier1 27커밋 중 다른 항목이 쓰는 신규 컴포넌트)은 이번 배치에서
+같이 가져오지 않았다 — 아직 배선할 소비처가 없는 상태로 미리 만들어두면 diff 추적이
+흐려진다는 판단(사용자 결정), 각각 후속 배치(F/D)에서 이식 예정.
+
+**E. `PublicDashboardPage.tsx` 로딩 상태 배선** — tier1과 같은 패턴: 패널마다 별도
+`useState`(`newsLoading`/`priceLoading`/`kpiLoading`/`materialRiskLoading`/`supplierLoading`/
+`materialsLoading`)를 두고, 재조회를 트리거하는 effect 시작 시점에 해당 로딩을 다시
+`true`로 켠 뒤(재조회 시에도 자리표시자가 다시 뜨도록) 조회가 끝나면 `.finally`로 끈다.
+전역 로딩 플래그 하나로 묶지 않는 이유는 조회가 서로 다른 시점에 끝나기 때문 — 이미 도착한
+패널까지 가장 느린 응답을 기다리며 자리표시자로 붙잡아 두지 않기 위함이다. 알림(모니터링
+이벤트)·브리핑 로딩은 우측 `DashboardSidePanel` 탭 스켈레톤과 함께 다음 배치(D)에서 배선한다.
+
+**아직 반영하지 않은 나머지 커밋(D/F/G/H, 후속 배치)**: `AlertsBellButton`의 `onToggle`→
+`onOpenAlerts`(열기 전용) 전환 + `SidePanelToggleButton`(접기/펼치기 분리) + `DashboardSidePanel`
+탭별 스켈레톤·`focusAlertsToken`(D), "완료 처리 항목" 되돌리기 `AcknowledgedPanel`(F),
+`AiBriefingPage`/`ContractRagPage`/`MaterialRiskPage`/`RiskMonitoringPage`의 필터·페이징·
+PDF 다운로드 등 추가 기능(H, `fetchRecentAiBriefings` 페이징 계약 브레이킹 체인지 포함),
+데이터 관리 화면(`DataManagementPage`) 신규 이식(G, `PublicDataManagementPage`로 포함 예정).
 
 ## 임시 mock 값 (후속 정리 필요)
 

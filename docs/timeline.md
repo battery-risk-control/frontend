@@ -821,3 +821,108 @@ H(보고/회귀 점검) — 위 검증 절차에 항목별 결과 기재, DonutC
 
 - `npm run typecheck`/`lint`/`build` 통과.
 - Playwright + 회귀 확인, `docs/qa-checklist.md` A~H — 아래 이어서 기록.
+
+## Phase 13(1차 배치) — `origin/minji-tier1-dashboard` 후속 27커밋 재동기화 (`feat/public-tier`, 2026-08-04)
+
+Phase 12 조사 기준점(`309bd1c`) 이후 `origin/minji-tier1-dashboard`에 27개 커밋이 추가로
+쌓인 것을 `git fetch`로 확인(HEAD `c2dbe67`). 브랜치는 이 사이 `youngjin/demo-layout-v3`에서
+`feat/public-tier`로 rename됐다(로컬 명령, `git branch -m`). 27개 커밋을 A~I로 성격별 분류해
+0~1단계는 조사·계획, 2단계부터 배치별로 반영하기로 했다(사용자 결정, 2026-08-04) — 이번
+Phase는 그중 1차 배치(A+B+C+E)만 다룬다.
+
+### 0~1단계 조사 결과 요약
+- 27개 커밋 전체 stat: 75개 파일, +6918/-1143줄.
+- **완전 삭제된 파일 4개**(tier1 쪽): `MaterialRiskOverviewSection`/`MaterialRiskOverviewRow`/
+  `MaterialRiskSummaryCard`/`ScoreCardPanel`(+각 `.module.css`) — `MaterialRiskGaugeGrid`로
+  대체.
+- **완전 신규 화면**: 데이터 관리 화면(`DataManagementPage`, 530줄+하위 컴포넌트 8개+전용
+  API 파일) — 조사 시점(`309bd1c`)엔 아직 없었다.
+- 그 외 `AiBriefingPage`/`ContractRagPage`/`MaterialRiskPage`/`RiskMonitoringPage`는 새 화면이
+  아니라 기존 화면의 기능 추가·버그 수정.
+- `fetchRecentAiBriefings` 시그니처가 `(token, limit)`→`(token, AiBriefingListQuery)`, 반환도
+  배열→`ApiPage<T>`로 브레이킹 체인지 — 우리 `publicAiBriefing.api.ts`(자체 mock 분기 래퍼)와
+  `PublicDashboardPage.tsx`/`PublicAiBriefingPage.tsx` 세 곳이 구 시그니처로 호출 중임을 확인
+  (4차 배치 H에서 처리 예정).
+- 상세 분류(A~I 정의, 파일별 대조표)는 계획 문서(`~/.claude/plans/`, 세션 종료 후 소멸)에
+  있었으나 핵심 결론은 `docs/mock-schemas.md` 10번 섹션·`docs/roadmap.md` Phase 13에 반영.
+
+### 1차 배치(A+B+C+E) 반영 내용
+- **C(먼저 이식)**: `Skeleton`/`SkeletonText`(신규, `components/ui/Skeleton/`) — tier1 그대로.
+  `AcknowledgedPanel`/`SidePanelToggleButton`은 아직 소비처가 없는 채로 미리 만들면 diff
+  추적이 흐려진다는 판단(사용자 결정)으로 이번 배치에서 제외, 각각 3차(F)/2차(D) 배치로 이연.
+- **B**: `MaterialRiskGaugeGrid`(신규, `features/public/components/`) 이식. **파일 삭제는
+  하지 않았다** — `grep` 확인 결과 `/purchasing`(구매팀 담당자 범위)의
+  `PurchasingDashboardPage.tsx` 21·134번째 줄이 지금도 `MaterialRiskOverviewSection`을
+  import·사용 중이라, tier1처럼 그 4개 파일을 삭제하면 그 화면이 깨진다 — Phase 12부터
+  유지해 온 "`/purchasing` 쪽 파일은 건드리지 않는다" 경계를 그대로 지켰다. 이 비로그인
+  대시보드(`PublicDashboardPage.tsx`)만 `MaterialRiskGaugeGrid`로 전환하고, 기존 4개 파일은
+  손대지 않고 그대로 뒀다. `publicPurchasingDashboard.api.ts`의 `toMaterialRiskGauges`/
+  `toScoreCards`(이 화면 전용, 다른 소비처 없음을 `grep`으로 확인 후)는 함께 제거 —
+  `/purchasing`이 쓰는 동명 함수는 별도 파일(`purchasingDashboard.api.ts`)이라 무관.
+- **A**: 7개 컴포넌트에 tier1 diff 그대로 patch:
+  - `PurchasingKpiRow` — `isLoading` prop, 라벨 "심각"/"주의"→"심각 원자재"/"주의 원자재"
+    정정(24시간 줄만 단위 `건`으로 분리, 큰 숫자는 자재 대분류 수라 `종`).
+  - `LatestNewsPanel`/`MaterialRiskSummaryTable`/`SupplierOverviewPanel` — `isLoading` prop
+    + `Skeleton` 자리표시자.
+  - `ImportDependencyRow`(`isPriceLoading?`)+`MaterialPriceDetail`(`isLoading?`, 공유 위젯) —
+    둘 다 선택적 prop이라 `/purchasing` 호출부 무수정.
+  - `PublicErpImpactPanel` — 데이터 품질 라벨·색 등급을 신규 공용 모듈 `lib/dataQuality.ts`로
+    추출(tier1 `9ff7e02` 대응, 원자재 위험 화면과 같은 코드를 같은 말로 부르기 위함).
+  - `PublicPurchasePriorityPanel` — `isLoading` + **평가 불가 자재를 순위에서 빼고 목록 아래
+    별도 영역으로**(tier1 `2d4f431` 대응). `toPurchasePriority()`가 `MaterialRiskItem[]`
+    대신 `PurchasePriority`(`{ ranked, unavailable }`)를 돌려주도록 반환 타입 변경.
+    (초기 조사 표에는 이 변경이 `ErpImpactPanel` 쪽으로 잘못 매핑돼 있었음 — 실제 diff 확인
+    과정에서 `PurchasePriorityPanel`이 맞는 대상임을 재확인 후 정정.)
+- **E**: `PublicDashboardPage.tsx`에 패널별 `isLoading` state 6종(`newsLoading`/`priceLoading`/
+  `kpiLoading`/`materialRiskLoading`/`supplierLoading`/`materialsLoading`) 배선 — 각 fetch
+  effect 시작 시 재점화(재조회 시에도 자리표시자가 다시 뜨도록) + `.finally`로 해제. 전역
+  플래그 하나로 묶지 않은 이유는 조회가 서로 다른 시점에 끝나기 때문(이미 도착한 패널까지
+  가장 느린 응답을 기다리지 않도록). 알림(모니터링 이벤트)·브리핑 로딩은 우측
+  `DashboardSidePanel` 탭 스켈레톤과 함께 2차 배치(D)에서 배선 예정 — 이번엔 제외.
+
+### 계획에 없던 발견 (구현 중)
+- **`react-hooks/set-state-in-effect`(eslint 신규 규칙) 3건** — `eslint-plugin-react-hooks`
+  v7 recommended 설정에 포함된 규칙으로, effect 본문에서 동기적으로 `setState(true)`를
+  호출하는 패턴(재조회 시작을 알리는 로딩 리셋)을 에러로 잡는다. tier1 원본 코드는 이
+  패턴을 그대로 쓰고 있어(이 저장소로 그대로 옮겨 적용) 이 규칙이 있는 우리 lint 설정에서만
+  걸렸다 — tier1 자체의 lint 설정 차이 또는 룰 추가 시점 차이로 추정(확인 안 함). 의도된
+  동작(탭 클릭 즉시 자리표시자가 보여야 함)이라 각 3곳에 `eslint-disable-next-line`과 사유
+  주석을 남겼다(가짜 억제가 아니라 규칙이 방지하려는 "불필요한 낭비성 setState"가 아님을
+  판단 근거로 명시).
+- **원래 계획 표의 오류 정정**: 0단계 조사 당시 "`PublicErpImpactPanel`: 평가 불가 자재
+  처리 로직(tier1 `2d4f431`)"으로 적었으나, 실제로 `2d4f431`이 건드린 파일은
+  `PurchasePriorityPanel.tsx`/`purchasingDashboard.api.ts`였다(`git show 2d4f431 --stat`로
+  재확인). `ErpImpactPanel.tsx`의 실제 변경은 `9ff7e02`(데이터 품질 라벨 공용 모듈화)였다 —
+  A 배치 구현 시점에 각 파일의 실제 diff를 다시 확인해 두 패널 모두 올바른 변경 내용으로
+  반영했다(위 "1차 배치 반영 내용" 참고).
+
+### 검증
+- `npm run typecheck`/`lint`/`build` 통과(빌드 chunk-size 경고는 기존과 동일, 무관).
+- Playwright(`npm run dev`, ①mock, `.scratch/verify-batch1.mjs`) 13/13 PASS: `/`에서
+  `PurchasingKpiRow` 라벨 정정 확인, `MaterialRiskGaugeGrid` 토글(접힘→펼침) 및 게이지 카드
+  렌더, `SupplierOverviewPanel`/`PublicPurchasePriorityPanel`/`PublicErpImpactPanel` 표시.
+  `/purchasing` 로그인 후 회귀 확인: 기존 `MaterialRiskOverviewSection`류 패널 여전히 표시,
+  `ImportDependencyRow` 기간 탭 클릭 정상(비제어형 fallback), 도넛·가격 차트 렌더. 콘솔
+  에러 0건.
+- 회귀: `git diff --stat -- src/features/purchasing/` → `ImportDependencyRow.tsx` +4줄만
+  (선택적 prop 추가, 하위호환) — `PurchasingDashboardPage.tsx` 등 나머지 무수정 확인.
+- VITE_MOCK_DELAY_MS(스켈레톤 실제 지연 시연 조건)는 로드맵 Phase 10.2가 아직 미착수라
+  코드에 구현돼 있지 않음(`grep` 확인, `src/` 어디서도 참조 없음) — 이번 배치에서 새로 만들지
+  않았고, 대신 mock 조회가 비동기(microtask 1틱)라 마운트 첫 렌더에 `isLoading:true`가 구조적
+  으로 존재함을 코드로 확인. 실제 화면에서 스켈레톤이 눈에 보이는 길이로 지속되는지는
+  Phase 10.2 착수 후 별도 검증 필요 — 이번엔 구조 검증(prop 배선·조건부 렌더)까지만 완료.
+- `docs/qa-checklist.md` A~H:
+  - A(인증 상태 표시): 해당 없음(이번 배치는 인증 UI 미변경).
+  - B(공용 컴포넌트 파급 범위): `MaterialPriceDetail`(공유 위젯)·`ImportDependencyRow`(공유
+    컴포넌트) 변경분을 `grep`으로 전체 소비처 확인 후 선택적 prop으로 처리, Playwright로
+    `/purchasing` 무회귀 실측.
+  - C(접근 제어 피드백): 해당 없음.
+  - D(클릭 요소 시각 신호): `MaterialRiskGaugeGrid` 토글 버튼에 텍스트 라벨("게이지로
+    보기"/"게이지 접기")+화살표 아이콘, 커서 포인터.
+  - E(요구사항 커버리지): 해당 없음(내부 tier1 재동기화, 신규 Seq 대응 아님).
+  - F(공용 레이아웃 컴포넌트 일관성): `MaterialRiskGaugeGrid`는 tier1 원본이 `ScrollCard`를
+    안 쓰는 독립 토글형 구조라 계획대로 tier1 그대로 이식(임의 변경 없음).
+  - G(트러블슈팅 잔존물): `.scratch/verify-batch1.mjs`·스크린샷은 gitignore 대상, `git
+    status`로 의도한 파일만 추적 확인.
+  - H(보고/회귀): 위 "검증" 항목에 배치별(A/B/C/E)로 구분해 기록, `git diff --stat` 수치
+    함께 명시.

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Skeleton } from '../ui/Skeleton/Skeleton'
 import { ScrollCard } from '../ui/ScrollCard/ScrollCard'
 import { RiskGradeBadge } from '../ui/RiskGradeBadge'
 import type { MaterialPriceSeries, MaterialPriceSummary } from '../../api/types'
@@ -8,6 +9,11 @@ import styles from './MaterialPriceDetail.module.css'
 
 interface MaterialPriceDetailProps {
   series: MaterialPriceSeries[]
+  /**
+   * 아직 조회가 끝나지 않았는지. 빈 차트는 "그 구간에 거래가 없었다"로 읽혀서,
+   * 도착 전 상태와 반드시 구분해야 한다.
+   */
+  isLoading?: boolean
   summaries: MaterialPriceSummary[]
   /** 선택된 기간 라벨. 조회는 페이지가 소유하므로 이 컴포넌트는 표시·통지만 한다. */
   period: string
@@ -103,6 +109,7 @@ export function MaterialPriceDetail({
   summaries,
   period,
   onPeriodChange,
+  isLoading = false,
 }: MaterialPriceDetailProps) {
   const [materialFilterOpen, setMaterialFilterOpen] = useState(false)
   const [materialFilterLabel, setMaterialFilterLabel] = useState('전체')
@@ -254,40 +261,44 @@ export function MaterialPriceDetail({
         </>
       }
     >
-      <div className={styles.chartArea}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={rows} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
-            <CartesianGrid vertical={false} stroke="var(--color-border)" />
-            <XAxis
-              dataKey="date"
-              tickFormatter={(value: string) => value.slice(5)}
-              tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
-              tickLine={false}
-              axisLine={{ stroke: 'var(--color-border)' }}
-            />
-            <YAxis width={36} tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} tickLine={false} axisLine={false} />
-            <Tooltip
-              contentStyle={{
-                background: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: 'var(--font-size-xs)',
-              }}
-              labelStyle={{ color: 'var(--color-text)', fontWeight: 'var(--font-weight-bold)' }}
-            />
-            {filteredSeries.map((materialSeries) => (
-              <Line
-                key={materialSeries.material}
-                type="monotone"
-                dataKey={materialSeries.material}
-                stroke={`var(${materialColorVar.get(materialSeries.material)})`}
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
+      <div className={styles.chartArea} aria-busy={isLoading || undefined}>
+        {isLoading ? (
+          <Skeleton variant="block" width="100%" height="100%" />
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={rows} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
+              <CartesianGrid vertical={false} stroke="var(--color-border)" />
+              <XAxis
+                dataKey="date"
+                tickFormatter={(value: string) => value.slice(5)}
+                tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
+                tickLine={false}
+                axisLine={{ stroke: 'var(--color-border)' }}
               />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
+              <YAxis width={36} tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} tickLine={false} axisLine={false} />
+              <Tooltip
+                contentStyle={{
+                  background: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: 'var(--font-size-xs)',
+                }}
+                labelStyle={{ color: 'var(--color-text)', fontWeight: 'var(--font-weight-bold)' }}
+              />
+              {filteredSeries.map((materialSeries) => (
+                <Line
+                  key={materialSeries.material}
+                  type="monotone"
+                  dataKey={materialSeries.material}
+                  stroke={`var(${materialColorVar.get(materialSeries.material)})`}
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </ScrollCard>
   )

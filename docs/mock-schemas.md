@@ -440,12 +440,55 @@ tier1처럼 삭제하면 그 화면이 깨진다. 대신 이 비로그인 대시
 패널까지 가장 느린 응답을 기다리며 자리표시자로 붙잡아 두지 않기 위함이다. 알림(모니터링
 이벤트)·브리핑 로딩은 우측 `DashboardSidePanel` 탭 스켈레톤과 함께 다음 배치(D)에서 배선한다.
 
-**아직 반영하지 않은 나머지 커밋(D/F/G/H, 후속 배치)**: `AlertsBellButton`의 `onToggle`→
-`onOpenAlerts`(열기 전용) 전환 + `SidePanelToggleButton`(접기/펼치기 분리) + `DashboardSidePanel`
-탭별 스켈레톤·`focusAlertsToken`(D), "완료 처리 항목" 되돌리기 `AcknowledgedPanel`(F),
-`AiBriefingPage`/`ContractRagPage`/`MaterialRiskPage`/`RiskMonitoringPage`의 필터·페이징·
-PDF 다운로드 등 추가 기능(H, `fetchRecentAiBriefings` 페이징 계약 브레이킹 체인지 포함),
-데이터 관리 화면(`DataManagementPage`) 신규 이식(G, `PublicDataManagementPage`로 포함 예정).
+**아직 반영하지 않은 나머지 커밋(F/G/H, 후속 배치)**: "완료 처리 항목" 되돌리기
+`AcknowledgedPanel`(F), `AiBriefingPage`/`ContractRagPage`/`MaterialRiskPage`/
+`RiskMonitoringPage`의 필터·페이징·PDF 다운로드 등 추가 기능(H, `fetchRecentAiBriefings`
+페이징 계약 브레이킹 체인지 포함), 데이터 관리 화면(`DataManagementPage`) 신규 이식(G,
+`PublicDataManagementPage`로 포함 예정). D는 아래 참고.
+
+### D. 알림 패널/사이드패널 갱신 — 2차 배치 (2026-08-04)
+
+`AlertsBellButton`을 "토글"에서 "열기 전용"으로 바꾸고, 접기/펼치기를 패널 가장자리의
+신규 `SidePanelToggleButton`으로 분리하는 tier1 UX 변경을 반영했다.
+
+- **`AlertsBellButton`(공유, `components/layout/`) — tier1과 달리 두 모드를 동시 지원**.
+  tier1은 `expanded`/`onToggle`을 완전히 제거하고 `onOpenAlerts`로 교체했지만, `grep` 확인
+  결과 `/purchasing`의 `PurchasingDashboardPage.tsx`(75·119·122번째 줄)가 지금도 옛
+  `expanded`/`onToggle` 계약으로 이 컴포넌트를 쓰고 있어 그대로 옮기면 컴파일이 깨진다.
+  대신 `onOpenAlerts?`를 선택적으로 추가하고, 있으면 열기 전용(tier1 스타일 `aria-label`,
+  `aria-expanded` 미부여), 없으면 기존 토글 동작(기존 `aria-label`/`aria-expanded`)으로
+  내부 분기했다 — `ImportDependencyRow`/`MaterialPriceDetail`/`GlobalRiskBoard`(1차 배치·
+  Phase 12)와 같은 "선택적 prop으로 두 소비처 동시 지원" 패턴.
+- **`AlertsPanelContext.ts`/`AlertsPanelProvider.tsx` — tier1 그대로(순수 additive)**.
+  `open: () => void`(접혀 있으면 펴고, 이미 펴져 있으면 아무 일도 안 함) 추가. `toggle`은
+  그대로 남아있어 `/purchasing`은 무수정.
+- **`SidePanelToggleButton`(신규, `components/layout/`)** — 좌측 `SideNavToggleButton`과
+  같은 위치 성격이나 배치 방식은 다름(`position: fixed`로 패널 위에 얹어 페이지 섹션 점과
+  패널이 예전처럼 맞붙게 함). `useAlertsPanelState()`의 `expanded`/`toggle`만 쓰므로
+  `/purchasing`과 무관하게 독립 동작.
+- **`tokens.css`** — `--side-panel-width: 320px` 신규 토큰. `DashboardSidePanel.module.css`의
+  두 `320px` 리터럴을 이 토큰으로 교체해 `SidePanelToggleButton`이 패널 펼침 상태에서
+  가장자리를 따라가게 함.
+- **`DashboardSidePanel.tsx`** — `isNewsLoading?`/`isAlertsLoading?`/`isBriefingsLoading?`
+  prop 추가(탭별 `Skeleton`/`SkeletonText` 자리표시자, 뉴스 상세는 `isNewsLoading &&
+  !selectedNews`일 때만), `focusAlertsToken?: number`(벨 클릭마다 증가, 오르면 "주요 알림"
+  탭으로 전환), `selectedNews` 참조 변경 시 "뉴스 상세" 탭 자동 복귀 effect. `UploadCard`는
+  손대지 않았다 — 이미 Phase 12부터 "RAG는 `/public/contract-rag`, ERP는 비활성
+  placeholder" 상태였고 tier1의 `data-management` 통합 링크로 바뀐 적이 없어 되돌릴 것도
+  없었다(G 배치에서 데이터 관리 화면이 생기면 그때 전환).
+- **`PublicDashboardPage.tsx`** — `useAlertsPanelState()`의 `toggle`→`open` 전환,
+  `handleOpenAlerts`(패널 열기+`alertsFocusToken` 증가+미리보기 닫기)와
+  `handleSelectArticle`(기사 선택+패널 열기, `GlobalRiskBoard`/`LatestNewsPanel`의
+  `onSelect`가 호출) 신규, `<SidePanelToggleButton />` 배치, `alertsLoading`/
+  `briefingsLoading` state 신규 추가(1차 배치에서 이연했던 부분, 같은 재점화+`.finally`
+  패턴)해 `DashboardSidePanel`에 배선.
+- `DashboardSidePanel.tsx`의 신규 `useEffect` 2건에서도 1차 배치와 동일하게
+  `react-hooks/set-state-in-effect` 2건이 걸려 `eslint-disable-next-line`으로 처리했다 —
+  tier1 원본(`DashboardSidePanel.tsx:292`·`:305`, `origin/minji-tier1-dashboard` 기준)에도
+  같은 패턴이 있고 로컬 재현으로 동일하게 lint 에러가 남을 확인했다(1차 배치 조사 때와
+  같은 결론).
+
+**여전히 반영하지 않은 것**: F(완료 처리 되돌리기)/G(데이터 관리 화면)/H(4화면 추가 기능).
 
 ## 임시 mock 값 (후속 정리 필요)
 

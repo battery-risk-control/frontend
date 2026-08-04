@@ -25,10 +25,11 @@
 | `app/routes.tsx` | 최상위 라우트 정의 및 로그인 가드. **2026-08-03** — `/public/risk-monitoring`/`/public/materials`/`/public/contract-rag`/`/public/ai-briefing` 4개 라우트 신규(RequireAuth 없이 완전 공개, minji 이식) |
 | `components/layout/Breadcrumb.tsx` | 브레드크럼(탐색 위치 안내) |
 | `components/layout/Footer.tsx` | 공통 하단 푸터. **2026-08-03(minji 이식)** — 환율 출처 표기(ExchangeRate-API 이용조건 의무) 추가, `flex-shrink:0` 보정 |
-| `components/layout/AlertsBellButton.tsx` | 헤더 알림 벨 아이콘(2026-07-27 신규) — `Header`의 `accountExtra` 슬롯에 들어감 |
+| `components/layout/AlertsBellButton.tsx` | 헤더 알림 벨 아이콘(2026-07-27 신규) — `Header`의 `accountExtra` 슬롯에 들어감. **2026-08-04(tier1 재동기화 D 배치)** — `onOpenAlerts?`(열기 전용, `/public`) 선택 prop 추가, `expanded`/`onToggle`(기존 토글, `/purchasing`)은 그대로 유지해 두 모드 동시 지원(tier1은 완전 교체했으나 `/purchasing`이 옛 계약을 계속 써서 하위호환 필요) |
 | `components/layout/Header.tsx` | 공통 상단 헤더(로고 = 홈 링크). 2026-07-27 — `accountExtra` prop 추가(계정정보-로그아웃 사이 슬롯, 선택) |
 | `components/layout/SideNav.tsx` | 사이드 메뉴 내비게이션(Phase 9.4부터 SideNavContext의 collapsed 상태 반영) |
 | `components/layout/SideNavToggleButton.tsx` | SideNav 접기/펼치기 토글 버튼(Phase 9.4 신규) — SideNav 바깥에 위치 |
+| `components/layout/SidePanelToggleButton.tsx` | 우측 `DashboardSidePanel` 접기/펼치기 토글 버튼(신규, 2026-08-04, tier1 재동기화 D 배치) — 좌측 `SideNavToggleButton`과 생김새는 같지만 `position: fixed`로 패널 위에 얹는 배치 방식이 다름(페이지 섹션 점과 패널 사이 간격 유지 목적). 헤더 알림 벨이 겸하던 패널 토글 역할을 분리해 받음 |
 | `components/layout/SkipLink.tsx` | 본문 바로가기 링크(접근성) |
 | `components/ui/ConfidenceBadge.tsx` | 리스크 판단 신뢰도 라벨 배지 |
 | `components/ui/ConfirmModal.tsx` | 확인/취소 모달 |
@@ -56,7 +57,7 @@
 | `features/planning/components/VendorRiskHistory.tsx` | 협력사 리스크 이력 및 탐색 리스트 |
 | `features/planning/pages/PlanningDashboardPage.tsx` | 2계층 경영기획팀 대시보드 페이지 |
 | `features/public/components/AiPriorityList.tsx` | AI 기반 권고 조치 리스트 |
-| `features/public/components/DashboardSidePanel.tsx` | 비로그인 대시보드 우측 패널 — 탭 3개(뉴스 상세/주요 알림/브리핑)+데이터 업로드 카드(신규, 2026-08-03, tier1 `DashboardSidePanel.tsx` 이식) — 기존 `AlertsBellButton` 배선(펼침/접힘 `AlertsPanelContext`, 호버 미리보기) 재사용 |
+| `features/public/components/DashboardSidePanel.tsx` | 비로그인 대시보드 우측 패널 — 탭 3개(뉴스 상세/주요 알림/브리핑)+데이터 업로드 카드(신규, 2026-08-03, tier1 `DashboardSidePanel.tsx` 이식) — 기존 `AlertsBellButton` 배선(펼침/접힘 `AlertsPanelContext`, 호버 미리보기) 재사용. **2026-08-04(D 배치)** — `isNewsLoading?`/`isAlertsLoading?`/`isBriefingsLoading?`(탭별 스켈레톤)·`focusAlertsToken?`(벨 클릭 시 "주요 알림" 탭 강제 전환) prop 추가, `selectedNews` 참조 변경 시 "뉴스 상세" 탭 자동 복귀 effect 신규 |
 | `features/public/components/LatestNewsPanel.tsx` | 최신 뉴스 페이징 목록(신규, 2026-08-03, tier1 이식) — 우측 "뉴스 상세" 탭과 짝을 이루는 선택 가능한 목록, `ScrollCard` 사용 |
 | `features/public/components/LiveNewsMarquee.tsx` | 실시간 뉴스 헤드라인 마퀴+환율 칩(신규, 2026-08-03, tier1 이식) — 최신 뉴스와 같은 `/public/news-feed`를 `limit`으로 줄여 재사용 |
 | `features/public/components/MaterialRiskGaugeGrid.tsx` | 원자재별 리스크 게이지 그리드(신규, 2026-08-04, tier1 재동기화 1차 배치) — `MaterialRiskSummaryTable`과 같은 배열을 게이지 7장으로 재표현, 기본 접힘+더보기 |
@@ -96,8 +97,8 @@
 | `lib/dashboardPaths.ts` | org_tier별 대시보드 경로 매핑 |
 | `lib/materialPricePeriods.ts` | 원자재 가격 추이 기간 탭 정의(`PERIOD_DAYS`/`DEFAULT_PERIOD`/`PERIOD_OPTIONS`, 신규, 2026-08-03, minji 이식) — `MaterialPriceDetail`/`ImportDependencyRow`/`PublicDashboardPage` 공용, 컴포넌트 파일 밖에 둔 이유는 react-refresh 제약 |
 | `lib/publicNav.ts` | 비로그인 `/public/*` 사이드 메뉴 정의(`PUBLIC_SIDE_NAV_ITEMS`, 신규, 2026-08-03) — minji `purchasingNav.ts`와 같은 패턴, 첫 항목이 비로그인 대시보드(`/`)로 돌아가는 링크 |
-| `lib/AlertsPanelContext.ts` | AlertsPanel 펼침/접힘 상태 Context 객체 정의(2026-07-27 신규, SideNavContext와 동일 패턴) |
-| `lib/AlertsPanelProvider.tsx` | AlertsPanel 펼침/접힘 상태 Provider 컴포넌트(2026-07-27 신규) — `DEFAULT_ALERTS_EXPANDED` 기본값 상수도 이 파일에 있음 |
+| `lib/AlertsPanelContext.ts` | AlertsPanel 펼침/접힘 상태 Context 객체 정의(2026-07-27 신규, SideNavContext와 동일 패턴). **2026-08-04(D 배치)** — `open: () => void`(접혀 있으면 펴고, 펴져 있으면 무시) 추가(순수 additive, `toggle` 유지) |
+| `lib/AlertsPanelProvider.tsx` | AlertsPanel 펼침/접힘 상태 Provider 컴포넌트(2026-07-27 신규) — `DEFAULT_ALERTS_EXPANDED` 기본값 상수도 이 파일에 있음. **2026-08-04(D 배치)** — `open: () => setExpanded(true)` 구현 추가 |
 | `lib/riskEventId.ts` | risk_event_id 날짜 파싱 유틸 |
 | `lib/selectAlertEvents.ts` | 알림 대상 risk_event 필터 함수(2026-07-27 신규, `AlertsPanel.tsx`에서 분리 — react-refresh 규칙상 컴포넌트 파일은 컴포넌트만 export해야 해서) — `AlertsPanel`(전체 목록)과 `AlertsBellButton`의 배지 숫자 양쪽이 재사용 |
 | `lib/SideNavContext.ts` | SideNav 접기/펼치기 상태 Context 객체 정의(Phase 9.4 신규) |
@@ -302,7 +303,7 @@
 ### `components/layout/AlertsBellButton.tsx`
 | physical | logical | 역할 |
 |---|---|---|
-| `AlertsBellButton` | 헤더 알림 벨 아이콘 컴포넌트 | 2026-07-27 신규(오류 및 기능 미흡 발견 #7). `Header`의 `accountExtra` 슬롯에 들어감. `count`(배지 숫자, 펼침/접힘과 무관하게 항상 표시)/`expanded`/`onToggle`/`onMouseEnter`/`onMouseLeave` props. 클릭 시 `AlertsPanelContext`의 `expanded` 토글, hover 이벤트는 그대로 상위(`PurchasingDashboardPage`)로 올려보내 디바운스 판단은 호출부가 맡는다(트리거와 콘텐츠가 화면상 떨어져 있어서) |
+| `AlertsBellButton` | 헤더 알림 벨 아이콘 컴포넌트 | 2026-07-27 신규(오류 및 기능 미흡 발견 #7). `Header`의 `accountExtra` 슬롯에 들어감. `count`(배지 숫자, 펼침/접힘과 무관하게 항상 표시)/`onMouseEnter`/`onMouseLeave`는 공통, hover 이벤트는 그대로 상위로 올려보내 디바운스 판단은 호출부가 맡는다(트리거와 콘텐츠가 화면상 떨어져 있어서). **2026-08-04(D 배치) 갱신 — 두 모드**: `onOpenAlerts?`가 있으면(신규, `/public`) 클릭 시 패널을 열고 "주요 알림" 탭으로 옮김(`aria-expanded` 미부여), 없으면(기존, `/purchasing`) `expanded`/`onToggle`로 펼침/접힘 토글(`aria-expanded` 부여) — `/purchasing`의 `PurchasingDashboardPage.tsx`가 여전히 옛 계약을 쓰고 있어 tier1처럼 완전 교체하지 않고 두 모드를 분기 |
 
 ### `components/layout/Header.tsx`
 | physical | logical | 역할 |
@@ -319,6 +320,11 @@
 | physical | logical | 역할 |
 |---|---|---|
 | `SideNavToggleButton` | SideNav 접기/펼치기 토글 버튼 컴포넌트 | Phase 9.4 신규. `useSideNavState()`의 `collapsed`/`toggle` 사용, 인라인 SVG 쉐브론(`aria-label`/`aria-expanded`). SideNav가 접히면 폭이 0이 돼 내부 요소가 클릭 불가능해지므로 SideNav 바깥(각 페이지 `.body`, `<SideNav>` 바로 앞)에 별도로 둔다. `position:sticky;top:var(--header-height)`가 누락돼 페이지 스크롤 시 버튼만 SideNav와 달리 사라지던 버그를 수정(2026-07-27) — SideNav `.wrapper`와 동일한 sticky 처리 적용 |
+
+### `components/layout/SidePanelToggleButton.tsx`(신규, 2026-08-04, tier1 재동기화 D 배치)
+| physical | logical | 역할 |
+|---|---|---|
+| `SidePanelToggleButton` | 우측 `DashboardSidePanel` 접기/펼치기 토글 버튼 컴포넌트 | `useAlertsPanelState()`의 `expanded`/`toggle` 사용. `SideNavToggleButton`과 생김새는 같지만 `position: fixed`로 패널 위에 얹는다(흐름 안에 두면 페이지 섹션 점과 패널 사이가 버튼 폭만큼 벌어짐) — 펼침 상태에서 `right: var(--side-panel-width)`로 패널 왼쪽 가장자리에 붙어 따라간다. 화살표 방향은 누르면 패널이 갈 쪽(펼침→오른쪽, 접힘→왼쪽). 예전엔 헤더 알림 벨이 이 역할을 겸했으나(벨을 누르면 뉴스 상세 탭이 열려 트리거·결과 불일치), 이제 벨은 열기만 하고 이 버튼이 접기/펼치기를 전담 |
 
 ### `components/layout/SkipLink.tsx`
 | physical | logical | 역할 |
@@ -466,7 +472,7 @@
 ### `features/public/components/DashboardSidePanel.tsx`(신규, 2026-08-03, tier1 이식)
 | physical | logical | 역할 |
 |---|---|---|
-| `DashboardSidePanel` | 대시보드 우측 패널 컴포넌트 | 탭 3개(뉴스 상세/주요 알림/브리핑)+`UploadCard`. `expanded`/`isPreviewing`/`onPreviewMouseEnter`/`onPreviewMouseLeave` prop 계약은 기존 `AlertsPanel`과 동일 |
+| `DashboardSidePanel` | 대시보드 우측 패널 컴포넌트 | 탭 3개(뉴스 상세/주요 알림/브리핑)+`UploadCard`. `expanded`/`isPreviewing`/`onPreviewMouseEnter`/`onPreviewMouseLeave` prop 계약은 기존 `AlertsPanel`과 동일. **2026-08-04(D 배치) 갱신**: `isNewsLoading?`/`isAlertsLoading?`/`isBriefingsLoading?`(탭별 `Skeleton` 자리표시자)·`focusAlertsToken?`(0=아직 안 누름, 오를 때마다 "주요 알림" 탭 강제 전환) prop 추가, `selectedNews` 참조 변경 시 "뉴스 상세" 탭 자동 복귀 `useEffect` 신규(둘 다 `react-hooks/set-state-in-effect` eslint-disable 적용 — tier1 원본에도 동일 lint 에러 있음 확인) |
 
 ### `features/public/components/LatestNewsPanel.tsx`(신규, 2026-08-03, tier1 이식)
 | physical | logical | 역할 |
@@ -640,7 +646,7 @@
 ### `lib/AlertsPanelContext.ts`
 | physical | logical | 역할 |
 |---|---|---|
-| `AlertsPanelContextValue` | AlertsPanel Context 값 타입 | 2026-07-27 신규. `expanded`(펼침 여부)/`toggle`(토글 함수) — `SideNavContextValue`와 동일 형태 |
+| `AlertsPanelContextValue` | AlertsPanel Context 값 타입 | 2026-07-27 신규. `expanded`(펼침 여부)/`toggle`(토글 함수) — `SideNavContextValue`와 동일 형태. **2026-08-04(D 배치)** — `open`(접혀 있으면 펴고, 이미 펴져 있으면 무시) 추가 — 알림 벨이 `toggle`을 쓰면 브리핑 탭을 보다가 벨을 눌렀을 때 패널이 닫히는 문제가 있어 분리 |
 | `AlertsPanelContext` | AlertsPanel Context 객체 | `AlertsPanelProvider`/`useAlertsPanelState`가 공유하는 React Context — `SideNavContext`와 동일 패턴 |
 
 ### `lib/AlertsPanelProvider.tsx`

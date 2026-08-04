@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { useScrollOverflowHint } from '../../../lib/useScrollOverflowHint'
+import { Skeleton, SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
 import { toNewsEventRef } from '../../../lib/newsEventRef'
 import { formatCollectedAt } from '../../../lib/formatCollectedAt'
 import type { AiBriefingListItem, DashboardAlert, SelectedArticle } from '../../../api/types'
@@ -36,7 +37,24 @@ interface DashboardSidePanelProps {
   /** 이미 `buildDashboardAlerts`로 걸러지고 정렬된 목록 — 이 컴포넌트는 순서를 바꾸지 않는다. */
   alerts: DashboardAlert[]
   briefings: AiBriefingListItem[]
+  /**
+   * 탭별 로딩. 세 탭의 원천이 달라 각각 다른 시점에 도착하므로 하나로 묶지 않는다 —
+   * 묶으면 이미 온 탭까지 가장 느린 응답을 기다린다.
+   */
+  isNewsLoading?: boolean
+  isAlertsLoading?: boolean
+  isBriefingsLoading?: boolean
   expanded: boolean
+  /**
+   * 헤더 알림 벨을 누를 때마다 1씩 오르는 값. 오르면 "주요 알림" 탭으로 옮긴다.
+   *
+   * boolean이 아니라 카운터인 이유: 이미 알림 탭에 있다가 브리핑 탭으로 옮긴 뒤 벨을 다시
+   * 눌러도 알림으로 돌아와야 하는데, boolean은 값이 그대로라 effect가 다시 돌지 않는다.
+   * `selectedNews`가 참조 변경으로 같은 일을 하는 것과 같은 방식이다.
+   *
+   * 0은 "아직 누른 적 없음"이라 첫 렌더에서는 기본 탭(뉴스 상세)을 밀어내지 않는다.
+   */
+  focusAlertsToken?: number
   isPreviewing: boolean
   onPreviewMouseEnter: () => void
   onPreviewMouseLeave: () => void
@@ -244,12 +262,48 @@ export function DashboardSidePanel({
   selectedNews,
   alerts,
   briefings,
+  isNewsLoading = false,
+  isAlertsLoading = false,
+  isBriefingsLoading = false,
   expanded,
+  focusAlertsToken = 0,
   isPreviewing,
   onPreviewMouseEnter,
   onPreviewMouseLeave,
 }: DashboardSidePanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>('news')
+
+  /*
+   * 기사를 고르면 "뉴스 상세"로 돌아온다.
+   *
+   * 브리핑 탭을 보던 중에 아래 "최신 뉴스"나 위험 지도에서 기사를 눌러도 탭이 그대로라,
+   * 클릭이 먹지 않은 것처럼 보였다 — 선택은 바뀌었는데 화면은 계속 브리핑 목록이었다.
+   *
+   * id가 아니라 객체 참조를 본다. 부모가 클릭할 때마다 fromNewsFeedItem/fromRiskBoardItem으로
+   * 새 객체를 만들어 넣으므로, 같은 기사를 다시 눌러도 탭이 돌아온다. 목록이 주기적으로
+   * 갱신돼도 참조는 그대로라 사용자가 브리핑 탭을 보는 중에 끌려가지 않는다.
+   */
+  useEffect(() => {
+    if (selectedNews) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 선택 변경을 알리는 동기 탭 전환(의도됨)
+      setActiveTab('news')
+    }
+  }, [selectedNews])
+
+  /*
+   * 헤더 알림 벨을 누르면 "주요 알림" 탭으로 옮긴다.
+   *
+   * 벨을 눌렀는데 뉴스 상세 탭이 열리면 트리거와 결과가 어긋난다 — 호버 미리보기에 알림 탭
+   * 내용만 띄우는 것과 같은 이유다. 위 selectedNews effect보다 <b>뒤에</b> 선언해야 한다.
+   * 두 effect가 같은 렌더에서 함께 돌 때 나중 것이 이기는데, 벨을 누른 의도가 더 최근이다.
+   */
+  useEffect(() => {
+    if (focusAlertsToken > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 벨 클릭을 알리는 동기 탭 전환(의도됨)
+      setActiveTab('alerts')
+    }
+  }, [focusAlertsToken])
+
   const scrollRef = useRef<HTMLDivElement>(null)
   const { hasOverflowTop, hasOverflowBottom } = useScrollOverflowHint(scrollRef, expanded)
 
@@ -291,7 +345,16 @@ export function DashboardSidePanel({
               aria-labelledby={`side-panel-tab-${activeTab}`}
               className={styles.tabPanel}
             >
-              {activeTab === 'news' && <NewsDetail news={selectedNews} />}
+              {activeTab === 'news' &&
+                (isNewsLoading && !selectedNews ? (
+                  <div className={styles.newsDetail} aria-busy="true">
+                    <Skeleton width="7em" />
+                    <SkeletonText lines={2} lastLineWidth="65%" />
+                    <Skeleton width="45%" />
+                  </div>
+                ) : (
+                  <NewsDetail news={selectedNews} />
+                ))}
               {activeTab === 'alerts' && (
                 <>
                   <div className={styles.panelHead}>
@@ -302,10 +365,23 @@ export function DashboardSidePanel({
                       전체 보기
                     </Link>
                   </div>
-                  <AlertList alerts={alerts} />
+                  {isAlertsLoading ? (
+                    <div aria-busy="true">
+                      <SkeletonText lines={5} lastLineWidth="50%" />
+                    </div>
+                  ) : (
+                    <AlertList alerts={alerts} />
+                  )}
                 </>
               )}
-              {activeTab === 'briefings' && <BriefingList briefings={briefings} />}
+              {activeTab === 'briefings' &&
+                (isBriefingsLoading ? (
+                  <div aria-busy="true">
+                    <SkeletonText lines={6} lastLineWidth="40%" />
+                  </div>
+                ) : (
+                  <BriefingList briefings={briefings} />
+                ))}
             </div>
 
             <UploadCard />

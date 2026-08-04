@@ -926,3 +926,101 @@ Phase는 그중 1차 배치(A+B+C+E)만 다룬다.
     status`로 의도한 파일만 추적 확인.
   - H(보고/회귀): 위 "검증" 항목에 배치별(A/B/C/E)로 구분해 기록, `git diff --stat` 수치
     함께 명시.
+
+## Phase 13(2차 배치, D) — 알림 패널/사이드패널 갱신 (`feat/public-tier`, 2026-08-04)
+
+1차 배치(A+B+C+E, 커밋 `a1695d8`, push 완료) 다음 배치. `AlertsBellButton`을 "토글"에서
+"열기 전용"으로 바꾸고, 접기/펼치기를 우측 패널 가장자리의 신규 `SidePanelToggleButton`으로
+분리하는 tier1 UX 변경을 반영했다.
+
+### 0단계 조사 결과
+- `PublicDashboardPage.tsx`(218번째 줄, 배치 착수 전 기준)가 `useAlertsPanelState()`의
+  `toggle`을 그대로 `AlertsBellButton`의 `onToggle`에 물려주는 구조임을 확인.
+- **`AlertsBellButton`/`DashboardSidePanel`의 `/purchasing` 사용 여부가 갈렸다** — `grep`
+  전체 검색 결과 `AlertsBellButton`(공유 `components/layout/`)은 `/purchasing`의
+  `PurchasingDashboardPage.tsx`(75·119·122번째 줄)가 지금도 옛 `expanded`/`onToggle` 계약으로
+  쓰고 있는 반면, `DashboardSidePanel`은 `/purchasing`에 아예 없다(그쪽은 별도의 옛
+  `AlertsPanel.tsx`를 씀 — `AlertsPanel.tsx`/`selectAlertEvents.ts`의 "AlertsBellButton"
+  언급은 실제 import가 아니라 주석뿐임을 확인). `useAlertsPanelState()`/`AlertsPanelContext`/
+  `AlertsPanelProvider`는 tier1이 `toggle`을 유지한 채 `open`만 순수 추가해 무수정 호환.
+- **UploadCard 링크 방향 재확인 — 이미 원안 상태**: 현재 `DashboardSidePanel.tsx`를 직접
+  읽어 "계약서 PDF/TXT → `/public/contract-rag`", "ERP CSV → 비활성 placeholder"로 Phase 12
+  이식 당시부터 그 상태였음을 확인 — tier1의 `data-management?mode=RAG|ERP` 통합 링크로
+  바뀐 적이 없어 되돌릴 것도 바꿀 것도 없었다.
+
+### 반영 내용
+- **`AlertsBellButton.tsx`(공유) — tier1과 다르게 두 모드 동시 지원**: tier1은
+  `expanded`/`onToggle`을 완전히 제거하고 `onOpenAlerts`로 교체했지만, `/purchasing`이 옛
+  계약을 계속 써서 그대로 옮기면 컴파일이 깨진다(B 배치의 `MaterialRiskOverviewSection`과
+  같은 성격). `onOpenAlerts?`를 선택적으로 추가하고 내부에서 `isOpenOnlyMode = onOpenAlerts
+  !== undefined`로 분기 — 있으면 클릭 시 `onOpenAlerts()` 호출+tier1 스타일 `aria-label`
+  ("주요 알림 N건 보기")+`aria-expanded` 미부여, 없으면 기존 `onToggle()` 호출+기존
+  `aria-label`/`aria-expanded` 유지. `ImportDependencyRow`/`MaterialPriceDetail`/
+  `GlobalRiskBoard`(1차 배치·Phase 12)와 같은 "선택적 prop으로 두 소비처 동시 지원" 패턴을
+  그대로 따랐다.
+- **`AlertsPanelContext.ts`/`AlertsPanelProvider.tsx` — tier1 그대로(순수 additive)**:
+  `open: () => void`(접혀 있으면 펴고, 이미 펴져 있으면 무시) 추가. `expanded`/`toggle`은
+  그대로 유지 — `/purchasing` 무수정.
+- **`SidePanelToggleButton.tsx`(+`.module.css`, 신규, `components/layout/`)**: tier1 그대로
+  이식. `useAlertsPanelState()`의 `expanded`/`toggle`만 쓰므로 `/purchasing`과 무관하게
+  독립 동작.
+- **`tokens.css`**: `--side-panel-width: 320px` 신규 토큰. `DashboardSidePanel.module.css`의
+  `.wrapper`/`.previewOverlay` 두 곳의 `320px` 리터럴을 이 토큰으로 교체 —
+  `SidePanelToggleButton`이 패널 펼침 상태에서 가장자리를 따라가려면 두 파일이 같은 값을
+  봐야 한다.
+- **`DashboardSidePanel.tsx`**: `isNewsLoading?`/`isAlertsLoading?`/`isBriefingsLoading?`
+  prop 추가(탭별 `Skeleton`/`SkeletonText` 자리표시자 — 뉴스 상세는 `isNewsLoading &&
+  !selectedNews`일 때만, 이미 선택된 기사가 있으면 재조회 중에도 그 기사를 계속 보여줌),
+  `focusAlertsToken?: number` prop 추가(벨 클릭마다 오르는 카운터, boolean이 아닌 이유는
+  같은 값 재클릭도 effect가 다시 돌아야 해서), `selectedNews` 참조 변경 시 "뉴스 상세" 탭
+  자동 복귀 `useEffect` 신규(`focusAlertsToken` effect보다 먼저 선언 — 같은 렌더에서 함께
+  돌 때 나중에 선언된 쪽이 이겨야 벨을 누른 의도가 최신으로 반영됨).
+- **`PublicDashboardPage.tsx`**: `useAlertsPanelState()` 구조분해를 `open: openAlertsPanel`로
+  전환, `handleOpenAlerts`(패널 열기+`alertsFocusToken` 1 증가+`isPreviewing` false)와
+  `handleSelectArticle`(기사 선택+패널 열기, `useCallback`) 신규 — `GlobalRiskBoard`/
+  `LatestNewsPanel`의 `onSelect`가 `setSelectedNews`만 하던 것을 이 함수로 교체.
+  `<AlertsBellButton onOpenAlerts={handleOpenAlerts} />`로 교체(`expanded`/`onToggle` 제거),
+  `<SidePanelToggleButton />`을 `<PageSectionDots>`와 `<DashboardSidePanel>` 사이에 배치.
+  `alertsLoading`/`briefingsLoading` state 신규(1차 배치 E에서 이연했던 부분) — 모니터링
+  이벤트·최근 브리핑 조회 effect에 재점화+`.finally` 배선 후 `DashboardSidePanel`에 전달.
+
+### 계획에 없던 발견 (구현 중)
+- `react-hooks/set-state-in-effect` 2건 추가 — `DashboardSidePanel.tsx`의 신규
+  `useEffect` 2개(`selectedNews`→`setActiveTab('news')`, `focusAlertsToken`→
+  `setActiveTab('alerts')`) 모두 걸림. tier1 원본(`origin/minji-tier1-dashboard`
+  `DashboardSidePanel.tsx:292`·`:305`, 1차 배치 때 로컬 재현 검증 완료한 것과 같은 파일)에도
+  동일 패턴이 있고 로컬 lint 재현으로 거기서도 에러가 남을 이미 확인해 둔 상태라, 1차
+  배치와 같은 결론(의도된 동작)으로 `eslint-disable-next-line`을 바로 적용했다 — 이번엔
+  재조사하지 않음.
+- Playwright 스크립트 작성 중 두 가지 방법론적 함정을 발견해 스크립트를 고쳤다(구현
+  코드 문제 아님): (1) `page.goto('/')`는 풀 리로드라 메모리 전용 인증 상태가 사라져
+  `AlertsBellButton`이 `Header`의 `accountExtra` 슬롯(로그인 시에만 렌더)에 안 나타남 —
+  로그인 후에는 반드시 SPA 클릭 내비게이션(홈 아이콘 링크)으로 이동해야 함. (2) 상단
+  3계층 탭이 `<a>`가 아니라 `<button>`이라 `a[href="/purchasing"]` 셀렉터가 안 먹힘.
+
+### 검증
+- `npm run typecheck`/`lint`/`build` 통과.
+- Playwright(`npm run dev`, ①mock, `.scratch/verify-batch-d.mjs`) 16/16 PASS: 벨 클릭 시
+  패널이 열리며 "주요 알림" 탭 활성화(닫히지 않음), 열기 전용 모드는 `aria-expanded` 미부여,
+  브리핑 탭으로 수동 전환 후 벨 재클릭 시 다시 "주요 알림" 탭으로 복귀(같은 값 재클릭도
+  동작), `SidePanelToggleButton` 클릭 시 접힘↔펼침 토글, 최신 뉴스 클릭 시 "뉴스 상세" 탭
+  자동 복귀, `/purchasing`은 여전히 `expanded`/`aria-expanded` 있는 기존 토글 방식(벨
+  클릭할 때마다 펼침↔접힘) + 기존 `AlertsPanel`("주요 알림 및 빠른 작업") 그대로 표시,
+  콘솔 에러 0건.
+- 회귀: `git diff --stat -- src/features/purchasing/` → **완전히 빈 결과** — 이번 배치는
+  `/purchasing` 아래 파일을 하나도 건드리지 않음(1차 배치의 `ImportDependencyRow.tsx` +4줄과
+  달리, 이번엔 공유 파일도 전부 `components/layout/`·`lib/`·`styles/`에 있어 `/purchasing`
+  범위 밖).
+- `docs/qa-checklist.md` A~H:
+  - A(인증 상태 표시): 해당 없음.
+  - B(공용 컴포넌트 파급 범위): `AlertsBellButton`(공유)의 두 소비처(`/public`·`/purchasing`)
+    를 `grep`으로 전수 확인 후 선택적 prop 분기로 처리, Playwright로 양쪽 실측.
+  - C(접근 제어 피드백): 해당 없음.
+  - D(클릭 요소 시각 신호): `SidePanelToggleButton`은 화살표 방향이 "누르면 패널이 갈 쪽"을
+    가리켜 클릭 결과를 미리 암시, `aria-label`/`aria-expanded`로 상태 노출.
+  - E(요구사항 커버리지): 해당 없음(내부 tier1 재동기화).
+  - F(공용 레이아웃 컴포넌트 일관성): 신규 카드형 UI 없음(토글 버튼류만 추가), 해당 없음.
+  - G(트러블슈팅 잔존물): `.scratch/verify-batch-d.mjs`·`diag-bell*.mjs`·스크린샷은
+    gitignore 대상, `git status`로 의도한 파일만 추적 확인.
+  - H(보고/회귀): 위 "검증" 항목에 배치 전체를 기록, `git diff --stat` 결과(완전히 빔)
+    명시.

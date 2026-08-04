@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   fetchPublicExchangeRates,
@@ -37,6 +37,7 @@ import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
+import { SidePanelToggleButton } from '../../../components/layout/SidePanelToggleButton'
 import { AlertsBellButton } from '../../../components/layout/AlertsBellButton'
 import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
 import { PageSectionDots } from '../../../components/ui/PageSectionDots/PageSectionDots'
@@ -183,9 +184,6 @@ export function PublicDashboardPage() {
    * 패널별 로딩 상태. 하나로 묶지 않는 이유는 조회가 **서로 다른 시점에 끝나기** 때문이다 —
    * 전역 플래그 하나로 두면 가장 느린 응답이 올 때까지 이미 도착한 패널까지 자리표시자로
    * 붙잡아 둔다. 실패해도 로딩은 끝난 것이므로 `.finally`에서 내린다.
-   *
-   * 알림(모니터링 이벤트)·브리핑 로딩은 우측 DashboardSidePanel 탭 스켈레톤과 함께 다음
-   * 배치에서 배선한다(이번 배치는 본문 패널만).
    */
   const [newsLoading, setNewsLoading] = useState(true)
   const [priceLoading, setPriceLoading] = useState(true)
@@ -193,6 +191,8 @@ export function PublicDashboardPage() {
   const [materialRiskLoading, setMaterialRiskLoading] = useState(true)
   const [supplierLoading, setSupplierLoading] = useState(true)
   const [materialsLoading, setMaterialsLoading] = useState(true)
+  const [alertsLoading, setAlertsLoading] = useState(true)
+  const [briefingsLoading, setBriefingsLoading] = useState(true)
 
   // --- 인증 API 4종(mock 폴백 있음) ---
   const [kpi, setKpi] = useState<PurchasingKpiSummary | null>(null)
@@ -215,8 +215,10 @@ export function PublicDashboardPage() {
   // 주요 알림은 두 원천이 섞인다 — 멀티에이전트 판정이 심각·주의인 뉴스 + 변동성이 큰 자재(정보).
   const alerts = buildDashboardAlerts(monitoringEvents, priceSeries, priceSummaries)
 
-  const { expanded: alertsExpanded, toggle: toggleAlertsExpanded } = useAlertsPanelState()
+  const { expanded: alertsExpanded, open: openAlertsPanel } = useAlertsPanelState()
   const [isPreviewing, setIsPreviewing] = useState(false)
+  /** 알림 벨을 누른 횟수. 우측 패널이 "주요 알림" 탭으로 옮겨야 할 때를 알린다. */
+  const [alertsFocusToken, setAlertsFocusToken] = useState(0)
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // 공개 API — 토큰이 필요 없으므로 마운트 시 한 번만 부른다(기간 탭에 반응하는 가격 2종 제외).
@@ -325,6 +327,8 @@ export function PublicDashboardPage() {
     setMaterialRiskLoading(true)
     setSupplierLoading(true)
     setMaterialsLoading(true)
+    setAlertsLoading(true)
+    setBriefingsLoading(true)
     fetchPurchasingKpiSummary(accessToken)
       .then((summary) => {
         if (!cancelled) setKpi(summary)
@@ -372,12 +376,18 @@ export function PublicDashboardPage() {
       .catch((err) => {
         console.error('리스크 이벤트 조회 실패', err)
       })
+      .finally(() => {
+        if (!cancelled) setAlertsLoading(false)
+      })
     fetchRecentAiBriefings(accessToken, RECENT_BRIEFING_LIMIT)
       .then((items) => {
         if (!cancelled) setBriefings(items)
       })
       .catch((err) => {
         console.error('최근 브리핑 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setBriefingsLoading(false)
       })
     return () => {
       cancelled = true
@@ -405,6 +415,36 @@ export function PublicDashboardPage() {
   function handleTierTabClick(path: string) {
     navigate(orgTier ? path : '/auth')
   }
+
+  /**
+   * 헤더 알림 벨 클릭 — 패널을 열고 "주요 알림" 탭으로 옮긴다.
+   *
+   * 토글이 아니라 열기다. 브리핑 탭을 보다가 알림을 보려고 눌렀는데 패널이 닫히면 안 된다.
+   * 열고 닫기는 패널 가장자리의 `SidePanelToggleButton`이 맡는다.
+   *
+   * 미리보기도 함께 내린다 — 패널이 열리면 그 안에 같은 내용이 있어서, 오버레이가 남아 있으면
+   * 같은 목록이 두 겹으로 보인다.
+   */
+  const handleOpenAlerts = useCallback(() => {
+    openAlertsPanel()
+    setAlertsFocusToken((previous) => previous + 1)
+    setIsPreviewing(false)
+  }, [openAlertsPanel])
+
+  /**
+   * 지도 마커·최신 뉴스에서 기사를 고르면 우측 패널을 함께 연다.
+   *
+   * 패널이 접혀 있을 때 제목을 눌러도 화면이 아무 반응도 하지 않아, 클릭이 먹지 않은 것처럼
+   * 보였다 — 선택은 바뀌었는데 그걸 보여줄 자리가 닫혀 있었다. "뉴스 상세" 탭으로 옮기는 것은
+   * `DashboardSidePanel`이 `selectedNews` 참조 변경을 보고 이미 하고 있다.
+   */
+  const handleSelectArticle = useCallback(
+    (article: SelectedArticle) => {
+      setSelectedNews(article)
+      openAlertsPanel()
+    },
+    [openAlertsPanel],
+  )
 
   function handlePreviewMouseEnter() {
     if (closeTimeoutRef.current) {
@@ -448,8 +488,7 @@ export function PublicDashboardPage() {
         accountExtra={
           <AlertsBellButton
             count={alerts.length}
-            expanded={alertsExpanded}
-            onToggle={toggleAlertsExpanded}
+            onOpenAlerts={handleOpenAlerts}
             onMouseEnter={handlePreviewMouseEnter}
             onMouseLeave={handlePreviewMouseLeave}
           />
@@ -481,14 +520,14 @@ export function PublicDashboardPage() {
           ) : (
             <GlobalRiskBoard
               items={riskBoardItems}
-              onSelectItem={(item) => setSelectedNews(fromRiskBoardItem(item))}
+              onSelectItem={(item) => handleSelectArticle(fromRiskBoardItem(item))}
             />
           )}
           <LatestNewsPanel
             items={newsItems}
             isLoading={newsLoading}
             selectedId={selectedNews?.id}
-            onSelect={(item) => setSelectedNews(fromNewsFeedItem(item))}
+            onSelect={(item) => handleSelectArticle(fromNewsFeedItem(item))}
             page={newsPage}
             pageSize={NEWS_FEED_PAGE_SIZE}
             total={newsTotal}
@@ -521,11 +560,18 @@ export function PublicDashboardPage() {
           <SupplierOverviewPanel overview={supplierOverview} isLoading={supplierLoading} />
         </main>
         <PageSectionDots variant="withAside" sections={SECTION_DOTS_SECTIONS} />
+        {/* 패널이 접히면 폭이 0이 되어 안쪽에 토글을 둘 수 없다 — 좌측 SideNavToggleButton과
+            같은 이유로 패널 바깥에 따로 세운다. */}
+        <SidePanelToggleButton />
         <DashboardSidePanel
           selectedNews={selectedNews}
+          isNewsLoading={newsLoading}
+          isAlertsLoading={alertsLoading}
+          isBriefingsLoading={briefingsLoading}
           alerts={alerts}
           briefings={briefings}
           expanded={alertsExpanded}
+          focusAlertsToken={alertsFocusToken}
           isPreviewing={isPreviewing}
           onPreviewMouseEnter={handlePreviewMouseEnter}
           onPreviewMouseLeave={handlePreviewMouseLeave}

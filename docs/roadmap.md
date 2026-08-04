@@ -181,8 +181,25 @@
     패널 표시, `/purchasing` 회귀 — `PurchasingDashboardPage.tsx` 자체는 diff 0, 공유 파일
     `ImportDependencyRow.tsx`만 +4줄), 콘솔 에러 0건. 상세는 `docs/mock-schemas.md` 10번
     섹션 참고.
-  - [ ] 2차 배치(D): `AlertsBellButton` `onToggle`→`onOpenAlerts` 전환 + `SidePanelToggleButton`
-    배선 + `DashboardSidePanel` 탭별 스켈레톤·`focusAlertsToken`.
+  - [x] 2차 배치(D, 2026-08-04): `AlertsBellButton`에 `onOpenAlerts?`(열기 전용, `/public`)
+    선택 prop 추가 — tier1은 `expanded`/`onToggle`을 완전히 제거했으나, `/purchasing`의
+    `PurchasingDashboardPage.tsx`가 지금도 그 옛 계약으로 이 컴포넌트를 쓰고 있어(`grep`
+    확인) 그대로 옮기면 컴파일이 깨진다 — 두 모드를 동시 지원하는 방향으로 정정(B 배치의
+    `MaterialRiskOverviewSection`과 같은 판단). `AlertsPanelContext`/`Provider`에 `open`
+    추가(순수 additive, `/purchasing` 무수정). `SidePanelToggleButton`(신규,
+    `components/layout/`) 배선 + `tokens.css`의 `--side-panel-width` 토큰 신규. `DashboardSidePanel`
+    탭별 스켈레톤(`isNewsLoading`/`isAlertsLoading`/`isBriefingsLoading`)·`focusAlertsToken`
+    ·`selectedNews` 자동 복귀 effect 반영, `PublicDashboardPage.tsx`에 `handleOpenAlerts`/
+    `handleSelectArticle`+`alertsLoading`/`briefingsLoading`(1차 배치에서 이연) 배선.
+    UploadCard는 조사 결과 이미 원안 상태(RAG→`/public/contract-rag`, ERP→비활성
+    placeholder)라 변경 없음 — tier1의 `data-management` 통합 링크로 바뀐 적이 없었다.
+    검증: `npm run typecheck`/`lint`/`build` 통과, Playwright 16/16 PASS(벨 열기 전용 동작,
+    브리핑 탭에서 벨 재클릭 시 알림 탭 복귀, 뉴스 클릭 시 뉴스 상세 탭 복귀,
+    `SidePanelToggleButton` 토글, `/purchasing` 벨 여전히 토글 동작), `git diff --stat --
+    src/features/purchasing/` 완전히 빈 결과(이번 배치는 `/purchasing` 파일을 아예 안 건드림).
+    `react-hooks/set-state-in-effect` 2건 추가 발견 — tier1 원본(`DashboardSidePanel.tsx:292·305`)
+    에도 동일 lint 에러가 남을 로컬 재현으로 확인, `eslint-disable-next-line`으로 처리.
+    상세는 `docs/mock-schemas.md` 10번 섹션 D 항목 참고.
   - [ ] 3차 배치(F): `AcknowledgedPanel`("완료 처리 항목" 되돌리기) 배선.
   - [ ] 4차 배치(H): `AiBriefingPage`/`ContractRagPage`/`MaterialRiskPage`/`RiskMonitoringPage`
     추가 기능(필터·페이징·PDF 다운로드 등), `fetchRecentAiBriefings` 페이징 계약 브레이킹

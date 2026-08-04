@@ -1,0 +1,38 @@
+/*
+ * 좌측 SideNavToggleButton과 생김새(크기·색·테두리)는 같게 두되, **배치 방식이 다르다.**
+ *
+ * 좌측 토글은 flex 흐름 안에 서서 자기 자리를 차지한다. 오른쪽에서 같은 방식을 쓰면 페이지
+ * 섹션 점(PageSectionDots)과 우측 패널 사이가 버튼 폭만큼 벌어져, 화살표를 붙이기 전과 다른
+ * 레이아웃이 된다. 그래서 이쪽은 흐름에서 빼고(`position: fixed`) 패널 위에 얹는다 — 점과
+ * 패널은 예전처럼 맞붙고, 버튼만 그 경계에 떠 있다.
+ */
+.toggleButton {
+  position: fixed;
+  top: calc(var(--header-height) + var(--space-2));
+  /* 접힌 상태: 화면 오른쪽 끝. 펼친 상태에서는 패널 폭만큼 왼쪽으로 밀려 그 가장자리에 붙는다. */
+  right: 0;
+  z-index: 15; /* 페이지 콘텐츠 위. 알림 미리보기 오버레이(20)보다는 아래 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  /* 패널의 width 트랜지션과 같은 시간으로 움직여야 버튼이 패널 가장자리에 붙어 따라간다.
+     시간이 다르면 열리는 도중 버튼만 앞서가거나 뒤처져 떨어져 보인다. */
+  transition: right var(--transition-fast) ease;
+}
+
+.toggleButton.panelOpen {
+  right: var(--side-panel-width);
+}
+
+.toggleButton:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}

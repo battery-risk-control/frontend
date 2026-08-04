@@ -1,0 +1,188 @@
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dropdownWrap {
+  position: relative;
+}
+
+.filterButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.filterButton:hover {
+  background: var(--color-bg);
+}
+
+.filterLabel {
+  color: var(--color-text-muted);
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  z-index: 10;
+  min-width: 140px;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dropdownItem {
+  display: block;
+  width: 100%;
+  padding: var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  text-align: left;
+  cursor: pointer;
+}
+
+.dropdownItem:hover {
+  background: var(--color-bg);
+}
+
+.periodGroup {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.periodButton,
+.periodButtonActive {
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.periodButton {
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.periodButton:hover {
+  color: var(--color-text);
+}
+
+.periodButtonActive {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+/* "사용자 설정"(날짜 범위 UI 미구현). 눌리는 것처럼 보이면 차트가 왜 그대로인지 알 수 없다. */
+.periodButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.periodButton:disabled:hover {
+  color: var(--color-text-muted);
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.summaryCard {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.summaryMaterial {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.summaryPrice {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.summaryUnit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.summaryChangeUp {
+  color: var(--color-risk-critical);
+}
+
+.summaryChangeDown {
+  color: var(--color-confidence-reference);
+}
+
+.summaryScoreRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-2);
+}
+
+.summaryScoreLabel {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.summaryScore {
+  margin-top: var(--space-1);
+  text-align: right;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.summaryScoreMax {
+  font-size: 10px;
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.chartArea {
+  /* 검증된 팔레트(node validate_palette.js "#2a78d6,#008300,#e87ba4") — 원래 MaterialPriceTrend.tsx에서
+     쓰던 값이었으나 해당 컴포넌트는 Phase 9.3 구조 단순화로 삭제됨(2026-07-23). 검증 근거 자체는
+     여전히 유효해 값만 그대로 유지한다. ScrollCard 도입으로 이 컴포넌트의 최상위 요소가 아니게 되어
+     .panel 대신 차트 SVG의 실제 조상인 이 규칙으로 옮겼다(CSS 커스텀 프로퍼티는 자손으로 상속됨). */
+  --mpd-series-1: #2a78d6;
+  --mpd-series-2: #008300;
+  --mpd-series-3: #e87ba4;
+
+  flex: 1;
+  min-height: 180px;
+}

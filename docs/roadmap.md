@@ -1,0 +1,145 @@
+# 개발 로드맵
+
+> 이 문서는 전체 그림 참고용이다. **각 작업 요청은 해당 시점의 Phase 범위로만 한정한다** — 뒤 Phase를 미리 구현하지 않는다. 명시적으로 다음 Phase를 요청받기 전까지는 그 범위를 건드리지 않는다.
+
+- [x] Phase 1 — 프로젝트 스캐폴딩 (Vite+React19+TS, 폴더 구조, 의존성, tokens.css, 폰트)
+- [x] Phase 2 — 육안 검증 (배경색·폰트 렌더링 확인)
+- [x] Phase 3 — 공통 컴포넌트: `components/layout/*`(Header, Footer, SideNav, Breadcrumb, SkipLink), `components/ui/*`(ConfidenceBadge, RiskGradeBadge)
+- [x] Phase 4 — 1계층 구매팀 대시보드 (MVP): `api/purchasing.api.ts` mock, KpiSummaryPanel/MaterialRiskStatusPanel/ErpImpactPanel/PurchasePriorityPanel/AlertsPanel
+- [x] Phase 5 — 인증 플로우: 로그인/회원가입(스플릿스크린+탭 토글) + 승인대기 락 화면
+- [x] Phase 5.5 — 라우팅 연결: react-router-dom 실제 연결, `/`(비로그인 공개 대시보드 자리, 아직 미구현), `/auth`, `/purchasing` 라우트 분리. App.tsx의 임시 단일 렌더링 제거
+- [x] Phase 5.6 — 비로그인 공개 대시보드 (Seq 23): `features/public/` — 글로벌 리스크 관제 맵 / AI 기반 권고 조치 리스트 / 원자재 가격 추이 / 실시간 뉴스 속보 (2x2, 상단 탭+로그인 버튼). `/` 라우트를 여기로 연결하고 `/auth` 강제 리다이렉트 제거 (Phase 8.5에서 공용 Header 컴포넌트로 교체, 상단 UI는 로그인 상태에 따라 조건부 표시로 변경됨)
+- [x] Phase 6 — 2계층·3계층 대시보드
+- [x] Phase 6.5 — 페이지 간 내비게이션 + 최소 접근 제어: 공개 대시보드 상단 탭은 미로그인 시 /auth로 유도, 로그인 시 해당 계층 화면 접근 가능. 테스트 계정 3종(mock, 배포 전 삭제 대상으로 명시). 인증/각 대시보드에서 홈으로 돌아가는 경로 추가 (Phase 8.5에서 계층 불일치 시 무음 리다이렉트 대신 확인 모달 "내 화면으로 이동/취소"로 변경됨) — **(2026-07-27 갱신)** FE mock 테스트 계정(`src/api/auth.api.ts`의 `TEST_ACCOUNTS`, ①단계 전용, 배포 전 삭제 대상 원칙은 그대로 유지)과 별개로, 백엔드에도 같은 계정 4종(`purchasing`/`planning`/`executive@test.local`+`pending@company.com`)을 실제 DB에 시드하는 `AuthTestSeedConfig`가 추가됨(`AUTH_TEST_SEED_ENABLED=true`일 때만 동작, 기본 `false` — ②서비스 테스트/e2e 전용, 운영 비활성). 상세는 `docs/backend-integration-guide.md`·`docs/timeline.md` 참고.
+- [x] Phase 7 — git remote 연결 및 첫 커밋 (권한 문제로 보류 중 — 첫 커밋/브랜치는 로컬에 존재)
+- [x] Phase 8 — 접근 제어 보정 + 계정 UI + 1계층 하위 화면
+  - RequireAuth에 실제 org_tier 매칭 추가 (계층 불일치 시 자신의 대시보드로 리다이렉트)
+  - Header에 로그인 계정 정보(이메일/계층) 표시 + 로그아웃 버튼, Planning/Executive 페이지에도 Header 적용
+  - 1계층 하위 화면: 브리핑 자료 열람 페이지 (Seq 24 "내부 브리핑 자료 열람 화면"), SideNav 플레이스홀더 해시(`#briefing` 등)를 실제 라우트로 연결
+    - ⚠️ 각주(2026-07-24): 실제로는 미완료 — href에 `/purchasing` 경로 접두사만 붙였을 뿐 여전히 해시 기반 placeholder이며 대응 앵커 요소도 없음. Phase 10.9에서 재확인 예정
+
+- [x] Phase 8.5 — 발견된 UX/일관성 오류 수정 (merge 전 필수)
+  - PublicDashboardPage가 Header를 쓰지 않아 로그인 상태 표시가 반영 안 됨 → Header 재사용으로 통일
+  - 로그인 상태에서 /auth 재진입 시 자동 리다이렉트 실동작 여부 재검증
+  - 홈 복귀가 텍스트 링크 하나에만 의존 → 별도 홈 아이콘 추가
+  - RequireAuth 계층 불일치 시 무음 리다이렉트 → 확인 모달("내 화면으로 이동"/"취소", 기본은 취소)로 변경
+  - docs/qa-checklist.md 전체 항목 재점검
+
+- [ ] Phase 9 — surin 브랜치 시각 요소 이식 (`dev-김영진_merge-test` 브랜치, git 히스토리 무관하므로 병합이 아닌 수동 이식)
+  - 원칙: dev-김영진의 구조(3계층 분리+RequireAuth, 신뢰도 라벨, 공개 대시보드, PENDING 화면, api/types.ts 스키마, CSS Modules)는 유지. surin에서는 시각/위젯 구현만 가져온다. surin의 Tailwind·mock.ts·요구사항에 없는 추가 메뉴는 가져오지 않는다.
+  - [x] 9.1 GlobalRiskBoard: surin의 react-leaflet 지도 이식 (최우선 — 격차 가장 큼)
+  - [ ] 9.2 로그인/회원가입: surin AuthShell 비주얼 이식 — **보류(기존 dev-김영진 화면 유지 결정, 20260722)**. surin 비주얼 이식은 현재 우선순위 밖.
+  - [x] 9.3 원자재 가격 추이(부분 완료, 2026-07-22~23): 전체보기/상세보기 토글, 상세보기 단독 유지 결정, 자재 드롭다운 실제 필터링, `ScrollCard` 공용 컴포넌트 도입(공개 대시보드 4개 카드 교체 포함), 애니메이션/스크롤 예외 처리(`scrollable={false}`) — surin `RiskMonitoring.tsx` 시각 이식(`d5ae9e3`/`bf68bb8`/`104c174`/`a670542`/`1938156`/`726b69f`). **"2·3계층 차트: surin 스타일 이식" 부분은 미착수** — Planning/Executive 차트 컴포넌트(`ComparisonChart`/`CumulativeRiskKpi` 등)는 Phase 6/8 이후 수정 이력이 없다(`git log` 확인). 원래 항목명이 두 범위를 함께 가리켜 착시가 있었음을 여기 기록. 상세는 `docs/roadmap-candidates.md` "C4" 참고.
+  - [x] 9.4 구매팀 대시보드 UX-01-DB 데모 구조 반영 + ScrollCard 통일 + SideNav 접기: 5칸 리스크 게이지 그리드(`MaterialRiskOverviewRow`, surin `RiskStepGauge` 이식) → 지도(승격된 `GlobalRiskBoard` 재사용) → 도넛+가격추이 2단(`ImportDependencyRow`, surin `DonutChart` 이식) 요약 영역 신설, 기존 4개 패널 전체를 `ScrollCard`로 전환, `GlobalRiskBoard`/`MaterialPriceDetail`을 `components/widgets/`로 승격(공개 대시보드와 구매팀 대시보드가 공유), `SideNav` 접기/펼치기(Context 전역 상태) 추가
+  - [ ] 9.5(후보) — 리스크 유형별 분포 차트: **미착수**. product-overview.md MVP 필수 항목이나 Seq 번호 없음, `risk_event` 스키마에 "유형" 관련 필드 자체가 없어 신규 필드 설계 선행 필요. 카테고리 출처·배치 화면 등 미결 사항은 `docs/roadmap-candidates.md` "C1" 참고
+  - [ ] 9.6(후보) — ERP 영향 분석 화면 신설: **미착수**. surin `pages/ErpImpact.tsx`(`/erp-impact`)·데모 이미지에는 있으나 `docs/requirements-frontend.md`에 대응 Seq 항목이 없고 우리 레포엔 미구현. 상세는 `docs/roadmap-candidates.md` "C2" 참고
+
+- [ ] Phase 10(후보) — 전체 앱 반응형 대응 — 이미 합의된 사항, 구매팀/기획팀/경영진 대시보드를 포함한 전체 화면의 반응형 대응 자체는 아직 착수 전. 아래 하위 항목은 진행 중 실제로 완료된 작업을 시간순으로 소급 번호 매김한 것(2026-07-26)이며, 전체 반응형 자체가 끝난 건 아니다.
+  - [x] 10.1 — 공개 대시보드(Seq 23) 760px 미만 브레이크포인트(2x2 → 1열 4행) + 하단 콘텐츠 힌트(ScrollHint)를 실험적으로 도입(2026-07-23, `5e4f119`). **(2026-07-26 갱신)** ScrollHint는 이후 컷오프 기법(그리드 행 auto 크기 + `.page` 자체 스크롤)으로 대체됐다 — 상세는 `docs/design-candidates.md` "공개 대시보드 좁은 화면 콘텐츠 신호" 참고.
+  - [ ] 10.2 — 스켈레톤 UI(`VITE_MOCK_DELAY_MS` 기반 의도적 로딩 지연 + 스켈레톤 화면): **미착수**.
+  - [x] 10.3 — GlobalRiskBoard 지도 스크롤휠 확대/축소 활성화(2026-07-25, `b0485d0`).
+  - [x] 10.4 — 원자재 리스크 게이지 요약 카드 + "더보기"(Disclosure)로 5칸 상세 그리드 접기/펼치기(`MaterialRiskOverviewSection`, 2026-07-25, `b98b222`).
+  - [x] 10.5 — GlobalRiskBoard 지도 정보 패널 접기/펼치기(Disclosure)(2026-07-25, `b98b222`, 10.4와 같은 커밋).
+  - [x] 10.6 — `ScrollCard` 카드 내부 오버플로 시각 신호(그라데이션+화살표 힌트) 도입 + `design-tokens.md` "카드 레이아웃·스크롤 규칙" 문서화(2026-07-25, `8080101`), 이후 3개 패널(원자재 공급사 리스크 현황/ERP 영향/구매 대응 우선순위)에 실측 기반 `maxBodyHeight` 적용해 4개 초과 시 실제 스크롤 트리거하도록 후속 수정(2026-07-25, `588fe73`).
+  - [x] 10.7 — 구매팀 대시보드 페이지 섹션 도트 인디케이터(`PageSectionDots`, 2026-07-26, `c73b654`) + SideNav/AlertsPanel 독립 스크롤 전환(`useScrollOverflowHint` 공용 훅 분리 포함, `dd3e07a`) + 공개 대시보드 컷오프 기법 적용(`37e011d`) + 미사용 `ScrollHint` 컴포넌트 삭제 및 문서 정리(`71d8787`).
+  - [ ] 10.9(후보) — SideNav 실기능 연결: **미착수**. `SIDE_NAV_ITEMS`가 Phase 4부터 `href="#..."` 순수 placeholder였고(원 목적: React key 중복 경고 회피), Phase 8에서 "실제 라우트로 교체"했다는 기록과 달리 실제로는 여전히 미기능 상태임을 Playwright 6개 시나리오로 실측 확인(2026-07-24). 앵커 스크롤/신규 페이지 분리/surin `Briefing.tsx` 이식 등 착수 방향 전부 미결정. 상세는 `docs/roadmap-candidates.md` "C3" 참고
+  - [x] 10.10 — "오류 및 기능 미흡 발견" 2차 라운드(#1 도트 hover 2단계 툴팁 → #3 관제맵 마커
+    hover 툴팁) + C7(도트 최하단 사각지대) 병합 완료(2026-07-27): C7 해소(`9c69569`) → #1
+    `PageSectionDots` 도트 hover 2단계 툴팁 신규(`e80922c`) → 사용자 재검토로 발견된 버그 3건
+    수정(expanded 리셋 누락/배지가 호버 도트 근처에 뭉침/`scroll-margin-top` 타겟이 heading
+    대신 `ScrollCard`의 `.panel`이어야 함, `5566491`) → 배지-도트 세로 중앙 정렬 불일치 보정
+    (`.dot`의 기본 `display:inline-block`이 원인, `0dd37cd`) → #3 `GlobalRiskBoard` 마커
+    hover 시 `confidence_label` 노출(`18cd9e0`). 미검증 상태로 남은 사항(중간 사각지대 2곳,
+    완전히 겹친 마커 간 hover 전환)은 각각 `docs/roadmap-candidates.md` "C8"/"C10" 참고.
+    다음 순서는 3차 라운드(#6-1 → #7 변경) 예정.
+  - [x] 10.11 — 공개 대시보드 글로벌 리스크 관제 지도, 최초 실 백엔드 API 연동(2026-07-27):
+    `GET /api/v1/public/risk-board`(백엔드 `b8d44b9`, 토큰 불필요)를 `public.api.ts`의
+    `fetchPublicRiskBoard()`로 연결 — `VITE_API_BASE_URL` 설정 시 실 API, 미설정 시(①단계)
+    기존 mock(`fetchGlobalRiskBoard()`) 그대로 폴백. 구매팀 대시보드가 쓰는
+    `fetchGlobalRiskBoard()`(`purchasing.api.ts`)는 이 변경과 분리돼 mock 그대로 유지 —
+    실측(mock 6개 마커 vs 실 API 4개 마커)으로 두 화면이 서로 다른 데이터 소스를 쓰는 것
+    확인. 코드베이스 최초의 실제 비동기 API 연동이지만 `useQuery`(TanStack Query)는 도입
+    하지 않고 `useState`/`useEffect`로 최소 구현 — `QueryClientProvider` 정식 도입 여부는
+    `docs/roadmap-candidates.md` "C11"에서 별도 트랙으로 계속 미룸. 로딩 중에는 최소 텍스트만
+    표시(정식 스켈레톤 UI는 Phase 10.2, 미착수). 응답 스키마는 `docs/mock-schemas.md` "4-1"
+    참고.
+  - [x] 10.12 — "오류 및 기능 미흡 발견" 3차 라운드 완료(2026-07-27): #6-1(스크롤힌트 클릭
+    시 "카드 1장 겹치는" 페이징 이동, `d920d38`) → #7(알림 패널 접기/펼치기 + 헤더 벨
+    아이콘 hover 미리보기+고정, 이 커밋) — 10.10에서 예정으로 남겨뒀던 "3차 라운드(#6-1
+    → #7 변경)"가 완료됨. #7은 `AlertsPanelContext`(펼침 상태, 페이지 이동 간 유지)로
+    구현했고, 이 상태-분리 원칙(무엇을 Context로 올리고 무엇을 로컬로 둘지)은
+    `docs/design-tokens.md` "카드 레이아웃·스크롤 규칙" e항에 일반 원칙으로 남겼다.
+
+- [x] Phase 11 — 구매팀 대시보드 2차 데모 재배치 (UX-01-DB, `youngjin/2nd-demo-layout` 브랜치, 2026-07-29)
+  본문 순서 재배치(KPI 요약 → 뉴스속보·환율정보 세로 롤링 티커(`NewsExchangeTicker` 신규)
+  → 글로벌 리스크 관제 맵(1.5배 확대, `GlobalRiskBoard`에 선택적 `mapHeight` prop 추가) →
+  실시간 뉴스 목록(승격된 `SupplyNewsFeed`, 카드 형식 변경) → 수입 의존도+가격 추이 →
+  원자재 리스크 요약(맨 아래로 이동)), 원자재 공급사 리스크 현황/ERP 영향/구매 대응
+  우선순위는 본문에서 제거하고 SideNav 전용으로 이동 예정(라벨 5종 갱신, 실제 라우트
+  연결은 다음 단계, 컴포넌트 파일은 유지)(`eb162bf`).
+  - 수정 1 — `QuickActionsPanel`("빠른 작업": 구매대응순위·마커뉴스·데이터 업데이트 상태
+    프레임만)을 별도 최상위 형제로 두지 않고 `AlertsPanel`의 "빠른 작업" 서브섹션으로
+    통합("주요 알림 및 빠른 작업"이라는 기존 패널 제목이 이미 두 개념을 포괄).
+  - 수정 2 — 뉴스속보/환율정보 롤링을 가로 마퀴에서 세로 캐러셀로 재구현. 구현 중
+    `translateY(-N%)`가 트랙 전체 높이 기준으로 계산돼 인덱스 1 이상에서 콘텐츠가
+    통째로 사라지는 버그를 발견해 px 고정값(`ROW_HEIGHT_PX`) 이동으로 수정.
+  - 수정 3 — 실시간 뉴스 목록을 카드 형식(상단 source뱃지+date / 중간 headline 굵게 2줄
+    클램프 / 하단 material 태그+ConfidenceBadge)으로 변경.
+  - 수정 4 — `ImportDependencyRow`의 940px 반응형 규칙이 "이번 작업 중 깨졌다"는 전제로
+    조사했으나, `git stash`로 base 브랜치(`dev-김영진_merge-test`)와 A/B 비교한 결과
+    회귀가 아니라 이 브랜치 이전부터 있던 기존 버그(1280px 등 940px보다 넓은 뷰포트에서도
+    "원자재 가격 추이" 카드 우측이 잘리는 현상, `.main{min-width:0}`이 문서 레벨 스크롤바로
+    전파되는 걸 막아 기존 판정 방식으로는 검출 불가능했던 사각지대)임을 확인 — 940px
+    규칙 자체는 미변경. 이 사전 발견 버그는 `docs/roadmap-candidates.md` C14로 별도
+    커밋(`8943260`)에 등재(레이아웃 수정 커밋과 분리).
+  - 수정 5 — `GlobalRiskBoard`가 자체 렌더링하던 "마커 클릭 시 정보 표시" 패널을
+    `AlertsPanel`의 "빠른 작업 > 마커뉴스" 서브섹션으로 이양. `GlobalRiskBoard`에 선택적
+    `onSelect` 콜백 prop 추가(전달 시 자체 표시 생략, 미전달 시 — 공개 대시보드 — 기존
+    그대로 유지, `mapHeight`와 동일한 공유 컴포넌트 override 원칙), 마커 클릭 시 접혀있던
+    `AlertsPanel`이 자동으로 펼쳐지도록 `AlertsPanelContext`에 `toggle`과 별도인 `expand`
+    (강제 펼침) 액션 추가. 구현 중 "주요 알림" 서브섹션(수정 1에서 만든 것)을 마저
+    제거하는 걸 누락했다가 검증 단계에서 발견해 별도 커밋으로 수정 — 제거 후 "주요 알림
+    상위 4건"을 따로 하드코딩해 보여주던 접힘 상태 hover 미리보기 로직도 함께 정리하고
+    펼침 패널과 동일한 `QuickActionsPanel`을 재사용하도록 통일(두 상태가 항상 같은
+    콘텐츠를 보여줌). 상세 이력은 `docs/timeline.md` 참고(2026-07-29 두 라운드에 걸쳐 진행).
+  - QA: docs/qa-checklist.md E(mock-schemas.md 반영)는 이 Phase 완료 후 별도 확인 후
+    진행, 나머지 A~H 특이사항 없음. tsc/eslint/build 통과.
+
+- [x] Phase 12 — 2계층 경영기획팀 대시보드 7탭 확장 (`feat/planning-tier-dashboard` 브랜치, 2026-08-02)
+  기존 `PlanningDashboardPage`(사이드바 2항목 해시 placeholder, 단일 페이지 3섹션)를
+  사이드바 7탭(전략 대시보드/자재 위험/수입 의존도/공급사 분석/계약 현황/AI 브리핑/데이터
+  품질/설정) 구조로 확장. 프론트엔드 mock 전용(사업부 개념이 백엔드에 없어 백엔드 연동은
+  별도 라운드). 신규 공용 컴포넌트 2개(`RankedBarChart`/`EntityBadgeList`, 기존
+  `ComparisonChart`/`VendorRiskHistory` 패턴 일반화) + 신규 페이지 6개 + `lib/planningNav.ts`
+  (7탭 공용 사이드바, 처음부터 실제 라우트로 연결 — 1계층의 "SideNav 해시 placeholder로
+  남아 미기능" 문제 반복 안 함). 상세는 `docs/timeline.md` "Phase 12" 참고.
+  - [x] Phase 12.1 — 2계층 반응형 대응 + C13(구매팀 대시보드 650px 이하 오버플로) 해결
+    (2026-08-02): C12(필터 pill 줄바꿈) 수정, 차트 패널 `min-width:0` 누락 버그 수정,
+    `SideNav`/`AlertsPanel` 자동 접힘(`NARROW_SHELL_BREAKPOINT_PX=650`)으로 구매팀·
+    경영기획팀 양쪽의 좁은 뷰포트 오버플로를 공용 Provider 레벨에서 해결. 상세는
+    `docs/timeline.md` "Phase 12.1", `docs/roadmap-candidates.md` C12/C13 참고.
+  - [ ] Phase 13(후보) — 2계층 백엔드 연동: **미착수**. 사업부(business_unit) 개념이
+    ERP/백엔드 스키마에 아예 없어(현재 `BUSINESS_UNIT_BY_MATERIAL` 프론트 임시 매핑으로만
+    존재) 실 데이터 연동 전 사업부 마스터 데이터 설계가 선행 필요.
+  - [x] Phase 12.2 — 2계층 실 백엔드 검증 후 발견된 화면 일관성/색상 개선(2026-08-03):
+    실 Spring 백엔드(격리 Docker 검증 스택)로 2계층 7탭을 전부 검증하는 과정에서 사용자가
+    지적한 3가지를 반영. (1) "전략 대시보드"에 1계층/공개 대시보드와 동일한
+    `GlobalRiskBoard`(글로벌 리스크 관제 맵)를 `useGlobalRiskBoard()` 신규 훅(공개
+    엔드포인트 `GET /api/v1/public/risk-board` 재사용, 인증 불필요)으로 추가 — 새 백엔드
+    작업 없음. (2) `RankedBarChart`에 선택적 `legend` prop 신설(색점+텍스트 칩) —
+    "공급사 분석" 탭 "리스크 이력 랭킹"(REVIEW/APPROVED)에 적용. (3) "데이터 품질" 탭
+    "신뢰도 라벨 분포"가 리스크 등급 색상(`--color-risk-*`)을 신뢐도 라벨 색상(확정/참고/
+    경고)에 잘못 재사용하던 문제 발견(`design-tokens.md`가 이미 "서로 다른 축"이라 명시한
+    원칙 위반) — `RankedBarItem['tone']`에 `'reference'` 추가, 참고 항목만
+    `--color-confidence-reference`로 교체하고 범례도 함께 추가. 전수 스캔 결과 `tone` 사용처
+    중 이 유형의 문제는 이 1건뿐이었다. 또한 이번 세션에서 "사업부별 리스크 노출도" 쿼리를
+    최근 1건 스냅샷 → 이번 분기 누적 평균으로 변경(`PlanningDashboardRepository.
+    loadRiskExposureByUnit()`), RAG 상태 조회 Jackson snake_case 역직렬화 버그
+    (`fastApiRestClient`가 전역 SNAKE_CASE 설정을 안 타는 문제, `@JsonProperty` 추가로 수정),
+    KG 게이트 미배선 시 ERP/계약 분석이 통째로 스킵되는 버그(`kg_service` 호스트 프로세스로
+    기동 + `KG_SERVICE_BASE_URL` 배선)도 함께 발견·수정됨 — 전부 백엔드(`빅프로젝트/backend`)
+    변경.
+
+## 재사용 규칙 (Phase 3에서 결정되는 인터페이스는 이후 Phase가 그대로 따른다)
+- `ConfidenceBadge`/`RiskGradeBadge`의 props 타입은 이후 모든 화면에서 동일하게 재사용한다 — 화면별로 별도 배지를 새로 만들지 않는다.
+- `Header`/`Footer`/`SideNav`는 `components/layout/`에서 한 번만 구현하고, `features/*`는 이를 import해서 쓰기만 한다.

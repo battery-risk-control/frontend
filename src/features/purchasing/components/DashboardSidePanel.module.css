@@ -1,0 +1,454 @@
+.wrapper {
+  position: sticky;
+  top: var(--header-height); /* sticky Header(56px)와 겹치지 않도록 그 아래에서부터 고정 */
+  height: calc(100vh - var(--header-height));
+  /* 토글 버튼(SidePanelToggleButton)이 이 폭만큼 왼쪽으로 밀려 패널 가장자리에 붙는다 —
+     여기만 바꾸면 버튼이 떨어지므로 값을 토큰으로 공유한다. */
+  width: var(--side-panel-width);
+  flex-shrink: 0;
+  overflow: hidden; /* SideNav 접기와 동일한 width 트랜지션 패턴 */
+  transition: width var(--transition-fast) ease;
+}
+
+.wrapper.collapsed {
+  width: 0;
+}
+
+/* 접힌 상태에서 호버 미리보기가 뜰 때만 overflow를 풀어준다 — 미리보기가 position:absolute로
+   폭 0인 wrapper 밖으로 튀어나가야 하는데, overflow:hidden이면 그 순간 잘려 보인다. */
+.wrapper.previewing {
+  overflow: visible;
+}
+
+.previewOverlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--side-panel-width);
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(8px);
+  transition:
+    opacity var(--transition-fast) ease,
+    transform var(--transition-fast) ease;
+}
+
+.previewVisible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100%;
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+}
+
+.panel::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Edge */
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.tab,
+.tabActive {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-1);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tabActive {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.tabCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--color-risk-critical);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+}
+
+.tabPanel {
+  flex: 1;
+  min-height: 0;
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.itemMeta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.itemLink {
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.itemLink:hover,
+.itemLink:focus-visible {
+  text-decoration: underline;
+}
+
+/* --- 주요 알림 --- */
+
+.panelHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.panelTitle {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.panelMore {
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.panelMore:hover,
+.panelMore:focus-visible {
+  text-decoration: underline;
+}
+
+.alertList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.alertItem {
+  display: flex;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.alertItem:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.alertIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.alertBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.alertHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.alertLevel {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+}
+
+.alertTime {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.alertTitle {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.4;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.alertTitle:hover,
+.alertTitle:focus-visible {
+  text-decoration: underline;
+}
+
+.alertDetail {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+
+/* 심각·주의는 등급 색(RiskGradeBadge와 같은 토큰)을 쓴다. `정보`는 위험 등급이 아니라
+   가격 변동성 참고 지표라, 같은 색 체계를 쓰면 3단계 등급 중 하나로 읽힌다 — 브랜드
+   네이비 계열로 따로 둔다. */
+.levelCritical {
+  color: var(--color-risk-critical);
+  background: rgba(217, 58, 63, 0.1);
+}
+
+.levelWarning {
+  color: var(--color-risk-warning);
+  background: rgba(240, 147, 63, 0.12);
+}
+
+.levelInfo {
+  color: var(--color-primary);
+  background: rgba(23, 52, 92, 0.08);
+}
+
+/* 아이콘은 배경 없이 색만 물려받는다 — 배지와 같은 클래스를 쓰되 칩처럼 보이지 않게 한다. */
+.alertIcon.levelCritical,
+.alertIcon.levelWarning,
+.alertIcon.levelInfo {
+  background: none;
+}
+
+/* --- 뉴스 상세 --- */
+
+.newsDetail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.detailCaption {
+  margin-top: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.detailCaption:first-child {
+  margin-top: 0;
+}
+
+.detailHeadline {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.detailMeta {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.detailOriginal {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.materialChip {
+  align-self: flex-start;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: rgba(42, 174, 138, 0.12);
+  color: var(--color-risk-normal);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.primaryAction,
+.secondaryAction {
+  display: block;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+  text-decoration: none;
+}
+
+.primaryAction {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.secondaryAction {
+  background: var(--color-risk-normal);
+  color: #ffffff;
+}
+
+.primaryAction:hover,
+.secondaryAction:hover {
+  opacity: 0.9;
+}
+
+/* --- 데이터 업로드 --- */
+
+.uploadBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.uploadItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+}
+
+.uploadItem:hover:not(.uploadDisabled) {
+  border-color: var(--color-primary);
+}
+
+.uploadDisabled {
+  opacity: 0.6;
+}
+
+.uploadTitle {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.uploadHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* --- 스크롤 힌트 --- */
+
+.overflowHintTop,
+.overflowHintBottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.overflowHintTop {
+  top: 0;
+  align-items: flex-start;
+  padding-top: var(--space-1);
+  background: linear-gradient(to top, rgba(255, 255, 255, 0) 0%, var(--color-surface) 75%);
+}
+
+.overflowHintBottom {
+  bottom: 0;
+  align-items: flex-end;
+  padding-bottom: var(--space-1);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, var(--color-surface) 75%);
+}
+
+.overflowArrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-surface);
+}

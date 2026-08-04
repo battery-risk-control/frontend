@@ -1,0 +1,67 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.itemHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  font-size: var(--font-size-sm);
+}
+
+.materialCode {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.stockDays {
+  color: var(--color-text-muted);
+}
+
+.qcStatus {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.pass {
+  color: var(--color-risk-normal);
+}
+
+.fail {
+  color: var(--color-risk-critical);
+}
+
+/* STALE·INCOMPLETE — 값을 쓸 수는 있지만 그대로 믿으면 안 되는 상태 */
+.stale {
+  color: var(--color-risk-warning);
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.reason {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.candidates {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}

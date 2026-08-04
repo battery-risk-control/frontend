@@ -1,0 +1,474 @@
+# 네이밍 사전 — Physical Name(영문) : Logical Name(한글)
+
+> `src/` 전체(.ts/.tsx)를 스캔해 작성한 파일·컴포넌트·함수/훅·타입의 영문(physical)-한글(logical) 대응표다.
+> `*.module.css`, `tokens.css`, `index.css` 등 스타일 파일은 export되는 JS 심볼이 없어 범위에서 제외했다.
+> 코드가 바뀌면 이 문서도 같이 갱신해야 정확하다 — 스냅샷 문서다.
+> 같은 물리 필드명(예: email, label, material)은 타입이 달라도 동일한 한글 표현을 원칙으로 한다. 단, 물리 필드명은 같지만 논리적 의미가 다른 경우(예: status가 실제 가변 상태값인지, 항상 고정값만 갖는 응답 태그인지 등 문맥상 다른 개념인 경우)는 실제 타입 정의와 사용처를 코드에서 먼저 확인한 뒤, 그 의미에 맞는 수식어를 붙이고 물리 필드명을 괄호로 병기해 검색 가능하게 한다. 타입 설명에는 export된 인터페이스의 모든 필드를 빠짐없이 반영한다(첫 필드 누락 금지).
+
+## 1. 요약 표 (파일 단위)
+
+| 파일 경로 (physical) | 논리명 (logical) |
+|---|---|
+| `App.tsx` | 앱 루트 컴포넌트 — AuthProvider·SideNavProvider·AlertsPanelProvider로 라우트 트리 감싸기(Phase 9.4에서 SideNavProvider, 2026-07-27에 AlertsPanelProvider 추가) |
+| `main.tsx` | 앱 진입점 — ReactDOM 렌더링, BrowserRouter 연결 |
+| `api/auth.api.ts` | 인증(로그인/회원가입) mock API |
+| `api/executive.api.ts` | 3계층 경영진 대시보드 mock API |
+| `api/planning.api.ts` | 2계층 경영기획팀 대시보드 mock API |
+| `api/public.api.ts` | 비로그인 공개 대시보드 API(Phase 9.4에서 fetchMaterialPriceTrends/fetchMaterialPriceSummaries를 purchasing.api.ts로 옮기고 재수출만 함; 2026-07-27 — fetchPublicRiskBoard 신규로 지도만 실 API 연동, 나머지는 여전히 mock) |
+| `api/purchasing.api.ts` | 1계층 구매팀 대시보드 mock API — risk_event 원천 데이터 + Phase 9.4에서 이동된 글로벌 리스크 맵/가격 추이 mock + 신규 원자재 리스크 개요/수입 의존도 mock |
+| `api/types.ts` | 전 화면 공용 API 응답 타입 정의 |
+| `app/routes.tsx` | 최상위 라우트 정의 및 로그인 가드 |
+| `components/layout/Breadcrumb.tsx` | 브레드크럼(탐색 위치 안내) |
+| `components/layout/Footer.tsx` | 공통 하단 푸터 |
+| `components/layout/AlertsBellButton.tsx` | 헤더 알림 벨 아이콘(2026-07-27 신규) — `Header`의 `accountExtra` 슬롯에 들어감 |
+| `components/layout/Header.tsx` | 공통 상단 헤더(로고 = 홈 링크). 2026-07-27 — `accountExtra` prop 추가(계정정보-로그아웃 사이 슬롯, 선택) |
+| `components/layout/SideNav.tsx` | 사이드 메뉴 내비게이션(Phase 9.4부터 SideNavContext의 collapsed 상태 반영) |
+| `components/layout/SideNavToggleButton.tsx` | SideNav 접기/펼치기 토글 버튼(Phase 9.4 신규) — SideNav 바깥에 위치 |
+| `components/layout/SkipLink.tsx` | 본문 바로가기 링크(접근성) |
+| `components/ui/ConfidenceBadge.tsx` | 리스크 판단 신뢰도 라벨 배지 |
+| `components/ui/ConfirmModal.tsx` | 확인/취소 모달 |
+| `components/ui/DonutChart.tsx` | 도넛 차트(Phase 9.4 신규, surin DonutChart 이식) |
+| `components/ui/PageSectionDots/PageSectionDots.tsx` | 페이지 섹션 이동 도트 인디케이터(Phase 10.7 신규, `rootMargin` 헤더 높이 보정 2026-07-27) |
+| `components/ui/RiskGauge.tsx` | 3단계 리스크 게이지(Phase 9.4 신규, surin RiskStepGauge 이식) |
+| `components/ui/RiskGradeBadge.tsx` | 리스크 등급 배지 |
+| `components/ui/ScrollCard/ScrollCard.tsx` | 카드형 UI 공통 컨테이너(스크롤 캡슐화) |
+| `components/widgets/GlobalRiskBoard.tsx` | 글로벌 리스크 관제 맵(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용) |
+| `components/widgets/MaterialPriceDetail.tsx` | 원자재 가격 추이(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용) |
+| `features/auth/components/AuthTabs.tsx` | 로그인/권한 신청 탭 토글 |
+| `features/auth/components/LoginForm.tsx` | 로그인 폼 |
+| `features/auth/components/PendingApprovalScreen.tsx` | 승인 대기 보안 락 화면 |
+| `features/auth/components/SecurityBadge.tsx` | 보안 안내 배지(IP 제어/OTP) |
+| `features/auth/components/SignupForm.tsx` | 권한 신청(회원가입) 폼 |
+| `features/auth/pages/AuthPage.tsx` | 로그인/회원가입 통합 페이지 |
+| `features/executive/components/CumulativeRiskKpi.tsx` | 누적 리스크 탐지 KPI 3박스 |
+| `features/executive/components/EnterpriseRiskSummary.tsx` | 전사 리스크 요약 리스트 |
+| `features/executive/components/SavingsSimulation.tsx` | 예산 절감 시뮬레이션 카드 |
+| `features/executive/pages/ExecutiveDashboardPage.tsx` | 3계층 경영진 대시보드 페이지 |
+| `features/planning/components/ComparisonChart.tsx` | 사업부별 리스크 노출도 비교 차트 |
+| `features/planning/components/KpiSummaryCards.tsx` | KPI 요약 카드 |
+| `features/planning/components/VendorRiskHistory.tsx` | 협력사 리스크 이력 및 탐색 리스트 |
+| `features/planning/pages/PlanningDashboardPage.tsx` | 2계층 경영기획팀 대시보드 페이지 |
+| `features/public/components/AiPriorityList.tsx` | AI 기반 권고 조치 리스트 |
+| `features/public/components/SupplyNewsFeed.tsx` | 실시간 뉴스 속보 |
+| `features/public/pages/PublicDashboardPage.tsx` | 비로그인 공개 대시보드 페이지 |
+| `features/purchasing/components/AlertsPanel.tsx` | 주요 알림 및 빠른 작업 패널. 2026-07-27 — `AlertsPanelContext`의 `expanded`로 펼침/접힘, 접힘+호버 시 상위 4개 `ScrollCard` 미리보기 추가(오류 및 기능 미흡 발견 #7) |
+| `features/purchasing/components/ErpImpactPanel.tsx` | ERP 영향 자재 재고 계약 분석 패널 |
+| `features/purchasing/components/ImportDependencyPanel.tsx` | 수입 의존도 도넛차트 패널(Phase 9.4 신규) |
+| `features/purchasing/components/ImportDependencyRow.tsx` | 수입 의존도+원자재 가격 추이 2컬럼 행(Phase 9.4 신규). 2026-07-27 — `940px` 이하 1컬럼 전환 미디어 쿼리 추가(신설 이후 처음, 미구현 상태였음) |
+| `features/purchasing/components/KpiSummaryPanel.tsx` | 상단 KPI 요약 패널 |
+| `features/purchasing/components/MaterialRiskStatusPanel.tsx` | 원자재 공급사 리스크 현황 패널 |
+| `features/purchasing/components/PurchasePriorityPanel.tsx` | 구매 대응 우선순위 패널 |
+| `features/purchasing/pages/BriefingDetailPage.tsx` | 1계층 브리핑 자료 열람 페이지 |
+| `features/purchasing/pages/PurchasingDashboardPage.tsx` | 1계층 구매팀 대시보드 페이지 |
+| `lib/AuthContext.ts` | 인증 상태 Context 객체 정의 |
+| `lib/AuthProvider.tsx` | 인증 상태 Provider 컴포넌트 |
+| `lib/dashboardPaths.ts` | org_tier별 대시보드 경로 매핑 |
+| `lib/AlertsPanelContext.ts` | AlertsPanel 펼침/접힘 상태 Context 객체 정의(2026-07-27 신규, SideNavContext와 동일 패턴) |
+| `lib/AlertsPanelProvider.tsx` | AlertsPanel 펼침/접힘 상태 Provider 컴포넌트(2026-07-27 신규) — `DEFAULT_ALERTS_EXPANDED` 기본값 상수도 이 파일에 있음 |
+| `lib/riskEventId.ts` | risk_event_id 날짜 파싱 유틸 |
+| `lib/selectAlertEvents.ts` | 알림 대상 risk_event 필터 함수(2026-07-27 신규, `AlertsPanel.tsx`에서 분리 — react-refresh 규칙상 컴포넌트 파일은 컴포넌트만 export해야 해서) — `AlertsPanel`(전체 목록)과 `AlertsBellButton`의 배지 숫자 양쪽이 재사용 |
+| `lib/SideNavContext.ts` | SideNav 접기/펼치기 상태 Context 객체 정의(Phase 9.4 신규) |
+| `lib/SideNavProvider.tsx` | SideNav 접기/펼치기 상태 Provider 컴포넌트(Phase 9.4 신규) |
+| `lib/tierLabels.ts` | org_tier별 한글 라벨 매핑 |
+| `lib/useAlertsPanelState.ts` | AlertsPanel 펼침/접힘 상태 접근 훅(2026-07-27 신규) |
+| `lib/useAuthState.ts` | 인증 상태 접근 훅 |
+| `lib/useHoverDisclosure.ts` | 2단계 hover 디스클로저 상태 훅(2026-07-27 신규, `PageSectionDots`에서 처음 사용 — WCAG 1.4.13 hoverable/dismissible/persistent 충족용). **소급 정정**: GlobalRiskBoard 마커 hover(#3)에서는 실제로 재사용하지 않기로 확정됨(근거는 `docs/roadmap-candidates.md` C9), AlertsPanel hover 프리뷰(#7)에서도 "벗어나면 항상 초기화" 모델이 pin 요구사항과 안 맞아 재사용하지 않음(`design-tokens.md` "카드 레이아웃·스크롤 규칙" e항 참고) — 지금까지 실사용처는 `PageSectionDots` 한 곳뿐 |
+| `lib/useScrollOverflowHint.ts` | 스크롤 오버플로 힌트 감지 훅(Phase 9.4/10.7, `axis` 파라미터로 세로/가로 축 지원) |
+| `lib/useSideNavState.ts` | SideNav 접기/펼치기 상태 접근 훅(Phase 9.4 신규) |
+
+## 2. 상세 — 파일별 export 목록
+
+각 파일에서 실제로 `export`된 심볼만 담았다(내부 전용 `interface XxxProps` 등은 export되지 않으므로 제외).
+
+### `App.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `App` (default export) | 앱 루트 컴포넌트 | `AuthProvider`→`SideNavProvider`로 `AppRoutes`를 감싸 렌더링(Phase 9.4에서 `SideNavProvider` 추가) |
+
+### `api/auth.api.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `login` | 로그인 함수 | 이메일/비밀번호로 로그인 시도 — 테스트 계정 3종(구매팀/경영기획팀/경영진) 또는 PENDING 테스트 계정에 따라 성공/승인대기 응답 반환. DEV/DEMO 전용 |
+| `signup` | 회원가입(권한 신청) 함수 | 입력값을 받아 항상 PENDING 상태 응답 생성 |
+
+### `api/executive.api.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `fetchExecutiveDashboard` | 3계층 대시보드 조회 함수 | 누적 리스크 KPI / 절감 시뮬레이션 / 전사 리스크 요약 반환. `enterprise_risk_summary`는 2계층 데이터에서 파생 |
+
+### `api/planning.api.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `fetchPlanningDashboard` | 2계층 대시보드 조회 함수 | KPI 요약 / 사업부별 노출도 / 협력사 리스크 이력을 1계층 `risk_event`에서 파생해 반환 |
+
+### `api/public.api.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `fetchPublicRiskBoard` | 글로벌 리스크 관제 맵 조회 함수(실 API 연동) | 2026-07-27 신규. `VITE_API_BASE_URL` 설정 시 `GET /api/v1/public/risk-board` 실 호출(`fetchJson` 재사용, 새 인증 헬퍼 불필요 — 토큰 없는 공개 엔드포인트), 미설정 시(①단계) `purchasing.api.ts`의 `fetchGlobalRiskBoard()`(mock)를 그대로 반환. `auth.api.ts`의 `login`/`signup`과 동일한 mode 분기 컨벤션. 구매팀 대시보드가 쓰는 `fetchGlobalRiskBoard()`와는 별도 함수라 이 변경이 구매팀 대시보드에 영향 없음(설계 의도, 실측 확인) |
+| `fetchMaterialPriceTrends` *(재수출)* | 원자재 가격 추이 조회 함수 | Phase 9.4에서 `api/purchasing.api.ts`로 이동, 여기서는 재수출만 |
+| `fetchMaterialPriceSummaries` *(재수출)* | 원자재 가격 요약 카드 조회 함수 | Phase 9.4에서 `api/purchasing.api.ts`로 이동, 여기서는 재수출만 |
+| `fetchAiRecommendations` | AI 권고 조치 조회 함수 | 등급 기반 일반 권고 문구 생성(ERP 내부 상세는 미노출) |
+| `fetchNewsFeed` | 실시간 뉴스 속보 조회 함수 | `risk_event`를 `risk_event_id` 기준 날짜 최신순으로 정렬 |
+
+### `api/purchasing.api.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `fetchRiskEvents` | 리스크 이벤트 목록 조회 함수 | 1계층 mock `risk_event` 배열 반환 — 다른 계층 API들이 공유하는 원천 데이터 |
+| `fetchRiskEventBriefing` | 브리핑 자료 조회 함수 | risk_event_id로 찾은 이벤트의 rag_view/output_artifacts만 추출(Seq 24). 존재하지 않으면 `null` 반환 |
+| `fetchGlobalRiskBoard` | 글로벌 리스크 관제 맵 조회 함수 | Phase 9.4에서 `api/public.api.ts`→이 파일로 이동(로직 변경 없음). `risk_event` 배열을 요약 항목으로 변환, `market_context`의 country_code/country_name/coordinates도 함께 매핑(지도 마커용) |
+| `fetchMaterialPriceTrends` | 원자재 가격 추이 조회 함수 | Phase 9.4에서 이동. 자재별 합성 가격 지수(기준일=100) 시계열 반환 |
+| `fetchMaterialPriceSummaries` | 원자재 가격 요약 카드 조회 함수 | Phase 9.4에서 이동. 자재별 등락률/리스크 지수/등급 반환 — `change_label`/`risk_score`/`grade`는 mock 임시값(`docs/mock-schemas.md` 참고), `material`만 실제 연동 키 |
+| `fetchMaterialRiskGauges` | 원자재 리스크 개요 게이지 카드 조회 함수 | Phase 9.4 신규, surin `materialRiskGauges` 이식. 리튬/니켈/흑연 3종 반환(전 필드 mock 임시값, `grade`는 3단계 `RiskGrade`로 매핑) |
+| `fetchScoreCards` | 원자재 리스크 개요 점수 카드 조회 함수 | Phase 9.4 신규, surin `summaryScores` 이식. 외부 리스크 종합 점수/ERP 영향 점수 2종 반환(전 필드 mock 임시값) |
+| `fetchImportDependency` | 수입 의존도 조회 함수 | Phase 9.4 신규, surin `importDependency` 이식. 국가별 수입 비중 반환(전 필드 mock 임시값) |
+
+### `api/types.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `ConfidenceLabel` *(재노출)* | 신뢰도 라벨 타입 | `'확정' \| '참고' \| '경고'` — 원본은 `components/ui/ConfidenceBadge.tsx` |
+| `RiskGrade` *(재노출)* | 리스크 등급 타입 | `'정상' \| '주의' \| '심각'` — 원본은 `components/ui/RiskGradeBadge.tsx` |
+| `MarketContext` | 시황 컨텍스트 타입 | 출처/자재/이벤트 요약/국가코드/국가명/좌표 |
+| `ErpView` | ERP 관점 타입 | 안전재고일수/자재코드/대체 조달처 |
+| `QualityCheck` | 품질 검증 타입 | 검증 상태(status)/기준/사유 |
+| `RagView` | RAG(계약) 관점 타입 | 계약조항 요약/협상 포인트 |
+| `OutputArtifacts` | 산출물 메타 타입 | 렌더 모드/파일 URL/JSON 폴백 여부 |
+| `RiskEvent` | 리스크 이벤트 타입 | 1계층 원천 스키마(CLAUDE.md 기준) |
+| `RiskEventBriefing` | 브리핑 자료 열람 응답 타입 | risk_event_id + risk_event의 rag_view/output_artifacts만 추출 + 배지 표시용 material/grade/confidence_label(Seq 24) |
+| `OrgTier` | 조직 계층 타입 | `'purchasing' \| 'planning' \| 'executive'` |
+| `LoginRequest` | 로그인 요청 타입 | 이메일/비밀번호 |
+| `LoginFormValues` | 로그인 폼 값 타입 | `LoginRequest` + 로그인 상태 유지 여부(UI 로컬 상태) |
+| `LoginSuccessResponse` | 로그인 성공 응답 타입 | 액세스 토큰/조직계층/승인 완료 표시(status, 항상 'APPROVED' 고정값) |
+| `LoginPendingErrorResponse` | 로그인 승인대기 응답 타입 | 에러 코드/메시지 |
+| `LoginResponse` | 로그인 응답 유니언 타입 | 성공 또는 승인대기 응답 |
+| `SignupFormValues` | 회원가입 폼 값 타입 | 성명/이메일/비밀번호/조직계층(Figma 폼 필드 기준) |
+| `SignupRequest` | 회원가입 요청 타입 | `SignupFormValues` + 소속 회사명(api 계층 고정값) |
+| `SignupResponse` | 회원가입 응답 타입 | 사용자ID/승인 대기 표시(status, 항상 'PENDING' 고정값)/메시지 |
+| `GlobalRiskBoardItem` | 글로벌 리스크 관제 맵 항목 타입 | 리스크 이벤트ID(risk_event_id)/자재/등급/신뢰도/이벤트 요약/국가코드/국가명/좌표(Phase 9.1 — 지도 마커용, 국가 특정 불가 시 생략 가능) |
+| `AiRecommendation` | AI 권고 조치 항목 타입 | 리스크 이벤트ID(risk_event_id)/자재/등급/신뢰도/권고 문구 |
+| `MaterialPricePoint` | 원자재 가격 포인트 타입 | 날짜/가격지수 |
+| `MaterialPriceSeries` | 원자재 가격 시계열 타입 | 자재/단위/포인트 배열 |
+| `NewsFeedItem` | 뉴스 속보 항목 타입 | 리스크 이벤트ID(risk_event_id)/날짜/자재/출처/헤드라인/신뢰도 |
+| `KpiSummaryItem` | KPI 요약 카드 항목 타입 | 라벨/값/단위 |
+| `RiskExposureByUnit` | 사업부별 리스크 노출도 타입 | 사업부명/노출도 점수 |
+| `VendorRiskHistoryItem` | 협력사 리스크 이력 항목 타입 | 공급사ID/명/90일 이력 건수/최신 등급·신뢰도 |
+| `PlanningDashboardResponse` | 2계층 대시보드 응답 타입 | business_unit + period + kpi_summary + risk_exposure_by_unit + vendor_risk_history |
+| `CumulativeRiskKpi` | 누적 리스크 KPI 타입 | 탐지/응답 건수·비율, 심각 건수, 평균 대응 소요 |
+| `SavingsSimulation` | 절감 시뮬레이션 타입 | is_simulation(항상 true)/예상 절감액/가정 |
+| `EnterpriseRiskSummaryItem` | 전사 리스크 요약 항목 타입 | 사업부명/노출도 점수/추세 |
+| `ExecutiveDashboardResponse` | 3계층 대시보드 응답 타입 | period + cumulative_risk_kpi + savings_simulation + enterprise_risk_summary |
+| `MaterialRiskGaugeItem` | 원자재 리스크 게이지 카드 타입 | Phase 9.4 신규 — name/basis/grade/changeLabel(선택) |
+| `ScoreCardItem` | 점수 카드 타입 | Phase 9.4 신규 — label/score/grade/diffLabel(선택) |
+| `ImportDependencyBreakdownItem` | 수입 의존도 국가별 비중 항목 타입 | Phase 9.4 신규 — label/value/color |
+| `ImportDependencyData` | 수입 의존도 타입 | Phase 9.4 신규 — total/year(선택)/breakdown |
+
+### `app/routes.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `AppRoutes` | 최상위 라우트 컴포넌트 | `/`, `/auth`, `/purchasing`, `/purchasing/briefing/:riskEventId`, `/planning`, `/executive` 라우트 정의. 뒤 4개는 내부 `RequireAuth`(비export) 가드 적용 — `tier` prop으로 org_tier까지 매칭. 미로그인이면 무음으로 `/auth` 리다이렉트하지만, 계층 불일치는 무음 리다이렉트 대신 `ConfirmModal`로 안내 후 사용자가 "내 화면으로 이동"을 선택해야 이동한다(Phase 8.5, qa-checklist.md C) |
+
+### `components/layout/Breadcrumb.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `BreadcrumbItem` | 브레드크럼 항목 타입 | 라벨/href(선택) |
+| `Breadcrumb` | 브레드크럼 컴포넌트 | 탐색 위치 안내, 마지막 항목은 링크 없이 현재 페이지로 표시 |
+
+### `components/layout/Footer.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `Footer` | 공통 푸터 컴포넌트 | 모든 화면 하단에 운영기관 식별 정보 표시 |
+
+### `components/layout/AlertsBellButton.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `AlertsBellButton` | 헤더 알림 벨 아이콘 컴포넌트 | 2026-07-27 신규(오류 및 기능 미흡 발견 #7). `Header`의 `accountExtra` 슬롯에 들어감. `count`(배지 숫자, 펼침/접힘과 무관하게 항상 표시)/`expanded`/`onToggle`/`onMouseEnter`/`onMouseLeave` props. 클릭 시 `AlertsPanelContext`의 `expanded` 토글, hover 이벤트는 그대로 상위(`PurchasingDashboardPage`)로 올려보내 디바운스 판단은 호출부가 맡는다(트리거와 콘텐츠가 화면상 떨어져 있어서) |
+
+### `components/layout/Header.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `Header` | 공통 헤더 컴포넌트 | 좌측에 홈 아이콘 링크(브랜드 텍스트 링크와 별개)+브랜드 텍스트 링크(둘 다 "/" 이동, sticky 상단 고정) + 우측 액션 슬롯(children). 로그인 상태면 계정 정보(이메일·계층)와 로그아웃 버튼, 미로그인 상태면 로그인/회원가입 버튼을 표시(Phase 8.5부터 모든 화면·비로그인 공개 대시보드 포함 대칭 적용) — 로그아웃은 SPA navigate와 인증 상태 갱신 간 경쟁을 피하려 하드 리다이렉트(`window.location.href`) 사용. 2026-07-27 — `accountExtra`(선택) prop 추가 — 계정 정보와 로그아웃 버튼 사이에 렌더링(예: `AlertsBellButton`), 미전달 시 기존과 완전히 동일(다른 소비처 무변경) |
+
+### `components/layout/SideNav.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `SideNavItem` | 사이드 메뉴 항목 타입 | 라벨/href |
+| `SideNav` | 사이드 메뉴 컴포넌트 | 하위 화면이 많은 대시보드용 좌측 내비게이션(`Link` 기반). Phase 9.4부터 `useSideNavState()`의 `collapsed`를 읽어 폭 0으로 접힘(내부 `<Link>`에 `tabIndex={-1}`, `<nav>`에 `aria-hidden` 적용) |
+
+### `components/layout/SideNavToggleButton.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `SideNavToggleButton` | SideNav 접기/펼치기 토글 버튼 컴포넌트 | Phase 9.4 신규. `useSideNavState()`의 `collapsed`/`toggle` 사용, 인라인 SVG 쉐브론(`aria-label`/`aria-expanded`). SideNav가 접히면 폭이 0이 돼 내부 요소가 클릭 불가능해지므로 SideNav 바깥(각 페이지 `.body`, `<SideNav>` 바로 앞)에 별도로 둔다. `position:sticky;top:var(--header-height)`가 누락돼 페이지 스크롤 시 버튼만 SideNav와 달리 사라지던 버그를 수정(2026-07-27) — SideNav `.wrapper`와 동일한 sticky 처리 적용 |
+
+### `components/layout/SkipLink.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `SkipLink` | 본문 바로가기 링크 컴포넌트 | 스크린리더/키보드 접근성용 — 평소 숨김, 포커스 시 노출 |
+
+### `components/ui/ConfidenceBadge.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ConfidenceLabel` | 신뢰도 라벨 타입 | `'확정' \| '참고' \| '경고'` |
+| `ConfidenceBadge` | 신뢰도 라벨 배지 컴포넌트 | Seq 20 — 전 화면 공통 필수 표시 |
+
+### `components/ui/ConfirmModal.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ConfirmModal` | 확인/취소 모달 컴포넌트 | qa-checklist.md "C. 접근 제어·리다이렉트의 사용자 피드백" 대응 — 무음 리다이렉트 대신 이유를 알리고 선택지를 준다. `cancelLabel` 버튼이 기본 포커스+주 버튼(강조) 스타일, `confirmLabel` 버튼은 보조 스타일(안전한 선택지가 기본이어야 한다는 원칙을 컴포넌트가 강제). `role="dialog"` + `aria-modal="true"`, Esc 키는 취소와 동일하게 동작, Tab/Shift+Tab은 라이브러리 없이 순수 React로 모달 내부 요소끼리만 순환(포커스 트랩). 현재 `app/routes.tsx`의 `RequireAuth` 계층 불일치 안내에서 사용 |
+
+### `components/ui/DonutChart.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `DonutChart` | 도넛 차트 컴포넌트 | Phase 9.4 신규, surin `DonutChart` 이식(recharts `Pie`/`Cell`). 고정 180x180px 컨테이너라 `ScrollCard` 기본 `scrollable`(true) 상태에서도 `ResponsiveContainer` 되먹임 리사이즈가 재현되지 않는다(사전 실측 확인) |
+
+### `components/ui/PageSectionDots/PageSectionDots.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `PageSectionDotsSection` | 도트 섹션 정의 타입 | `id`(표시명)+`headingId`(관찰 대상 heading의 DOM id) |
+| `PageSectionDots` | 페이지 섹션 이동 도트 인디케이터 컴포넌트 | Phase 10.7 신규. `sections`의 heading들을 `IntersectionObserver`로 다중 관찰해 뷰포트에 보이는 섹션 도트를 활성 표시(여러 개 동시 활성 가능), 클릭 시 `scrollIntoView`. 2026-07-27 — `rootMargin: -{header-height}px 0px -60% 0px`를 추가해 sticky Header에 가려지는 상단을 관찰 대상에서 제외하고 "뷰포트 상단 40%" 기준선으로 좁힘(통상적 스크롤스파이 기법). 같은 날 후속 수정 4건 — (1) 마지막 섹션이 rootMargin 조건을 영영 만족 못 해 active가 안 되던 사각지대(C7)를 "문서 하단 도달" 별도 감지로 해소, (2) 도트 호버 시 `useHoverDisclosure` 기반 hover 툴팁(각 배지를 자기 도트와 동일한 y좌표에 개별 고정 배치, 대상 도트가 바뀌면 1단계로 리셋, 현재 활성 섹션 강조) 추가, (3) 클릭 시 스크롤 대상을 heading이 아니라 `ScrollCard`의 `.panel`(section 컨테이너)로 변경 — `scroll-margin-top: var(--header-height)`도 `ScrollCard.module.css`의 `.title`(heading)이 아니라 `.panel`에 걸어야 heading 위 카드 padding까지 포함해 정확히 헤더 아래로 오게 된다(heading에만 걸면 그 위 padding만큼 카드 테두리가 헤더 뒤로 가려짐, 실측 확인 — 소급 정정), (4) 배지-도트 세로 중앙 정렬 버그 수정 — `.dot`(button)의 기본 `display:inline-block`이 인라인 서식 문맥을 만들어 부모 `<li>` 렌더링 높이가 버튼 자체 8px이 아니라 상속된 line-height(약 19px)로 부풀려지고 버튼도 `vertical-align:baseline`으로 배치돼 li 중앙과도 어긋나던 것(8개 도트 전수 실측 시 항상 배지가 도트보다 7px 위, `diff:-7`)이 근본 원인 — `.dot`에 `display:block`을 줘 li 높이를 정확히 8px로 맞추고, `.hoverPanel`도 고정 px 오프셋(`-8px`) 대신 `top:50%; transform:translateY(-50%)`(li 중앙 기준 퍼센트 정렬)로 되돌려 li 중앙=도트 중앙이 구조적으로 보장되게 함(수정 후 8개 도트 전수 `diff:0`), (5) (4)의 부수 효과로 발생한 도트 간격 회귀 수정 — `.dot`의
+`display:block` 전환이 li 높이를 19px→8px로 줄이며 `.dots`의 `gap`(`var(--space-2)`, 8px)과
+합쳐진 실제 간격도 27px(19+8)→16px(8+8)로 함께 좁아졌고, 2단계 hover 시 24px 고정 높이
+배지 8개가 서로 8px씩 겹치는 회귀로 이어짐(실측 확인). li 높이(=정렬 기준)는 8px로 그대로
+두고 `.dots`의 `gap`만 `var(--space-6)`(24px)로 늘려 간격을 32px(8+24)로 복구 — 배지끼리도
+8px(32-24) 여유가 생겨 겹침 해소, 정렬(`diff:0`)은 그대로 유지 |
+| `BOTTOM_THRESHOLD_PX` | 문서 하단 도달 판정 여유값(2px) | C7 해소용 — 특정 콘텐츠의 부족분을 메우는 값이 아니라 픽셀 반올림 오차만 흡수하는 값 |
+
+### `components/ui/RiskGauge.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `RiskGauge` | 3단계 리스크 게이지 컴포넌트 | Phase 9.4 신규, surin `RiskStepGauge` 이식. surin의 4단계 대신 기존 3단계 `RiskGrade`(`components/ui/RiskGradeBadge.tsx`)를 재사용하고, 점 색상도 리터럴 hex 대신 `--color-risk-*` 토큰을 사용 |
+
+### `components/ui/RiskGradeBadge.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `RiskGrade` | 리스크 등급 타입 | `'정상' \| '주의' \| '심각'` |
+| `RiskGradeBadge` | 리스크 등급 배지 컴포넌트 | 등급별 색상(`--color-risk-*`) 배지 |
+
+### `components/ui/ScrollCard/ScrollCard.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ScrollCard` | 카드형 UI 공통 컨테이너 컴포넌트 | 제목(`title`)+헤더 우측 컨트롤(`actions`)+부제(`caption`)+스크롤 영역 밖 고정 콘텐츠(`pinnedTop`)+스크롤 본문(`children`)+하단 고정 안내(`footer`) 슬롯 구조. 본문에 기본적으로 `min-height:0`+`overflow-y:auto`를 캡슐화해, 부모 레이아웃이 카드 높이를 제약하는 경우(예: 비로그인 공개 대시보드 2x2 그리드)에만 내부 스크롤이 실제로 발동하고 그 외에는 자유롭게 늘어난다. `fillHeight`는 형제와 높이를 맞춰야 하는 카드용(`height:100%`). `scrollable`(기본 `true`)을 `false`로 주면 본문에 `overflow: visible`이 적용돼 스크롤이 배제된다(레이아웃 속성인 `flex:1`/`min-height:0`은 유지) — Recharts `ResponsiveContainer`처럼 스크롤 컨테이너 안에서 폭을 잘못 재측정하는 콘텐츠용(MaterialPriceDetail에서 실사용, 트러블슈팅으로 확인). 신규 카드형 컴포넌트는 이 컴포넌트를 사용하고 자체 `.panel`/`.title` 스타일을 새로 만들지 않는다(CLAUDE.md). `.panel`(section 컨테이너)에 `scroll-margin-top: var(--header-height)`를 줘(2026-07-27, 최초 `.title`에 걸었다가 같은 날 `.panel`로 정정 — heading에만 걸면 그 위 카드 padding만큼 테두리가 헤더 뒤로 가려짐) `PageSectionDots`의 `scrollIntoView`(대상도 heading이 아니라 이 `.panel`로 함께 변경)가 sticky Header에 안 가리는 위치로 이동하게 한다 |
+
+### `components/widgets/GlobalRiskBoard.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `GlobalRiskBoard` | 글로벌 리스크 관제 맵 컴포넌트 | Phase 9.1 구현, Phase 9.4에서 `features/public/components/`→여기로 승격(구매팀 대시보드도 재사용, 로직 변경 없음). `react-leaflet`+`world-atlas`+`topojson-client` 기반 인터랙티브 세계지도. "이벤트뷰"(개별 좌표 마커)/"국가뷰"(country_code 기준 집계, 대표 이벤트=최고 심각도) 토글, 마커 클릭 시 컴포넌트 내부 상세 패널에 관련 risk_event 리스트 표시. country_code 없는 이벤트는 마커 제외. `ScrollCard` 도입(지도는 `pinnedTop`으로 항상 고정 노출, 뷰토글은 `actions`, 클릭 시 상세 리스트만 스크롤 영역인 `children`). 2026-07-27 — 마커 hover 시 `confidence_label`을 permanent Tooltip 안에 조건부로 추가 노출(`hoveredKey` state, `CircleMarker`의 `eventHandlers.mouseover`/`mouseout`로 갱신) — Leaflet은 레이어 하나에 Tooltip을 하나만 바인딩할 수 있어 별도 hover 전용 Tooltip을 새로 못 붙이는 제약 때문에 기존 permanent Tooltip을 그대로 확장하는 방식을 씀(`useHoverDisclosure`/커스텀 오버레이는 채택 안 함, 근거는 `docs/roadmap-candidates.md` C9 참고). 국가뷰는 대표(`representative`) 이벤트의 confidence_label을 그대로 사용 |
+
+### `components/widgets/MaterialPriceDetail.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `MaterialPriceDetail` | 원자재 가격 추이 컴포넌트 | Phase 9.3 구현, Phase 9.4에서 `features/public/components/`→여기로 승격(구매팀 대시보드도 재사용, 로직 변경 없음). surin RiskMonitoring.tsx 시각 이식(필터行/요약카드 3장/기간버튼/Recharts 멀티라인 차트). "원자재" 드롭다운만 실제로 차트 계열을 필터링, "국가·지역"과 기간 버튼은 의도적으로 표시 전용(확정된 범위). `ScrollCard` 도입(필터行+요약카드는 `pinnedTop`으로 항상 고정 노출). 차트 영역은 `scrollable={false}`로 스크롤 제외 |
+
+### `features/auth/components/AuthTabs.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `AuthTabKey` | 인증 탭 키 타입 | `'login' \| 'signup'` |
+| `AuthTabs` | 로그인/권한 신청 탭 토글 컴포넌트 | Seq 33 — 새로고침 없이 전환, 슬라이딩 인디케이터 |
+
+### `features/auth/components/LoginForm.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `LoginForm` | 로그인 폼 컴포넌트 | 사내 이메일/비밀번호/로그인 상태 유지/비밀번호 초기화 신청 링크 |
+
+### `features/auth/components/PendingApprovalScreen.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `PendingApprovalScreen` | 승인 대기 보안 락 화면 컴포넌트 | Seq 35 — "처음으로" 버튼으로 로그인 화면 복귀 |
+
+### `features/auth/components/SecurityBadge.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `SecurityBadge` | 보안 안내 배지 컴포넌트 | Seq 36 — IP 접근 제어 및 2차 인증(OTP) 활성화 구간 안내 |
+
+### `features/auth/components/SignupForm.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `SignupForm` | 권한 신청(회원가입) 폼 컴포넌트 | 임직원 성명/이메일/비밀번호 + 3계층 접근권한 라디오(설명 포함) |
+
+### `features/auth/pages/AuthPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `AuthPage` | 로그인/회원가입 통합 페이지 | 좌:우 5:6 스플릿스크린. 로그인 성공 시 해당 계층 대시보드로 이동, PENDING 시 락 화면 전환. 이동은 `signIn()` 호출과 같은 핸들러에서 바로 `navigate()`하지 않고, orgTier가 실제로 커밋된 뒤 `useEffect`에서 수행한다 — 로그아웃과 같은 종류의 SPA navigate·인증 상태 경쟁을 막기 위함(Phase 8) |
+
+### `features/executive/components/CumulativeRiskKpi.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `CumulativeRiskKpi` | 누적 리스크 탐지 KPI 컴포넌트 | 이번 분기 탐지 건수/심각 등급 건수/평균 대응 소요 3박스. ⚠️ `api/types.ts`의 동명 타입 `CumulativeRiskKpi`와 이름은 같지만 별개 심볼(컴포넌트 vs 타입) — import 시 혼동 주의 |
+
+### `features/executive/components/EnterpriseRiskSummary.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `EnterpriseRiskSummary` | 전사 리스크 요약 컴포넌트 | 2계층 통계를 압축한 리스트, 상승/유지/하락 추세 표시 |
+
+### `features/executive/components/SavingsSimulation.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `SavingsSimulation` | 예산 절감 시뮬레이션 컴포넌트 | "시뮬레이션 값" 문구 필수 표기(비예측 원칙). ⚠️ `api/types.ts`의 동명 타입 `SavingsSimulation`과 이름은 같지만 별개 심볼 |
+
+### `features/executive/pages/ExecutiveDashboardPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ExecutiveDashboardPage` | 3계층 경영진 대시보드 페이지 | 상단 KPI 3박스 → 하단 좌우 분할(절감 시뮬레이션/전사 요약) |
+
+### `features/planning/components/ComparisonChart.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ComparisonChart` | 핵심 시각화 및 비교 차트 컴포넌트 | 사업부별 리스크 노출도 막대그래프(Recharts, 단일 계열) |
+
+### `features/planning/components/KpiSummaryCards.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `KpiSummaryCards` | KPI 요약 카드 컴포넌트 | `kpi_summary` 배열을 카드로 렌더링 |
+
+### `features/planning/components/VendorRiskHistory.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `VendorRiskHistory` | 협력사 리스크 이력 및 탐색 컴포넌트 | `vendor_risk_history` 리스트, 등급/신뢰도 배지 포함 |
+
+### `features/planning/pages/PlanningDashboardPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `PlanningDashboardPage` | 2계층 경영기획팀 대시보드 페이지 | 좌측 사이드바 + 단일 컬럼(KPI 카드 → 비교 차트 → 협력사 이력) |
+
+### `features/public/components/AiPriorityList.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `AiPriorityList` | AI 기반 권고 조치 리스트 컴포넌트 | 등급(심각>주의>정상) 순 정렬. `ScrollCard` 도입(리스트가 `children`) |
+
+### `features/public/components/SupplyNewsFeed.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `SupplyNewsFeed` | 실시간 뉴스 속보 컴포넌트 | risk_event 기반 최신순 뉴스 리스트. `ScrollCard` 도입(리스트가 `children`) |
+
+### `features/public/pages/PublicDashboardPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `PublicDashboardPage` | 비로그인 공개 대시보드 페이지 | 공통 `Header`(3계층 탭을 children으로 전달) + 4개 패널 2x2 그리드. 탭 클릭 시 인증 상태에 따라 대시보드 또는 /auth로 이동. Phase 8.5 전에는 `Header`를 쓰지 않고 로그인 여부와 무관하게 로그인 버튼을 무조건 노출하는 자체 상단바를 갖고 있었음(버그, qa-checklist.md A/B 계기). 2026-07-27 — 글로벌 리스크 관제 지도만 `fetchPublicRiskBoard()`(비동기, `useState`/`useEffect`)로 전환, 나머지 3개 패널은 여전히 동기 mock. 로딩 중엔 `.riskBoardLoading`(최소 텍스트)이 `GlobalRiskBoard` 대신 같은 그리드 칸에 표시됨 |
+
+### `features/purchasing/components/AlertsPanel.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `AlertsPanel` | 주요 알림 및 빠른 작업 패널 컴포넌트 | 등급 '심각' 또는 신뢰도 '경고' 항목 우선 노출(필터링은 `selectAlertEvents`, 소비처가 미리 걸러 `alerts` prop으로 전달). 2026-07-27 — `expanded`(펼침, `AlertsPanelContext`)/`isPreviewing`(접힘+호버 미리보기, 로컬) 두 상태로 분기: 펼침은 기존과 동일한 자체 sticky 패널+`useScrollOverflowHint`, 접힘은 `.wrapper`가 폭 0(SideNav 접기와 동일한 width 트랜지션), 그 상태에서 `isPreviewing`이면 상위 4개(`PREVIEW_COUNT`)를 `ScrollCard`로 감싼 `position:absolute` 오버레이가 opacity+transform으로 떠오름(항상 DOM에 렌더링해두고 클래스로만 토글 — 조건부 마운트면 등장/퇴장에 transition이 안 먹어서) |
+| `AlertItem` | 알림 목록 항목(내부 헬퍼) | 등급/신뢰도 배지+요약, 전체 목록과 미리보기 양쪽에서 재사용 |
+| `PREVIEW_COUNT` | 미리보기 표시 개수 상수(4) | design-tokens.md d항목("리스트 항목 4개 초과 시 overflow")과 일관되게 4로 고정 |
+
+### `features/purchasing/components/ErpImpactPanel.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ErpImpactPanel` | ERP 영향 자재 재고 계약 분석 패널 컴포넌트 | 재고 소진일수/대체 공급사/품질 검증 결과. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
+
+### `features/purchasing/components/ImportDependencyPanel.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ImportDependencyPanel` | 수입 의존도 도넛차트 패널 컴포넌트 | Phase 9.4 신규(데모 화면ID UX-01-DB, surin `importDependency` 이식). `ScrollCard`+`DonutChart`+범례 리스트. `DonutChart`는 고정 180x180px라 `ScrollCard` 기본 `scrollable`(true) 유지 |
+
+### `features/purchasing/components/ImportDependencyRow.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `ImportDependencyRow` | 수입 의존도+원자재 가격 추이 2컬럼 행 컴포넌트 | Phase 9.4 신규. `340px 1fr` grid(surin 비율 그대로) — `ImportDependencyPanel` + 승격된 `components/widgets/MaterialPriceDetail`. 2026-07-27 — 신설 이후 반응형 브레이크포인트가 없어(회귀 아님, 미구현) `940px`(SideNav 펼침 기준 실측) 이하에서 `1fr`(1컬럼)로 전환하는 미디어 쿼리 추가, 카드 순서(수입 의존도→원자재 가격 추이)는 그대로 유지. `docs/design-tokens.md` "카드 레이아웃·스크롤 규칙" f항(고정 px 컬럼 병렬 그리드 규칙) 신설 계기 |
+
+### `features/purchasing/components/KpiSummaryPanel.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `KpiSummaryPanel` | 상단 KPI 요약 패널 컴포넌트 | 전체/심각/주의/정상 건수 집계. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
+
+### `features/purchasing/components/MaterialRiskStatusPanel.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `MaterialRiskStatusPanel` | 원자재 공급사 리스크 현황 패널 컴포넌트 | risk_event 리스트, 등급/신뢰도 배지 포함. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
+
+### `features/purchasing/components/PurchasePriorityPanel.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `PurchasePriorityPanel` | 구매 대응 우선순위 패널 컴포넌트 | 등급·재고 소진일 기준 파생 정렬 순위 리스트. Phase 9.4에서 자체 `.panel`/`.title` 대신 `ScrollCard`로 전환 |
+
+### `features/purchasing/pages/BriefingDetailPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `BriefingDetailPage` | 1계층 브리핑 자료 열람 페이지 | Seq 24 "내부 브리핑 자료 열람 화면". `/purchasing/briefing/:riskEventId` — 계약 조항 요약/협상 포인트/산출물 메타 표시, RiskGradeBadge/ConfidenceBadge·Breadcrumb 재사용(Breadcrumb 첫 실사용). Phase 9.4부터 `SideNavToggleButton` 추가 |
+
+### `features/purchasing/pages/PurchasingDashboardPage.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `PurchasingDashboardPage` | 1계층 구매팀 대시보드 페이지 | 사이드바(+`SideNavToggleButton`) + 단일 컬럼 + 우측 알림 패널(Figma 프레임 기준). Phase 9.4에서 데모(화면ID UX-01-DB) 요약 영역을 기존 4단 패널 위에 추가(`GlobalRiskBoard` → `ImportDependencyRow`). 2026-08-03 — `MaterialRiskOverviewSection`은 제거하고 게이지만 `MaterialRiskGaugeGrid`(원자재별 리스크 점수 표 아래 접기)로 옮김. 2026-07-27 — `selectAlertEvents`로 알림 필터링 후 `Header`의 `accountExtra`(`AlertsBellButton`)와 `AlertsPanel` 양쪽에 전달, hover 미리보기 디바운스(`PREVIEW_CLOSE_DELAY_MS`=150ms)+ESC 닫기 로컬 상태 관리 |
+| `PREVIEW_CLOSE_DELAY_MS` | 알림 미리보기 닫힘 디바운스(150ms) | 트리거(헤더 벨)·콘텐츠(AlertsPanel)가 화면상 떨어져 있어 둘 다 벗어난 뒤 이 시간만큼 지나야 닫힘 |
+
+### `lib/AuthContext.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `AuthContextValue` | 인증 Context 값 타입 | orgTier/이메일/signIn/signOut — 이메일(email)은 Phase 8에서 Header 계정 정보 표시용으로 추가 |
+| `AuthContext` | 인증 Context 객체 | `AuthProvider`/`useAuthState`가 공유하는 React Context |
+
+### `lib/AuthProvider.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `AuthProvider` | 인증 상태 Provider 컴포넌트 | 로그인 성공 시 orgTier와 이메일을 메모리에만 저장(localStorage 미사용, 새로고침 시 소실) |
+
+### `lib/dashboardPaths.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `DASHBOARD_PATH_BY_TIER` | org_tier별 대시보드 경로 매핑 상수 | `AuthPage`(로그인 성공 후 이동)와 `app/routes.tsx`의 `RequireAuth`(계층 불일치 리다이렉트)가 공용으로 참조(Phase 8) |
+
+### `lib/riskEventId.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `parseRiskEventDate` | risk_event_id 날짜 파싱 함수 | `'RISK-YYYY-MMDD-NNN'` → `'YYYY-MM-DD'` |
+
+### `lib/AlertsPanelContext.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `AlertsPanelContextValue` | AlertsPanel Context 값 타입 | 2026-07-27 신규. `expanded`(펼침 여부)/`toggle`(토글 함수) — `SideNavContextValue`와 동일 형태 |
+| `AlertsPanelContext` | AlertsPanel Context 객체 | `AlertsPanelProvider`/`useAlertsPanelState`가 공유하는 React Context — `SideNavContext`와 동일 패턴 |
+
+### `lib/AlertsPanelProvider.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `DEFAULT_ALERTS_EXPANDED` | AlertsPanel 기본 펼침 상태 상수(`true`) | 이 값 하나만 바꾸면 기본 동작(펼침/접힘)이 전체적으로 뒤집힌다(하드코딩 대신 이름 붙은 상수로 한 곳에 선언) |
+| `AlertsPanelProvider` | AlertsPanel 펼침/접힘 상태 Provider 컴포넌트 | 2026-07-27 신규. `App.tsx`에서 `SideNavProvider` 안·`AppRoutes` 바깥에 래핑 — 지금은 `PurchasingDashboardPage` 하나만 쓰지만 페이지 이동(예: 브리핑 상세) 간에도 펼침 상태 유지가 필요해 `SideNavContext`와 동일하게 앱 최상위에 둠(실측: Purchasing→브리핑 상세→뒤로가기 왕복에서 유지 확인) |
+
+### `lib/useAlertsPanelState.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `useAlertsPanelState` | AlertsPanel 펼침/접힘 상태 접근 훅 | 2026-07-27 신규. `AlertsPanelProvider` 내부에서 `expanded`/`toggle` 제공, 범위 밖 사용 시 예외 발생(`useSideNavState`와 동일 패턴) |
+
+### `lib/selectAlertEvents.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `selectAlertEvents` | 알림 대상 risk_event 필터 함수 | 2026-07-27 신규, `AlertsPanel.tsx`에서 분리(react-refresh 규칙 — 컴포넌트 파일은 컴포넌트만 export). 등급 '심각' 또는 신뢰도 '경고'인 이벤트만 남김. `PurchasingDashboardPage`가 한 번 계산해 `AlertsPanel`(전체 목록)과 `AlertsBellButton`(배지 숫자, `alerts.length`) 양쪽에 내려줌 |
+
+### `lib/SideNavContext.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `SideNavContextValue` | SideNav Context 값 타입 | Phase 9.4 신규. `collapsed`(접힘 여부)/`toggle`(토글 함수) |
+| `SideNavContext` | SideNav Context 객체 | `SideNavProvider`/`useSideNavState`가 공유하는 React Context — `AuthContext.ts`와 동일 패턴 |
+
+### `lib/SideNavProvider.tsx`
+| physical | logical | 역할 |
+|---|---|---|
+| `SideNavProvider` | SideNav 접기/펼치기 상태 Provider 컴포넌트 | Phase 9.4 신규. `App.tsx`에서 `AuthProvider` 안·`AppRoutes` 바깥에 래핑 — Purchasing/BriefingDetail/Planning 3개 페이지가 공유해 페이지 이동 간에도 접힘 상태 유지 |
+
+### `lib/tierLabels.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `TIER_LABEL` | org_tier별 한글 라벨 매핑 상수 | `Header`(계정 정보 표시)와 `app/routes.tsx`의 `RequireAuth`(계층 불일치 모달 메시지)가 공용으로 참조(Phase 8.5) — 이전엔 `Header.tsx`에 로컬 상수로 중복 정의돼 있었음 |
+
+### `lib/useAuthState.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `useAuthState` | 인증 상태 접근 훅 | `AuthProvider` 내부에서 orgTier/이메일/signIn/signOut 제공, 범위 밖 사용 시 예외 발생 |
+
+### `lib/useScrollOverflowHint.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `ScrollOverflowHint` | 스크롤 오버플로 힌트 타입 | `hasOverflowTop`/`hasOverflowBottom` — 필드명은 축과 무관하게 고정, 세로축은 위/아래, 가로축은 왼쪽/오른쪽으로 의미 해석 |
+| `ScrollOverflowAxis` | 스크롤 오버플로 판단 축 타입 | `'vertical'`(기본) \| `'horizontal'`(자재 카드 가로 스크롤, 2026-07-27 신규) |
+| `useScrollOverflowHint` | 스크롤 오버플로 힌트 감지 훅 | scroll 이벤트+`ResizeObserver`로 실제 오버플로·스크롤 위치 감지(`ScrollCard`/`SideNav`/`DashboardSidePanel`이 세로축으로 재사용. 가로축 소비처였던 `MaterialRiskOverviewRow`/`MaterialRiskOverviewSection`은 2026-08-03에 제거됐다) |
+
+### `lib/useHoverDisclosure.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `HoverDisclosure<T>` | 2단계 hover 디스클로저 상태 타입 | `hovered`(어느 트리거가 호버됐는지, 제네릭)+`expanded`(2단계 확장 여부)+`openHover`/`expandHover`/`closeHover` |
+| `useHoverDisclosure` | 2단계 hover 디스클로저 상태 훅 | 순수 CSS `:hover` 대신 상태로 열림/확장/닫힘을 관리 — 트리거+콘텐츠를 하나의 컨테이너로 감싸고 컨테이너에만 `onMouseLeave`를 걸면(개별 트리거는 `onMouseEnter`만) DOM 포함 관계상 트리거→콘텐츠 이동 중엔 안 닫힘(WCAG 1.4.13 hoverable), `Escape`로도 닫힘(dismissible). `PageSectionDots`에서 처음 사용(2026-07-27) |
+
+### `lib/useSideNavState.ts`
+| physical | logical | 역할 |
+|---|---|---|
+| `useSideNavState` | SideNav 접기/펼치기 상태 접근 훅 | Phase 9.4 신규. `SideNavProvider` 내부에서 `collapsed`/`toggle` 제공, 범위 밖 사용 시 예외 발생 |

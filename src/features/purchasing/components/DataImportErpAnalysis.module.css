@@ -1,0 +1,339 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.headerNote {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.statRow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.statLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.statValue {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.statSuffix {
+  margin-left: 2px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+/* 반영 가능 여부는 숫자가 아니라 판정이다. 숫자 칸과 같은 크기로 두면 눈에 들어오지 않는다. */
+.committableYes,
+.committableNo {
+  align-self: flex-start;
+  padding: 2px var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  border-radius: var(--radius-sm);
+}
+
+.committableYes {
+  color: var(--color-risk-normal);
+  background: rgb(42 174 138 / 12%);
+}
+
+.committableNo {
+  color: var(--color-risk-critical);
+  background: rgb(217 58 63 / 12%);
+}
+
+.normal {
+  color: var(--color-risk-normal);
+}
+
+.warning {
+  color: var(--color-risk-warning);
+}
+
+.critical {
+  color: var(--color-risk-critical);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+/* 표는 컬럼이 많아 좁은 화면에서 넘친다. 페이지 대신 표만 가로로 스크롤한다. */
+.tableScroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  font-size: var(--font-size-sm);
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.table th {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table td {
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.selectedRow td {
+  background: var(--color-bg);
+}
+
+.fileNameCell {
+  font-weight: var(--font-weight-medium);
+}
+
+.unknown {
+  color: var(--color-risk-critical);
+}
+
+.linkButton {
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.badgeSUCCESS,
+.badgeWARNING,
+.badgeERROR {
+  display: inline-block;
+  padding: 1px var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-sm);
+}
+
+.badgeSUCCESS {
+  color: var(--color-risk-normal);
+  background: rgb(42 174 138 / 12%);
+}
+
+.badgeWARNING {
+  color: var(--color-risk-warning);
+  background: rgb(240 147 63 / 14%);
+}
+
+.badgeERROR {
+  color: var(--color-risk-critical);
+  background: rgb(217 58 63 / 12%);
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.detailHeader {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detailHeading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.detailTarget {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.detailNote {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.filter {
+  padding: var(--space-1) var(--space-3);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.filter:hover {
+  background: var(--color-bg);
+}
+
+.filterActive {
+  composes: filter;
+  color: var(--color-surface);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.filterActive:hover {
+  background: var(--color-primary);
+}
+
+.search {
+  min-width: 160px;
+  padding: var(--space-1) var(--space-3);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.issueERROR,
+.issueWARNING,
+.issueDUPLICATE {
+  display: inline-block;
+  padding: 1px var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-sm);
+}
+
+.issueERROR {
+  color: var(--color-risk-critical);
+  background: rgb(217 58 63 / 12%);
+}
+
+.issueWARNING {
+  color: var(--color-risk-warning);
+  background: rgb(240 147 63 / 14%);
+}
+
+/* 중복은 고쳐야 할 오류라기보다 알려주는 사실이다. 경고와 같은 색이면 위급해 보인다. */
+.issueDUPLICATE {
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+}
+
+.pager {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: center;
+}
+
+.pagerButton {
+  padding: var(--space-1) var(--space-4);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.pagerButton:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pagerLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 960px) {
+  .statRow {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .statRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

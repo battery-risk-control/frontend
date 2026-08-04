@@ -1,0 +1,154 @@
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+  flex-shrink: 0;
+  width: 40px;
+  align-self: flex-start;
+  padding: var(--space-2) 0;
+}
+
+.railWithAside {
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-6)); /* sticky Header와 겹치지 않도록 그 아래에서부터 고정 */
+}
+
+.railStandalone {
+  position: sticky;
+  top: 50%;
+  transform: translateY(-50%);
+  align-self: flex-end;
+}
+
+.dots {
+  display: flex;
+  flex-direction: column;
+  /* var(--space-2)(8px)였으나, 0dd37cd에서 .dot을 display:block으로 바꿔 li 높이가
+     8px로 줄어든 부수 효과로 도트 간격이 27px(19+8)→16px(8+8)로 좁아져 2단계 hover 시
+     24px 고정 높이 배지 8개가 서로 8px씩 겹치는 회귀가 발생했다(실측 확인). li 높이(=도트
+     정렬 기준, 0dd37cd의 목적)는 8px로 그대로 두고 간격만 여기서 별도로 늘려 겹침을
+     해소한다 — 8+24=32px 간격이면 배지끼리도 32-24=8px 여유가 생긴다. */
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dot {
+  /* button의 기본 display:inline-block이 인라인 서식 문맥을 만들어, 부모 <li>의 렌더링
+     높이가 이 버튼 자체의 8px이 아니라 상속된 line-height(16px 폰트 기준 약 19px)로
+     부풀려지고, 버튼도 그 안에서 기본 vertical-align:baseline으로 배치돼 li 중앙과도
+     어긋난다(실측 확인 — hoverPanel 정렬 버그의 근본 원인). display:block으로 이 인라인
+     서식 문맥 자체를 없애 li 높이가 정확히 이 버튼의 8px과 일치하게 한다. */
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  background: var(--color-border);
+  cursor: pointer;
+  transition: background var(--transition-fast) ease, transform var(--transition-fast) ease;
+}
+
+.dot:hover {
+  background: var(--color-text-muted);
+}
+
+.dotActive {
+  background: var(--color-primary);
+  transform: scale(1.3);
+}
+
+.dotItem {
+  position: relative;
+}
+
+/* hover 툴팁 팝오버 — 각 li가 자기 자신의 배지 1개만 렌더링한다(8개를 한 리스트로 묶어
+   "현재 호버 중인 도트 하나"에 앵커링하지 않는다 — 그러면 배지 간격이 실제 도트 간격과
+   어긋나고 항상 호버 중인 도트 근처에 뭉쳐 보인다, 실측 확인). 각 li가 이미 실제 도트와
+   동일한 위치(같은 <ul>, 같은 gap)에 있어 배지도 별도 계산 없이 도트 간격을 그대로
+   물려받는다. "확장"은 한 배지가 커지는 게 아니라 여러 배지가 동시에 나타나는 방식이라
+   배지 높이가 항상 고정이고, 그래서 max-height 트랜지션이 필요 없다 — opacity+transform만
+   쓴다. right:100%로 트리거(li)에 맞닿게 배치하고, 여백은 margin이 아니라 padding-right로
+   준다 — margin이면 트리거-팝오버 사이에 아무 요소도 없는 빈 공간이 생겨 그 위를 지날 때
+   mouseleave로 오인돼 닫힐 수 있다(패딩은 이 요소 자신의 hit box라 안전). 항상 DOM에
+   렌더링해두고 opacity+pointer-events로만 켜고 끈다(조건부 마운트면 등장/퇴장에 transition이
+   안 먹는다 — "from" 상태가 없어서).
+   top은 li 상단 기준 고정 px 오프셋(예: -8px) 대신 `top:50%; transform:translateY(-50%)`
+   (li 중앙 기준 퍼센트 정렬)를 쓴다 — li 높이가 `.dot`의 `display:block` 덕분에 정확히
+   도트 자체의 8px과 같아졌으므로(위 `.dot` 주석 참고), li 중앙 = 도트 중앙이 구조적으로
+   보장된다. 예전에는 이 자리에 퍼센트 중앙 정렬을 쓰면 배지가 500px까지 확장될 때 그
+   절반만큼 위로도 자라 목록 맨 위쪽 도트에서 sticky Header 뒤로 가려지는 문제가 있어(당시
+   실측 확인) 고정 px 오프셋으로 바꿨었지만, 지금은 배지 높이가 24px 고정이라(리스트 전체가
+   아니라 배지 1개만 렌더링, 5566491) 그 문제가 재발하지 않는다 — 반경 12px 이내의 확장이라
+   Header를 침범하지 않는다(실측 확인). */
+.hoverPanel {
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  transform: translateY(-50%) translateX(4px);
+  padding-right: var(--space-2);
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--transition-fast) ease,
+    transform var(--transition-fast) ease;
+}
+
+.hoverPanelVisible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) translateX(0);
+}
+
+.hoverPill {
+  display: block;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.hoverPillCurrent {
+  background: var(--color-confidence-confirmed);
+  border-color: var(--color-confidence-confirmed);
+  color: var(--color-surface);
+}
+
+.remote {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.remoteButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.remoteButton:hover:not(:disabled) {
+  background: var(--color-bg);
+  color: var(--color-primary);
+}
+
+.remoteButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

@@ -1,0 +1,147 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.target {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.headerNote {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.missingCount {
+  color: var(--color-risk-critical);
+}
+
+.missingNote {
+  margin: 0;
+  padding: var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-risk-critical);
+  background: rgb(217 58 63 / 8%);
+  border-radius: var(--radius-sm);
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  font-size: var(--font-size-sm);
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.table th {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table td {
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.sourceCell {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--font-size-xs);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.sampleCell {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mappingMAPPED,
+.mappingIGNORED,
+.mappingMISSING,
+.requiredTag {
+  display: inline-block;
+  padding: 1px var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-sm);
+}
+
+.mappingMAPPED {
+  color: var(--color-risk-normal);
+  background: rgb(42 174 138 / 12%);
+}
+
+.mappingIGNORED {
+  color: var(--color-risk-warning);
+  background: rgb(240 147 63 / 14%);
+}
+
+.mappingMISSING,
+.requiredTag {
+  color: var(--color-risk-critical);
+  background: rgb(217 58 63 / 12%);
+}
+
+/* 미리보기는 기본으로 접어둔다 — 매핑을 확인하러 온 화면에서 원본 표가 먼저 눈에 들어오면
+   정작 봐야 할 매핑 상태가 아래로 밀린다. */
+.sample {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.sampleSummary {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

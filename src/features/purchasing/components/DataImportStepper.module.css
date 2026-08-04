@@ -1,0 +1,79 @@
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 0;
+  padding: var(--space-4);
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.step {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* 마지막 항목은 연결선이 없으므로 남는 폭을 차지하지 않게 한다. */
+.step:last-child {
+  flex: 0 0 auto;
+}
+
+.marker {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  border-radius: 50%;
+}
+
+.active {
+  color: var(--color-surface);
+  background: var(--color-primary);
+}
+
+.done {
+  color: var(--color-surface);
+  background: var(--color-risk-normal);
+}
+
+.todo {
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.labelTodo {
+  composes: label;
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.connector {
+  flex: 1;
+  min-width: var(--space-4);
+  margin: 0 var(--space-3);
+  border-top: 1px dashed var(--color-border);
+}
+
+@media (max-width: 720px) {
+  /* 좁은 화면에서는 라벨을 접고 번호만 남긴다 — 줄바꿈되면 단계 순서가 읽히지 않는다. */
+  .label,
+  .labelTodo {
+    display: none;
+  }
+}

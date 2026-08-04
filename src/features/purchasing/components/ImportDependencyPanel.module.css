@@ -1,0 +1,54 @@
+.body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.legend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+}
+
+.legendLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legendValue {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+/* 비로그인 화면용 흐림. 시각적 구분일 뿐 보안 장치가 아니다 — 값은 응답에 그대로 들어 있다.
+   드래그로 텍스트를 긁어 읽는 것만은 막아 "가려져 있다"는 의도가 분명해지게 한다. */
+.blurred {
+  filter: blur(5px);
+  user-select: none;
+  pointer-events: none;
+}
+
+.footnote {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}

@@ -1,0 +1,95 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  /* PageSectionDots의 scrollIntoView가 sticky Header에 가리지 않는 위치로 이동하도록 —
+     대상은 heading(.title)이 아니라 이 섹션 컨테이너 자체여야 한다. heading에 걸면 heading
+     자체는 헤더 아래로 정확히 오지만, heading 위쪽 이 .panel의 padding(space-4)만큼 카드
+     테두리/배경이 헤더 뒤로 말려들어간다(실측 확인) — .panel 자체에 걸면 카드 테두리부터
+     정확히 헤더 아래에 위치한다. header-height와 이 padding은 서로 다른 여백이라 더하지
+     않는다(이중 계산 없음). */
+  scroll-margin-top: var(--header-height);
+}
+
+.fillHeight {
+  height: 100%;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+.caption {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.bodyWrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin-top: var(--space-3);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.noScroll {
+  overflow: visible;
+}
+
+.overflowHint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 40px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: var(--space-1);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, var(--color-surface) 75%);
+  pointer-events: none;
+}
+
+.overflowArrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.footer {
+  flex-shrink: 0;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}

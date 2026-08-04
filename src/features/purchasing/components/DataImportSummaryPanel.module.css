@@ -1,0 +1,340 @@
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.cardHeading {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.totalLabel {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.totalValue {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.totalUnit {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.summaryList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.summaryItem {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+}
+
+.summaryLabel {
+  color: var(--color-text-muted);
+}
+
+.summaryCount {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  text-align: right;
+  word-break: break-all;
+}
+
+.score {
+  display: flex;
+  gap: var(--space-1);
+  align-items: baseline;
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.scoreMax {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.scoreNormal {
+  color: var(--color-risk-normal);
+}
+
+.scoreWarning {
+  color: var(--color-risk-warning);
+}
+
+.scoreCritical {
+  color: var(--color-risk-critical);
+}
+
+/*
+ * 점수 옆 등급 배지. 92라는 숫자를 읽고 "이게 좋은 건가"를 따로 판단하지 않아도 되게 한다.
+ * 배경은 점수 색을 흰색에 섞어 만들어, 팔레트가 바뀌면 배지도 따라 바뀐다.
+ * 라벨과 색은 `scoreBand()` 한 곳에서 함께 정해지므로 여기서 임계값을 다시 쓰지 않는다.
+ */
+.badgeNormal,
+.badgeWarning,
+.badgeCritical {
+  margin-left: auto;
+  padding: 2px var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-sm);
+}
+
+.badgeNormal {
+  color: var(--color-risk-normal);
+  background: color-mix(in srgb, var(--color-risk-normal) 14%, var(--color-surface));
+}
+
+.badgeWarning {
+  color: var(--color-risk-warning);
+  background: color-mix(in srgb, var(--color-risk-warning) 16%, var(--color-surface));
+}
+
+.badgeCritical {
+  color: var(--color-risk-critical);
+  background: color-mix(in srgb, var(--color-risk-critical) 14%, var(--color-surface));
+}
+
+.scoreBar {
+  height: 6px;
+  overflow: hidden;
+  background: var(--color-bg);
+  border-radius: 999px;
+}
+
+/*
+ * 채움 색은 점수 등급을 따라간다(`scoreBand()`). 예전에는 --color-primary 고정이라, 점수가
+ * 71(주황)인데 막대만 남색이었다 — 같은 값을 두 색으로 그리면 어느 쪽이 뜻인지 알 수 없다.
+ */
+.scoreFill {
+  height: 100%;
+}
+
+.fillNormal {
+  background: var(--color-risk-normal);
+}
+
+.fillWarning {
+  background: var(--color-risk-warning);
+}
+
+.fillCritical {
+  background: var(--color-risk-critical);
+}
+
+.issueSummary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.issueSummaryRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.warning {
+  color: var(--color-risk-warning);
+}
+
+.critical {
+  color: var(--color-risk-critical);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.commitButton {
+  padding: var(--space-3);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-surface);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.commitButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.blockedNote {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-risk-warning);
+}
+
+/* 되돌릴 수 없다는 사실은 버튼 아래에 항상 둔다 — 누르기 직전에 읽히는 자리다. */
+.warnNote {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.resultHeading {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-risk-normal);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-risk-critical);
+}
+
+/* 최종 판정 — 점수 카드 맨 아래에서 "그래서 반영해도 되는가"에 한 줄로 답한다. */
+.verdictOk,
+.verdictBlocked {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+  border-radius: var(--radius-sm);
+}
+
+.verdictOk {
+  color: var(--color-risk-normal);
+  background: rgb(42 174 138 / 12%);
+}
+
+.verdictBlocked {
+  color: var(--color-risk-critical);
+  background: rgb(217 58 63 / 12%);
+}
+
+.secondaryButton {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.secondaryButton:hover:not(:disabled) {
+  background: var(--color-bg);
+}
+
+.secondaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* 거부는 파괴적이지 않다(DB를 건드리지 않는다). 그래서 빨간 채움 대신 테두리로만 구분한다 —
+   꽉 찬 빨강은 "데이터가 지워진다"는 신호로 읽힌다. */
+.rejectButton {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-risk-critical);
+  background: var(--color-surface);
+  border: 1px solid var(--color-risk-critical);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.rejectButton:hover:not(:disabled) {
+  background: rgb(217 58 63 / 8%);
+}
+
+.rejectButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* KG 경고는 반영 성공 안에 들어가는 부분 실패다. 카드 전체를 빨갛게 만들지 않는다. */
+.kgWarning {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: rgb(240 147 63 / 10%);
+  border-left: 3px solid var(--color-risk-warning);
+  border-radius: var(--radius-sm);
+}
+
+.kgWarningTitle {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-risk-warning);
+}
+
+.kgWarningBody {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+.kgWarningReason {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  word-break: break-all;
+}
+
+.kgOk {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-risk-normal);
+}

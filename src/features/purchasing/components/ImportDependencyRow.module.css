@@ -1,0 +1,15 @@
+.row {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: var(--space-6);
+}
+
+/* 고정 340px 컬럼은 부모(.main)가 좁아져도 줄어들지 않아, 그 폭을 확보할 수 없는 뷰포트에서
+   페이지 전체에 가로 스크롤바가 생기는 실측 확인(940px 이하, SideNav 펼침 기준) — 이 폭
+   이하에서는 1컬럼(직렬)로 전환한다. 카드 순서(수입 의존도 → 원자재 가격 추이)는 그대로
+   유지(위→아래로만 쌓임). design-tokens.md "카드 레이아웃·스크롤 규칙" f항 참고. */
+@media (max-width: 940px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}

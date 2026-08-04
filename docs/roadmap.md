@@ -215,6 +215,19 @@
     9/9 PASS, `git diff --stat -- src/features/purchasing/` 완전히 빈 결과(이 기능 자체가
     `/purchasing`엔 없어 충돌 여지가 구조적으로 없음). 상세는 `docs/mock-schemas.md` 10번
     섹션 F 항목 참고.
+  - [x] main 자체 수정 동기화(A~H 배치 밖 보정, 2026-08-05): 3차 배치(F) 이후
+    `origin/main`이 별도로 진행되며(`feat/public-tier`가 main 조상 이력에서 빠짐) 자체적으로
+    얹은 수정 중 `/public/*`와 실질적으로 겹치는 2건을 전수 조사(`git diff`/`git log
+    --not`/`git show`)로 찾아 이식. `MaterialPriceDetail.tsx`에 `isAnimationActive={false}`
+    (main `ee69ebe` 이식, 툴팁 지연 버그 수정). `/public/*`에 남아있던
+    `react-hooks/set-state-in-effect` eslint-disable 5건(1차 3건+2차 2건)을 main `bb08fb9`와
+    같은 "렌더 중 조정" 패턴(React 공식 "Storing information from previous renders")으로
+    재작성해 전부 제거 — `DashboardSidePanel.tsx`(`selectedNews`/`focusAlertsToken`),
+    `PublicDashboardPage.tsx`(`period`/`newsPage`/`accessToken`+`reloadKey` 인증 7종).
+    검증: typecheck/lint(신규 disable 0건)/build 통과, Playwright 12/13 PASS(1건은 mock
+    모드 `fetchPublicNewsFeedCount()`가 항상 0을 반환해 페이징 버튼이 애초에 안 뜨는 기존
+    설계상 정상 동작, 테스트 스크립트 오류이지 회귀 아님), `git diff --stat --
+    src/features/purchasing/` 빈 결과. 상세는 `docs/mock-schemas.md` 10번 섹션 참고.
   - [ ] 4차 배치(H): `AiBriefingPage`/`ContractRagPage`/`MaterialRiskPage`/`RiskMonitoringPage`
     추가 기능(필터·페이징·PDF 다운로드 등), `fetchRecentAiBriefings` 페이징 계약 브레이킹
     체인지 흡수.

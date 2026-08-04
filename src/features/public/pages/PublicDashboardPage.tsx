@@ -219,6 +219,47 @@ export function PublicDashboardPage() {
   // 우측 "뉴스 상세" 탭이 보여줄 항목. 두 곳에서 선택된다 — 최신 뉴스 목록과 위험 지도 마커.
   const [selectedNews, setSelectedNews] = useState<SelectedArticle | null>(null)
 
+  /*
+   * 조회 조건이 바뀌면 자리표시자를 다시 켠다 — effect가 아니라 렌더 중에 직전 값과
+   * 비교한다("props가 바뀔 때 state 조정"의 표준 패턴).
+   *
+   * 로딩 상태의 초기값은 전부 `true`라 첫 조회는 이미 자리표시자로 시작한다. 여기서 다루는
+   * 건 재조회다. 이게 없으면 기간 탭을 눌러도 이전 구간 차트가 그대로 떠 있고, 뉴스
+   * 페이지를 넘겨도 이전 목록이 남아 "안 먹는다"처럼 보인다.
+   *
+   * effect에서 setState하면 화면이 한 번 그려진 뒤 다시 그려지는 연쇄 렌더가 되고
+   * (react-hooks/set-state-in-effect), 그 사이 한 프레임 동안 옛 데이터가 "로딩 아님"으로
+   * 보인다. 렌더 중 조정은 React가 그 자리에서 다시 렌더해 중간 상태가 화면에 나가지 않는다.
+   */
+  const [prevPeriod, setPrevPeriod] = useState(period)
+  if (period !== prevPeriod) {
+    setPrevPeriod(period)
+    setPriceLoading(true)
+  }
+
+  const [prevNewsPage, setPrevNewsPage] = useState(newsPage)
+  if (newsPage !== prevNewsPage) {
+    setPrevNewsPage(newsPage)
+    setNewsLoading(true)
+  }
+
+  // 인증 조회 묶음은 "대응 완료/되돌리기"(reloadKey)와 토큰 교체에 함께 반응한다 — 한쪽만
+  // 갱신하면 KPI 건수와 표가 어긋난 채로 남는다.
+  const authQueryKey = `${accessToken ?? ''}|${reloadKey}`
+  const [prevAuthQueryKey, setPrevAuthQueryKey] = useState(authQueryKey)
+  if (authQueryKey !== prevAuthQueryKey) {
+    setPrevAuthQueryKey(authQueryKey)
+    setKpiLoading(true)
+    setMaterialRiskLoading(true)
+    setSupplierLoading(true)
+    setMaterialsLoading(true)
+    setBriefingsLoading(true)
+    setAcknowledgedLoading(true)
+    // 알림은 1분 폴링이 따로 돌지만, 자리표시자는 첫 조회와 재조회에서만 띄운다
+    // (폴링 중에 자리표시자로 바뀌면 읽던 알림이 사라진다).
+    setAlertsLoading(true)
+  }
+
   // 주요 알림은 두 원천이 섞인다 — 멀티에이전트 판정이 심각·주의인 뉴스 + 변동성이 큰 자재(정보).
   const alerts = buildDashboardAlerts(monitoringEvents, priceSeries, priceSummaries)
 
@@ -270,11 +311,7 @@ export function PublicDashboardPage() {
   // 가격 차트·요약 카드만 기간 탭에 반응한다.
   useEffect(() => {
     let cancelled = false
-    // 기간 탭을 바꾸면 다시 불러오므로 로딩을 되켠다 — 초기값 true만으로는 첫 조회에만
-    // 자리표시자가 뜨고, 이후 재조회는 이전 구간 데이터를 띄운 채로 조용히 바뀐다. 탭을
-    // 누른 즉시 자리표시자가 보여야 하므로 fetch 시작 전 동기 호출이 의도된 것이다.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- 재조회 시작을 알리는 동기 리셋(의도됨)
-    setPriceLoading(true)
+    // 자리표시자는 위쪽 렌더 중 조정(prevPeriod 비교)에서 이미 켰다.
     const days = PERIOD_DAYS[period]
     fetchPublicPriceTrends(days)
       .then((series) => {
@@ -301,10 +338,7 @@ export function PublicDashboardPage() {
   // 뉴스 목록은 페이지가 바뀔 때마다 다시 부른다.
   useEffect(() => {
     let cancelled = false
-    // 화살표로 페이지를 넘길 때마다 다시 불러오므로 로딩을 되켠다 — 이게 없으면 첫 조회
-    // 이후로는 자리표시자가 영영 안 뜨고, 넘긴 뒤에도 이전 페이지 목록이 그대로 남는다.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- 재조회 시작을 알리는 동기 리셋(의도됨)
-    setNewsLoading(true)
+    // 자리표시자는 위쪽 렌더 중 조정(prevNewsPage 비교)에서 이미 켰다.
     fetchPublicNewsFeed(NEWS_FEED_PAGE_SIZE, newsPage * NEWS_FEED_PAGE_SIZE)
       .then((items) => {
         if (cancelled) return
@@ -328,15 +362,7 @@ export function PublicDashboardPage() {
   // 위 컴포넌트 주석 "원본과의 차이" 참고).
   useEffect(() => {
     let cancelled = false
-    // "대응 완료" 후 reloadKey로 다시 부를 때도 자리표시자가 떠야 한다.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- 재조회 시작을 알리는 동기 리셋(의도됨)
-    setKpiLoading(true)
-    setMaterialRiskLoading(true)
-    setSupplierLoading(true)
-    setMaterialsLoading(true)
-    setAlertsLoading(true)
-    setBriefingsLoading(true)
-    setAcknowledgedLoading(true)
+    // 자리표시자는 위쪽 렌더 중 조정(authQueryKey 비교)에서 이미 켰다.
     fetchPurchasingKpiSummary(accessToken)
       .then((summary) => {
         if (!cancelled) setKpi(summary)

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
@@ -274,35 +274,40 @@ export function DashboardSidePanel({
   const [activeTab, setActiveTab] = useState<TabId>('news')
 
   /*
-   * 기사를 고르면 "뉴스 상세"로 돌아온다.
+   * 부모가 보낸 신호에 맞춰 탭을 옮긴다 — effect가 아니라 렌더 중에 직전 값과 비교한다
+   * ("props가 바뀔 때 state 조정"의 표준 패턴, React 문서 "Storing information from
+   * previous renders" 참고). effect에서 하면 탭이 한 번 잘못 그려진 뒤 다시 그려지고
+   * (react-hooks/set-state-in-effect에 걸린다), 렌더 중 조정은 React가 그 자리에서 다시
+   * 렌더해 중간 상태가 화면에 나가지 않는다.
    *
-   * 브리핑 탭을 보던 중에 아래 "최신 뉴스"나 위험 지도에서 기사를 눌러도 탭이 그대로라,
-   * 클릭이 먹지 않은 것처럼 보였다 — 선택은 바뀌었는데 화면은 계속 브리핑 목록이었다.
+   * 두 가지 전환이 있다.
+   *   1. 기사를 고르면 "뉴스 상세"로 돌아온다. 브리핑 탭을 보던 중에 "최신 뉴스"나 위험
+   *      지도에서 기사를 눌러도 탭이 그대로라 클릭이 먹지 않은 것처럼 보였다.
+   *      id가 아니라 객체 참조를 본다 — 부모가 클릭할 때마다 fromNewsFeedItem/
+   *      fromRiskBoardItem으로 새 객체를 만들어 넣으므로 같은 기사를 다시 눌러도 탭이
+   *      돌아오고, 목록이 주기적으로 갱신돼도 참조는 그대로라 브리핑 탭을 보는 중에
+   *      끌려가지 않는다.
+   *   2. 헤더 알림 벨을 누르면 "주요 알림"으로 옮긴다. 벨을 눌렀는데 뉴스 상세가 열리면
+   *      트리거와 결과가 어긋난다.
    *
-   * id가 아니라 객체 참조를 본다. 부모가 클릭할 때마다 fromNewsFeedItem/fromRiskBoardItem으로
-   * 새 객체를 만들어 넣으므로, 같은 기사를 다시 눌러도 탭이 돌아온다. 목록이 주기적으로
-   * 갱신돼도 참조는 그대로라 사용자가 브리핑 탭을 보는 중에 끌려가지 않는다.
+   * 알림 검사를 뉴스 검사보다 뒤에 둔다. 둘이 같은 렌더에서 함께 바뀌면 나중 것이 이기는데,
+   * 벨을 누른 의도가 더 최근이다(예전 effect 두 개의 선언 순서와 같은 규칙).
    */
-  useEffect(() => {
+  const [prevSelectedNews, setPrevSelectedNews] = useState(selectedNews)
+  if (selectedNews !== prevSelectedNews) {
+    setPrevSelectedNews(selectedNews)
     if (selectedNews) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- 선택 변경을 알리는 동기 탭 전환(의도됨)
       setActiveTab('news')
     }
-  }, [selectedNews])
+  }
 
-  /*
-   * 헤더 알림 벨을 누르면 "주요 알림" 탭으로 옮긴다.
-   *
-   * 벨을 눌렀는데 뉴스 상세 탭이 열리면 트리거와 결과가 어긋난다 — 호버 미리보기에 알림 탭
-   * 내용만 띄우는 것과 같은 이유다. 위 selectedNews effect보다 <b>뒤에</b> 선언해야 한다.
-   * 두 effect가 같은 렌더에서 함께 돌 때 나중 것이 이기는데, 벨을 누른 의도가 더 최근이다.
-   */
-  useEffect(() => {
+  const [prevFocusAlertsToken, setPrevFocusAlertsToken] = useState(focusAlertsToken)
+  if (focusAlertsToken !== prevFocusAlertsToken) {
+    setPrevFocusAlertsToken(focusAlertsToken)
     if (focusAlertsToken > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- 벨 클릭을 알리는 동기 탭 전환(의도됨)
       setActiveTab('alerts')
     }
-  }, [focusAlertsToken])
+  }
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const { hasOverflowTop, hasOverflowBottom } = useScrollOverflowHint(scrollRef, expanded)

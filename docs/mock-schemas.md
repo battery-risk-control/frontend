@@ -530,6 +530,41 @@ tier1처럼 삭제하면 그 화면이 깨진다. 대신 이 비로그인 대시
 
 **여전히 반영하지 않은 것**: G(데이터 관리 화면)/H(4화면 추가 기능).
 
+### origin/main 자체 수정 동기화 — A~H 배치 밖 보정 (2026-08-05)
+
+3차 배치(F) 이후 `origin/main`이 우리 병합 이력 없이 별도로 진행돼(`feat/public-tier`가
+main 조상 이력에서 빠짐), main이 자체적으로 얹은 수정 중 `/public/*`에 실질적으로 겹치는
+2건을 전수 조사(`git diff`/`git log --not`/`git show`)로 찾아 이식했다.
+
+- **`MaterialPriceDetail.tsx`** — main 커밋 `ee69ebe`("차트 툴팁 지연 애니메이션 제거")를
+  그대로 이식: `<Tooltip>`에 `isAnimationActive={false}` 한 줄 추가. recharts 기본 400ms
+  이징 트랜지션 때문에 마우스를 빠르게 움직이면 툴팁이 못 따라오던 버그 수정.
+- **`react-hooks/set-state-in-effect` 5건 재작성** — main 커밋 `bb08fb9`("CI를 막던
+  react-hooks/set-state-in-effect 6건 해소")가 `/purchasing`(tier1판)에 적용한 것과 같은
+  패턴을 `/public/*`의 남은 `eslint-disable-next-line` 5건(1차 배치 3건+2차 배치 2건)에
+  그대로 적용했다 — React 공식 문서의 "Storing information from previous renders" 패턴
+  (`useEffect` 없이 렌더 함수 본문에서 `if (x !== prevX) { setPrevX(x); ...setState... }`로
+  직접 비교·조정). `useEffect` 콜백 안이 아니므로 규칙이 원래 통과시키는 패턴이라
+  eslint-disable가 더는 필요 없다.
+  - `DashboardSidePanel.tsx`: `selectedNews`/`focusAlertsToken` 두 effect →
+    `prevSelectedNews`/`prevFocusAlertsToken` 렌더 중 비교로 교체, `useEffect` import 제거
+    (파일 내 유일한 사용처였음, `grep` 확인).
+  - `PublicDashboardPage.tsx`: `period`(가격)/`newsPage`(뉴스)/`accessToken`+`reloadKey`
+    (인증 7종 — kpi/materialRisk/supplier/materials/alerts/briefings/**acknowledged**,
+    마지막 필드는 main의 원 패턴엔 없던 F 배치 추가분) 세 묶음을 `prevPeriod`/
+    `prevNewsPage`/`authQueryKey`(`` `${accessToken ?? ''}|${reloadKey}` ``) 렌더 중
+    비교로 교체. 각 effect 안의 `setXxxLoading(true)` 호출은 제거하고 "위쪽 렌더 중
+    조정에서 이미 켰다" 주석으로 대체 — fetch·`.finally` false 처리 로직은 그대로 유지.
+    tier1 원본의 `if (!accessToken) return` 가드는 이식하지 않음(mock 폴백 때문에 우리
+    쪽은 의도적으로 없는 상태를 유지).
+- 검증: `npm run typecheck`/`lint`(신규 disable 0건, 기존 5건도 전부 제거 확인)/`build`
+  통과. Playwright 12/13 PASS(기간 탭 전환, 뉴스 페이지 넘김, "대응 완료" 클릭, 벨→"주요
+  알림" 탭 전환, 뉴스 클릭→"뉴스 상세" 탭 전환 전부 에러 없이 동작 — "뉴스 다음 페이지
+  버튼 표시" 1건은 `fetchPublicNewsFeedCount()`가 mock 모드에서 항상 0을 반환해 페이징
+  버튼 자체가 안 뜨는 기존 설계상 정상 동작이라 테스트 스크립트의 잘못된 가정, 회귀 아님).
+  `git diff --stat -- src/features/purchasing/` 빈 결과(수정 대상 3개 파일 전부
+  `/public/*`·공유 위젯).
+
 ## 임시 mock 값 (후속 정리 필요)
 
 Phase 9.3(원자재 가격 추이 "상세보기", surin `RiskMonitoring.tsx` 시각 이식)에서 시각 구성을 우선하기 위해 실제 계산 로직 없이 하드코딩한 필드 목록. 각 필드는 코드에도 `// mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요` 주석이 달려 있다. 앞으로도 실제 계산 로직 없이 mock 값으로 구현하는 필드가 생기면, 이 섹션에 반드시 등재하고 코드에도 `// mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요` 주석을 남긴다.

@@ -1105,3 +1105,84 @@ tier1엔 없던 분기지만, 확인 모달도 없는 단순 즉시-실행 UX라
   - G(트러블슈팅 잔존물): `.scratch/verify-batch-f.mjs`·스크린샷은 gitignore 대상, `git
     status`로 의도한 파일만 추적 확인.
   - H(보고/회귀): 위 "검증" 항목에 배치 전체 기록, `git diff --stat` 결과(완전히 빔) 명시.
+
+## Phase 13(main 자체 수정 동기화, A~H 배치 밖 보정) — (`feat/public-tier`, 2026-08-05)
+
+3차 배치(F, `c03de90`) 이후 `origin/main`이 우리 병합 이력 없이(force-push 등으로 재작성돼
+`feat/public-tier`가 main 조상 이력에서 빠진 상태) 별도로 진행됐음을 확인 — main이
+자체적으로 얹은 수정 전체를 전수 조사해, 우리 1~3차 배치와 실질적으로 겹치는 항목이
+있는지 판정하고 필요한 만큼만 이식했다.
+
+### 조사 방법과 결과
+- `git log origin/main --oneline --not origin/minji-tier1-dashboard -- src/features/purchasing/
+  src/components/ src/lib/ src/api/`로 main이 tier1 계보 밖에서 자체적으로 얹은 커밋 11개를
+  추출(executive/planning 전용 6개 제외).
+- `git diff --name-only origin/main origin/feat/public-tier -- <같은 경로>`(114개 파일)와
+  교집합(30개)을 `comm -12`로 기계적으로 산출한 뒤, 각 파일을 `git cat-file -e`/`grep`으로
+  직접 대조해 **거짓 양성**을 걸러냈다 — `AlertsPanel.tsx`(main에 파일 자체가 없음, tier1
+  병합 시 삭제됨), `AlertsBellButton.tsx`의 `disabled` prop(main 최종본엔 없음, tier1
+  재작성이 대체), `SideNav*`(우리가 아예 안 건드린 파일, 베이스 자체가 오래된 것뿐),
+  `purchasing.api.ts`/`types.ts`의 `NewsFeedItem.publisher`(main 현재 파일에 필드 자체가
+  없음, Phase 11 이전부터 있던 별개 격차) 등은 전부 "역사적 커밋의 효과가 main 최종
+  상태엔 없음" 또는 "1~3차 배치 범위 밖의 기존 이슈"로 판정해 이번 작업 대상에서 제외했다.
+- **진짜 유효한 교집합은 2건**: `MaterialPriceDetail.tsx`(main 커밋 `ee69ebe`)와
+  `/purchasing`의 `DashboardSidePanel.tsx`/`PurchasingDashboardPage.tsx`(main 커밋
+  `bb08fb9`, 단 이 둘은 `/purchasing` 파일이라 원래 우리 배치 범위 밖 — 다만 같은 종류의
+  `eslint-disable-next-line react-hooks/set-state-in-effect`가 우리 `/public/*`에도 1차
+  배치 3건+2차 배치 2건, 총 5건 남아있어 같은 패턴을 이식할지 판단이 필요했다).
+
+### 반영 내용
+- **`MaterialPriceDetail.tsx`**: `git show ee69ebe`로 전체 diff 확인 후 `<Tooltip>`에
+  `isAnimationActive={false}` 한 줄 그대로 이식 — recharts 기본 400ms 이징 트랜지션 때문에
+  마우스를 빠르게 움직이면 툴팁이 못 따라오던 버그 수정.
+- **`react-hooks/set-state-in-effect` 5건 재작성**: `git show bb08fb9`로 tier1판
+  `/purchasing`이 채택한 정확한 패턴을 확인 — React 공식 문서
+  ["Storing information from previous renders"](https://react.dev/reference/react/useState)
+  패턴이다. `useEffect` 콜백 밖, 렌더 함수 본문에서 `const [prevX, setPrevX] = useState(x);
+  if (x !== prevX) { setPrevX(x); ...연쇄 setState... }`로 직접 비교·조정한다 — `useEffect`
+  콜백 안이 아니므로 규칙이 원래 통과시키는 패턴이라 eslint-disable가 필요 없어진다(우회가
+  아니라 애초에 규칙 위반이 아니게 되는 재작성).
+  - `DashboardSidePanel.tsx`: `selectedNews` effect → `prevSelectedNews` 비교,
+    `focusAlertsToken` effect → `prevFocusAlertsToken` 비교로 교체. 두 `if` 블록의 코드
+    순서가 옛 두 `useEffect`의 "선언 순서 = 나중 것이 이긴다" 규칙을 그대로 이어받는다
+    (알림 검사를 뉴스 검사보다 뒤에 둠). `grep -n useEffect` 결과 이 두 곳이 파일 내 유일한
+    사용처임을 확인 후 `useEffect` import 제거.
+  - `PublicDashboardPage.tsx`: `period`(가격 차트/요약)/`newsPage`(뉴스 목록)/
+    `` `${accessToken ?? ''}|${reloadKey}` ``(인증 7종 — kpi/materialRisk/supplier/
+    materials/alerts/briefings/**acknowledged**, 마지막은 main 원 패턴엔 없던 F 배치
+    추가분) 세 묶음을 `prevPeriod`/`prevNewsPage`/`authQueryKey` 렌더 중 비교로 교체.
+    각 `useEffect` 내부에 남아있던 `setXxxLoading(true)` 호출은 제거하고 "위쪽 렌더 중
+    조정에서 이미 켰다" 주석으로 대체 — fetch·`.finally`(false 처리) 로직은 그대로 유지.
+    tier1/main 원본의 `if (!accessToken) return` 가드는 이식하지 않았다 — mock 폴백 때문에
+    우리 쪽은 비로그인 상태에서도 조회해야 해서 의도적으로 없는 상태를 유지한다.
+
+### 검증
+- `npm run typecheck`/`lint`(`grep -rn eslint-disable.*set-state-in-effect src/features/public/`
+  결과 0건 확인)/`build` 통과.
+- Playwright(`.scratch/verify-lintfix.mjs`) 12/13 PASS: 기간 탭 전환(`prevPeriod` 렌더 중
+  조정) 에러 없음, "대응 완료" 클릭(`authQueryKey` 렌더 중 조정) 에러 없음, 벨 클릭 시
+  "주요 알림" 탭 전환(`prevFocusAlertsToken`), 뉴스 클릭 시 "뉴스 상세" 탭 전환
+  (`prevSelectedNews`), 원자재 가격 추이 차트 정상 렌더, `/purchasing` 회귀 없음(차트 정상
+  렌더), 콘솔 에러 0건. 1건 FAIL("뉴스 다음 페이지 버튼 표시")은 `fetchPublicNewsFeedCount()`
+  가 mock 모드(①단계)에서 항상 0을 반환해 페이징 버튼 자체가 렌더되지 않는 기존 설계상
+  정상 동작 — 테스트 스크립트가 mock 구조를 잘못 가정한 것이지 이번 수정으로 인한 회귀가
+  아님(재실행 중 첫 시도에서 콘솔 에러 다수가 잡혔으나, 원인은 이전 세션들에서 정리하지
+  않고 남아있던 포트 5173~5179 점유 좀비 dev server 프로세스 7개가 stale 코드를 서빙한
+  것이었다 — 전부 종료 후 5173에 새로 띄워 재검증, 콘솔 에러 0건으로 확인).
+- 회귀: `git diff --stat -- src/features/purchasing/` 빈 결과 — 수정 대상 3개 파일
+  (`MaterialPriceDetail.tsx`/`DashboardSidePanel.tsx`/`PublicDashboardPage.tsx`) 전부
+  `/public/*` 또는 공유 위젯이라 `/purchasing`은 애초에 대상 밖.
+- `docs/qa-checklist.md` A~H:
+  - A(인증 상태 표시): 해당 없음.
+  - B(공용 컴포넌트 파급 범위): `MaterialPriceDetail.tsx`(공유 위젯)는 prop 추가가 아니라
+    JSX 내부 한 줄이라 `/purchasing`(같은 컴포넌트 재사용) 영향 없음을 Playwright로 확인.
+  - C(접근 제어 피드백): 해당 없음.
+  - D(클릭 요소 시각 신호): 해당 없음(내부 렌더링 패턴 변경, 시각적 차이 없음).
+  - E(요구사항 커버리지): 해당 없음(main 자체 수정 동기화, 신규 Seq 대응 아님).
+  - F(공용 레이아웃 컴포넌트 일관성): 해당 없음(신규 카드형 UI 없음).
+  - G(트러블슈팅 잔존물): `.scratch/verify-lintfix.mjs`·스크린샷·`dev-server-lintfix*.log`는
+    gitignore 대상. 검증 중 발견한 좀비 dev server 프로세스 7개(포트 5173~5179)는 전부
+    종료 처리(코드 변경 아님, 이전 세션들의 `taskkill` 실행이 실제로는 실패했던 것으로
+    추정 — 향후 `taskkill` 결과를 한글 인코딩 깨진 출력만 보고 성공으로 단정하지 말고
+    `netstat`로 재확인하는 습관 필요).
+  - H(보고/회귀): 위 "검증" 항목에 기록, `git diff --stat` 결과(빔) 명시.

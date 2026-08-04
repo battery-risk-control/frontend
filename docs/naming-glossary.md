@@ -18,7 +18,7 @@
 | `api/publicAiBriefing.api.ts` | 비로그인 `/public/ai-briefing` API(신규, 2026-08-03, minji `aiBriefing.api.ts` 이식) — accessToken을 `string \| null`로 받아 ①단계는 항상 mock, 로그인 없는 ②/③단계는 LOGIN_REQUIRED_MESSAGE를 던지는 3단계 분기. **2026-08-03(tier1 재동기화)** — generateAiBriefing에 5번째 인자 `analysisId` 추가(프리필 분석으로 고정), mock context에 `latest_briefing_id` 추가 |
 | `api/publicContractRag.api.ts` | 비로그인 `/public/contract-rag` API(신규, 2026-08-03, minji `contractRag.api.ts` 이식) — 업로드/재처리는 mock 모드에서 "준비 중" 에러 |
 | `api/publicMaterialRisk.api.ts` | 비로그인 `/public/materials` API(신규, 2026-08-03, minji `materialRisk.api.ts` 이식). **2026-08-03(tier1 재동기화)** — fetchMaterialRiskOverview에 `refresh` 2번째 인자 추가("새로고침" 버튼용) |
-| `api/publicPurchasingDashboard.api.ts` | 비로그인 대시보드(`/`) 인증 API 3종(신규, 2026-08-03, tier1 `purchasingDashboard.api.ts` 이식) — KPI 요약/원자재별 리스크 점수/공급사 현황. 원저자는 mock 폴백 없음 원칙이었으나 `/public/*` 공통 원칙("완전 공개+mock 폴백")을 적용, 다른 `publicX.api.ts`와 동일한 3단계 분기. `toPurchasePriority` 순수 함수 포함(`toMaterialRiskGauges`/`toScoreCards`는 2026-08-04 제거, 아래 상세 섹션 참고) |
+| `api/publicPurchasingDashboard.api.ts` | 비로그인 대시보드(`/`) 인증 API 3종(신규, 2026-08-03, tier1 `purchasingDashboard.api.ts` 이식) — KPI 요약/원자재별 리스크 점수/공급사 현황. 원저자는 mock 폴백 없음 원칙이었으나 `/public/*` 공통 원칙("완전 공개+mock 폴백")을 적용, 다른 `publicX.api.ts`와 동일한 3단계 분기. `toPurchasePriority` 순수 함수 포함(`toMaterialRiskGauges`/`toScoreCards`는 2026-08-04 제거, 아래 상세 섹션 참고). **2026-08-04(F 배치)** — `unacknowledgeAssessment`/`fetchAcknowledgedAssessments` 신규 추가. tier1은 이 둘에 mock/비로그인 분기가 없었으나(로그인 필수 화면), 기존 `acknowledgeAssessment`와 대칭으로 3단계 분기를 새로 설계해 적용(아래 상세 섹션 참고) |
 | `api/publicRiskMonitoring.api.ts` | 비로그인 `/public/risk-monitoring` API(신규, 2026-08-03, minji `riskMonitoring.api.ts` 이식) — 4개 `publicX.api.ts` 공통 3단계 분기(①mock/②③비로그인=LOGIN_REQUIRED/②③로그인=fetchWithAuth) 규칙을 이 파일 최상단 주석에 정의, 나머지 3개가 참조. **2026-08-03(tier1 재동기화)** — mock procurement_risk에 representative_material_id/valid_material_count/target_material_count/material_assessments 추가 |
 | `api/purchasing.api.ts` | 1계층 구매팀 대시보드 mock API — risk_event 원천 데이터 + Phase 9.4에서 이동된 글로벌 리스크 맵/가격 추이 mock + 신규 원자재 리스크 개요/수입 의존도 mock |
 | `api/types.ts` | 전 화면 공용 API 응답 타입 정의 |
@@ -60,6 +60,7 @@
 | `features/public/components/DashboardSidePanel.tsx` | 비로그인 대시보드 우측 패널 — 탭 3개(뉴스 상세/주요 알림/브리핑)+데이터 업로드 카드(신규, 2026-08-03, tier1 `DashboardSidePanel.tsx` 이식) — 기존 `AlertsBellButton` 배선(펼침/접힘 `AlertsPanelContext`, 호버 미리보기) 재사용. **2026-08-04(D 배치)** — `isNewsLoading?`/`isAlertsLoading?`/`isBriefingsLoading?`(탭별 스켈레톤)·`focusAlertsToken?`(벨 클릭 시 "주요 알림" 탭 강제 전환) prop 추가, `selectedNews` 참조 변경 시 "뉴스 상세" 탭 자동 복귀 effect 신규 |
 | `features/public/components/LatestNewsPanel.tsx` | 최신 뉴스 페이징 목록(신규, 2026-08-03, tier1 이식) — 우측 "뉴스 상세" 탭과 짝을 이루는 선택 가능한 목록, `ScrollCard` 사용 |
 | `features/public/components/LiveNewsMarquee.tsx` | 실시간 뉴스 헤드라인 마퀴+환율 칩(신규, 2026-08-03, tier1 이식) — 최신 뉴스와 같은 `/public/news-feed`를 `limit`으로 줄여 재사용 |
+| `features/public/components/AcknowledgedPanel.tsx` | 완료 처리 항목 되돌리기 패널(신규, 2026-08-04, tier1 재동기화 F 배치) — `MaterialRiskSummaryTable`에서 "대응 완료"로 내린 평가를 되돌리는 목록, `MaterialRiskGaugeGrid` 바로 아래 배치 |
 | `features/public/components/MaterialRiskGaugeGrid.tsx` | 원자재별 리스크 게이지 그리드(신규, 2026-08-04, tier1 재동기화 1차 배치) — `MaterialRiskSummaryTable`과 같은 배열을 게이지 7장으로 재표현, 기본 접힘+더보기 |
 | `features/public/components/MaterialRiskSummaryTable.tsx` | 원자재별 리스크 점수 7종 테이블(신규, 2026-08-03, tier1 이식) — 최종 합성 점수(외부신호+ERP노출+계약공백), "대응 완료" 버튼 포함 |
 | `features/public/components/PublicErpImpactPanel.tsx` | ERP 영향 자재 재고 계약 분석 패널(신규, 2026-08-03, tier1 `ErpImpactPanel.tsx` 이식) — `features/purchasing/components/ErpImpactPanel.tsx`(Phase 4 MVP, `events` 배열 prop)와 이름이 겹쳐 `Public` 접두로 분리, `materials` 배열 prop 기반 |
@@ -193,6 +194,8 @@
 | `fetchMaterialRiskSummary` | 원자재별 리스크 점수 7종 조회 함수 | 〃 |
 | `fetchSupplierOverview` | 공급사 현황+대체 공급사 추천 조회 함수 | 〃 |
 | `acknowledgeAssessment` | 평가 완료 처리 함수 | mock 모드에서는 서버 반영 없이 호출부가 로컬로만 갱신 |
+| `unacknowledgeAssessment` | 완료 처리 되돌리기 함수(신규, 2026-08-04, F 배치) | `acknowledgeAssessment`와 대칭인 3단계 분기(①무동작/②비로그인 `LOGIN_REQUIRED_MESSAGE`/②로그인 `fetchWithAuth` DELETE) — tier1 원본엔 이 분기가 없었으나(로그인 필수 화면) 새로 설계해 적용 |
+| `fetchAcknowledgedAssessments` | 완료 처리된 평가 목록 조회 함수(신규, 2026-08-04, F 배치) | ①단계 mock은 항상 빈 배열(`MOCK_ACKNOWLEDGED`) — `acknowledgeAssessment`의 ①단계가 무동작이라 mock 모드에서는 실제로 완료 처리되는 항목이 없음 |
 | `toPurchasePriority` | 자재별 위험 목록 → 구매 대응 우선순위 정렬 함수 | **2026-08-04(tier1 재동기화 1차 배치) 갱신**: 반환 타입이 `MaterialRiskItem[]`(평가 불가를 심각·주의 사이 2.5로 끼워 정렬)에서 `PurchasePriority`(`{ ranked, unavailable }`, 평가 불가는 순위 없이 별도 배열)로 변경 |
 
 > **정정(2026-08-04)**: `toMaterialRiskGauges`/`toScoreCards`는 이 파일에서 제거했다 — tier1이
@@ -478,6 +481,11 @@
 | physical | logical | 역할 |
 |---|---|---|
 | `LatestNewsPanel` | 최신 뉴스 목록 컴포넌트 | 번호 매긴 페이징 목록, 제목 클릭 시 우측 "뉴스 상세" 탭 전환·원문 링크는 별도 — `isLoading` prop 추가(2026-08-04, tier1 재동기화 1차 배치, 목록 모양 그대로의 `Skeleton` 자리표시자 5줄) |
+
+### `features/public/components/AcknowledgedPanel.tsx`(신규, 2026-08-04, tier1 재동기화 F 배치)
+| physical | logical | 역할 |
+|---|---|---|
+| `AcknowledgedPanel` | 완료 처리 항목 되돌리기 패널 컴포넌트 | `items`/`isLoading?`/`pendingAssessmentId`/`onUndo` prop. 되돌리기 버튼 클릭 시 확인 모달 없이 바로 `onUndo` 호출(tier1 원본 UX 그대로) — 되돌리는 중엔 버튼이 비활성화+"되돌리는 중…"으로 바뀜 |
 
 ### `features/public/components/MaterialRiskGaugeGrid.tsx`(신규, 2026-08-04, tier1 재동기화 1차 배치)
 | physical | logical | 역할 |

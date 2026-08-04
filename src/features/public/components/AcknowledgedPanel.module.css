@@ -1,0 +1,103 @@
+/* 표 아래 전체 폭을 쓴다. 한 줄에 여러 건이 들어가도록 가로로 흐르게 두되, 좁아지면
+   자연스럽게 줄바꿈되게 한다 — 항목 수가 0~수 건으로 들쭉날쭉해서 고정 열 수를 정할 수 없다. */
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 카드 하나가 뉴스 제목까지 담아야 해서 최소 폭을 준다. 그보다 좁아지면 제목이 두 글자씩
+   끊겨 무슨 건인지 알아볼 수 없다. */
+.item {
+  flex: 1 1 320px;
+  min-width: 0;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.material {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+/* 등급·점수는 참고용이다. 이 목록의 주인공은 "무엇을 되돌릴지"라 등급 배지를 크게 쓰지 않는다. */
+.score {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.subject {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  /* 제목이 길어도 카드 높이가 들쭉날쭉해지지 않게 두 줄로 끊는다. */
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+.who {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.undoButton {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.undoButton:hover:not(:disabled) {
+  color: var(--color-surface);
+  background: var(--color-primary);
+}
+
+.undoButton:disabled {
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  cursor: default;
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-risk-critical);
+}

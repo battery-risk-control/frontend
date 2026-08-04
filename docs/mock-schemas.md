@@ -488,7 +488,47 @@ tier1처럼 삭제하면 그 화면이 깨진다. 대신 이 비로그인 대시
   같은 패턴이 있고 로컬 재현으로 동일하게 lint 에러가 남을 확인했다(1차 배치 조사 때와
   같은 결론).
 
-**여전히 반영하지 않은 것**: F(완료 처리 되돌리기)/G(데이터 관리 화면)/H(4화면 추가 기능).
+### F. "완료 처리 항목" 되돌리기 — 3차 배치 (2026-08-04)
+
+`MaterialRiskSummaryTable`에서 "대응 완료"로 내린 평가를 되돌릴 수 있는 `AcknowledgedPanel`을
+배선했다.
+
+- **`api/types.ts`**: `AcknowledgedItem` 신규(tier1 그대로) — `assessment_id`/
+  `material_category`/`material_name`/`procurement_risk_level`/`procurement_risk_score`/
+  `subject_title: string | null`/`acknowledged_by_name: string | null`/`acknowledged_at`.
+- **`publicPurchasingDashboard.api.ts` — tier1과 달리 3분기를 새로 설계**: tier1의
+  `acknowledgeAssessment`/`unacknowledgeAssessment`/`fetchAcknowledgedAssessments`는
+  `accessToken: string`(nullable 아님)만 받고 mock/비로그인 분기가 아예 없다(로그인 필수
+  화면이라 그럴 필요가 없었음). `unacknowledgeAssessment`는 이미 이 파일에 있던
+  `acknowledgeAssessment`(①단계 무동작 반환/②비로그인 `LOGIN_REQUIRED_MESSAGE`/②로그인
+  `fetchWithAuth`)와 대칭으로 같은 3분기를 새로 설계해 적용했다 — 확인 모달이 없는 tier1
+  UX(버튼 클릭 시 즉시 실행, "되돌리는 중…" 표시만 있고 별도 대화상자 없음, 코드 확인
+  완료)라 클라이언트 쪽에 새 UI를 추가하지 않았다. `fetchAcknowledgedAssessments`(읽기
+  액션)는 다른 5개 API 파일과 같은 표준 3분기를 따르되, **①단계 mock은 빈 배열
+  `MOCK_ACKNOWLEDGED = []`**로 정했다 — `acknowledgeAssessment`의 ①단계가 애초에 아무
+  것도 하지 않아 mock 모드에서는 어떤 평가도 실제로 "완료 처리"되지 않으므로, 되돌릴
+  목업 항목을 지어내면 "누른 적 없는데 이미 완료 처리된 항목이 있다"는 앞뒤가 안 맞는
+  상태가 된다.
+- **`AcknowledgedPanel.tsx`(+`.module.css`, 신규, `features/public/components/`)**: tier1
+  그대로 이식. `ScrollCard`+`SkeletonText`(둘 다 기존 재사용) 기반.
+- **`PublicDashboardPage.tsx`**: `acknowledged`/`acknowledgedLoading` state 신규, 기존
+  KPI/원자재리스크/공급사/자재 조회 effect(`[accessToken, reloadKey]`, 1차 배치 E가 만든 것)에
+  `fetchAcknowledgedAssessments` 호출을 합류시켰다 — tier1도 같은 effect 안에 나란히 두고
+  같은 `reloadKey`로 함께 다시 부르므로 **별도 트리거를 새로 만들지 않았다**.
+  `handleUndoAcknowledge`(tier1 그대로: `unacknowledgeAssessment` 호출 성공 시
+  `setReloadKey` 증가, 기존 `handleAcknowledge`("대응 완료")가 쓰는 `pendingAssessmentId`
+  state를 그대로 공유) 신규, `<MaterialRiskGaugeGrid>` 바로 아래에 `<AcknowledgedPanel>`
+  배치(tier1과 같은 위치). `SECTION_DOTS_SECTIONS`는 tier1도 이 패널을 별도 도트 섹션으로
+  두지 않아 무수정.
+- **`AcknowledgedPanel`의 `/purchasing` 사용 여부**: 없음(`grep` 0건) — "대응 완료" 개념
+  자체가 tier1발 신규 기능이라 옛 `/purchasing` 화면에는 애초에 대응되는 기능이 없었다.
+  B/D 배치와 달리 하위호환 충돌 여지가 구조적으로 없다.
+- 검증: `npm run typecheck`/`lint`/`build` 통과, Playwright 9/9 PASS(mock 모드에서 항상
+  빈 목록 안내 표시, "대응 완료" 클릭 후에도 mock의 `acknowledgeAssessment` 자체가 무동작
+  이라 계속 비어있음, `/purchasing`엔 이 패널이 없음), `git diff --stat --
+  src/features/purchasing/` 완전히 빈 결과.
+
+**여전히 반영하지 않은 것**: G(데이터 관리 화면)/H(4화면 추가 기능).
 
 ## 임시 mock 값 (후속 정리 필요)
 

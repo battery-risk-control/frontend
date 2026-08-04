@@ -1024,3 +1024,84 @@ Phase는 그중 1차 배치(A+B+C+E)만 다룬다.
     gitignore 대상, `git status`로 의도한 파일만 추적 확인.
   - H(보고/회귀): 위 "검증" 항목에 배치 전체를 기록, `git diff --stat` 결과(완전히 빔)
     명시.
+
+## Phase 13(3차 배치, F) — "완료 처리 항목" 되돌리기 (`feat/public-tier`, 2026-08-04)
+
+2차 배치(D, 커밋 `da801d8`, 이 시점까지 push 안 함) 다음 배치. `MaterialRiskSummaryTable`에서
+"대응 완료"로 내린 평가를 되돌릴 수 있는 `AcknowledgedPanel`을 신규 이식+배선했다.
+
+### 0단계 조사 결과
+- tier1 `purchasingDashboard.api.ts`의 `acknowledgeAssessment`/`unacknowledgeAssessment`/
+  `fetchAcknowledgedAssessments`는 셋 다 `accessToken: string`(nullable 아님)만 받고
+  mock/비로그인 분기가 아예 없음을 확인(로그인 필수 화면이라 그럴 필요가 없었음).
+  `unacknowledgeAssessment`는 DELETE 메서드, "되돌릴 기록이 없어도 성공"(백엔드가 200 +
+  not_acknowledged로 응답, 화면은 본문을 안 씀).
+- `AcknowledgedPanel.tsx`(tier1 원본) 전체 코드 확인 — **확인 모달 없음**. 버튼 클릭 시
+  즉시 `onUndo(item)` 호출, 처리 중엔 버튼이 비활성화+"되돌리는 중…"으로 바뀔 뿐(`handleAcknowledge`
+  "대응 완료"와 완전히 대칭인 즉시-실행 패턴). 빈 목록일 때 안내문 확인.
+- `grep -rln "AcknowledgedPanel" src/` 결과 **0건** — 1차 배치 승인 시 사용자 지시("Skeleton만
+  이식, AcknowledgedPanel/SidePanelToggleButton은 파일도 만들지 말 것")에 따라 1차에서는
+  `Skeleton`만, 2차(D)에서는 `SidePanelToggleButton`만 이식됐고 `AcknowledgedPanel`은 이번이
+  첫 이식임을 재확인. `/purchasing`에도 같은 기능이 없음(같은 grep 결과) — "대응 완료" 개념
+  자체가 tier1발 신규 기능이라 옛 화면에 대응되는 기능이 애초에 없었다, B/D 배치와 달리
+  하위호환 충돌 여지가 구조적으로 없다.
+- `reloadKey` 재사용 확인 — tier1도 `fetchAcknowledgedAssessments`를 KPI/원자재리스크/공급사/
+  자재 조회와 같은 `useEffect`(`[accessToken, reloadKey]`) 안에 두고, `handleUndoAcknowledge`도
+  완료 처리와 같은 `reloadKey`를 올린다(주석: "한쪽만 갱신하면 표에는 돌아왔는데 KPI는 그대로인
+  어긋난 화면이 된다"). 별도 트리거 불필요, 1차 배치 E가 만든 기존 effect에 합류.
+
+### 되돌리기 mock 처리 방향 (0-2, 계획 단계에서 확정)
+`unacknowledgeAssessment`는 기존 `acknowledgeAssessment`(①무동작 반환/②비로그인
+`LOGIN_REQUIRED_MESSAGE`/②로그인 `fetchWithAuth`)와 **대칭인 3분기를 새로 설계**해 적용했다 —
+tier1엔 없던 분기지만, 확인 모달도 없는 단순 즉시-실행 UX라 클라이언트 쪽에 새 UI를 만들
+필요가 없었다. `fetchAcknowledgedAssessments`(읽기 액션)는 다른 5개 API 파일과 같은 표준
+3분기를 따르되, **①단계 mock을 빈 배열 `MOCK_ACKNOWLEDGED = []`로 정했다** — 근거:
+`acknowledgeAssessment`의 ①단계가 애초에 아무 것도 하지 않으므로 mock 모드에서는 어떤 평가도
+실제로 "완료 처리"되지 않는다. 되돌릴 목업 항목을 지어내면 "누른 적 없는데 이미 완료 처리된
+항목이 있다"는 앞뒤가 안 맞는 상태가 된다 — CLAUDE.md "mock 데이터를 완벽하게 구성하려
+애쓰지 않는다... 부분적 '데이터 없음' 상태를 보여주는 placeholder UI로 대체할 수 있다"
+원칙에 따라, ①단계에서는 빈 목록 안내문으로 충분하다고 판단했다.
+
+### 반영 내용
+- **`api/types.ts`**: `AcknowledgedItem` 신규(tier1 그대로) — `MaterialRiskSummaryItem` 인터페이스
+  바로 앞에 배치(tier1과 같은 위치).
+- **`publicPurchasingDashboard.api.ts`**: `unacknowledgeAssessment`(DELETE)와
+  `fetchAcknowledgedAssessments`(기존 `resolve<T extends object>()` 헬퍼 재사용 — 배열
+  반환 함수가 이 헬퍼를 쓴 전례는 `fetchMaterialRiskSummary`가 이미 있어 그대로 통과,
+  typecheck로 확인) 신규 추가. `MOCK_ACKNOWLEDGED: AcknowledgedItem[] = []`.
+- **`AcknowledgedPanel.tsx`(+`.module.css`, 신규, `features/public/components/`)**: tier1
+  그대로 이식.
+- **`PublicDashboardPage.tsx`**: `acknowledged`/`acknowledgedLoading` state 신규, 기존
+  4종 조회 effect(`[accessToken, reloadKey]`)의 재점화 묶음에 `setAcknowledgedLoading(true)`
+  합류 + `fetchAcknowledgedAssessments` 호출 추가(`.finally`로 해제). `handleUndoAcknowledge`
+  신규(tier1 그대로 — `if (!accessToken) return` 가드, 기존 `pendingAssessmentId` state를
+  `handleAcknowledge`와 공유). JSX는 `<MaterialRiskGaugeGrid>` 바로 아래에 `<AcknowledgedPanel>`
+  배치(tier1과 같은 위치). `SECTION_DOTS_SECTIONS`는 tier1도 이 패널을 도트 섹션으로 안 둬서
+  무수정.
+
+### 검증
+- `npm run typecheck`/`lint`/`build` 통과(이번 배치는 `react-hooks/set-state-in-effect` 신규
+  발생 없음 — 기존 effect의 이미 disable된 재점화 블록에 합류했을 뿐 새 동기 setState를
+  추가하지 않았다).
+- Playwright(`npm run dev`, ①mock, `.scratch/verify-batch-f.mjs`) 9/9 PASS: `AcknowledgedPanel`
+  ("완료 처리 항목") 표시, mock 모드(빈 배열)에서 빈 목록 안내 문구 표시, 되돌리기 버튼
+  자체가 없음(항목이 없으므로), "대응 완료" 버튼 클릭 후에도 패널이 계속 비어있음(mock의
+  `acknowledgeAssessment` 자체가 무동작이라 대칭적으로 확인), `/purchasing`에는 이 패널이
+  없음(정상), 콘솔 에러 0건.
+- 회귀: `git diff --stat -- src/features/purchasing/` 완전히 빈 결과 — 이번 배치는
+  `/purchasing` 파일을 하나도 건드리지 않음(이 기능 자체가 `/purchasing`엔 없어 공유 파일
+  patch조차 필요 없었다).
+- `docs/qa-checklist.md` A~H:
+  - A(인증 상태 표시): 해당 없음.
+  - B(공용 컴포넌트 파급 범위): `AcknowledgedPanel`/`unacknowledgeAssessment`/
+    `fetchAcknowledgedAssessments` 전부 신규 파일·함수라 기존 소비처 영향 없음, `grep`으로
+    `/purchasing` 무관 확인.
+  - C(접근 제어 피드백): 해당 없음.
+  - D(클릭 요소 시각 신호): 되돌리기 버튼이 처리 중 "되돌리는 중…"으로 바뀌고 비활성화
+    (tier1 원본 그대로).
+  - E(요구사항 커버리지): 해당 없음(내부 tier1 재동기화).
+  - F(공용 레이아웃 컴포넌트 일관성): `AcknowledgedPanel`은 tier1 원본이 `ScrollCard`를
+    쓰는 카드형 UI라 그대로 이식(`ScrollCard` 재사용, 자체 `.panel` 스타일 신설 없음).
+  - G(트러블슈팅 잔존물): `.scratch/verify-batch-f.mjs`·스크린샷은 gitignore 대상, `git
+    status`로 의도한 파일만 추적 확인.
+  - H(보고/회귀): 위 "검증" 항목에 배치 전체 기록, `git diff --stat` 결과(완전히 빔) 명시.

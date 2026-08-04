@@ -1,5 +1,6 @@
 import { fetchWithAuth } from './http'
 import type {
+  AcknowledgedItem,
   MaterialRiskItem,
   MaterialRiskSummaryItem,
   PurchasingKpiSummary,
@@ -74,6 +75,16 @@ const MOCK_SUPPLIER_OVERVIEW: SupplierOverview = {
   ],
 }
 
+/**
+ * "완료 처리 항목" mock — 항상 빈 배열이다.
+ *
+ * `acknowledgeAssessment`의 ①단계는 아무 동작도 하지 않으므로(위 주석 참고), mock 모드에서는
+ * 애초에 그 어떤 평가도 실제로 "완료 처리"되지 않는다. 되돌릴 목업 항목을 지어내면 "누른 적
+ * 없는데 이미 완료 처리된 항목이 있다"는 앞뒤가 안 맞는 상태가 된다 — 빈 목록 안내문으로
+ * 충분하다(CLAUDE.md "mock 데이터를 완벽하게 구성하려 애쓰지 않는다").
+ */
+const MOCK_ACKNOWLEDGED: AcknowledgedItem[] = []
+
 async function resolve<T extends object>(
   accessToken: string | null,
   path: string,
@@ -132,6 +143,36 @@ export async function acknowledgeAssessment(
   if (result !== null && typeof result === 'object' && 'error' in result) {
     throw new Error(String((result as { message?: string }).message ?? '완료 처리에 실패했습니다.'))
   }
+}
+
+/**
+ * 완료 처리 되돌리기. 그 평가가 KPI·주요 이슈 집계로 되돌아온다. `acknowledgeAssessment`와
+ * 대칭인 3분기 — mock 모드는 아무 것도 하지 않는다(되돌릴 서버 상태 자체가 없다).
+ *
+ * 되돌릴 기록이 없어도 성공이다 — 결과 상태가 같기 때문이고, 백엔드가 200 + not_acknowledged로
+ * 알려준다. 화면은 어느 쪽이든 목록을 다시 불러오면 되므로 응답 본문을 쓰지 않는다.
+ */
+export async function unacknowledgeAssessment(
+  accessToken: string | null,
+  assessmentId: string,
+): Promise<void> {
+  if (!API_BASE_URL) return
+  if (!accessToken) throw new Error(LOGIN_REQUIRED_MESSAGE)
+  const result = await fetchWithAuth<unknown>(
+    `/api/v1/multi-agent/assessments/${assessmentId}/acknowledge`,
+    accessToken,
+    { method: 'DELETE' },
+  )
+  if (result !== null && typeof result === 'object' && 'error' in result) {
+    throw new Error(String((result as { message?: string }).message ?? '되돌리기에 실패했습니다.'))
+  }
+}
+
+/** 완료 처리된 평가 목록. 되돌리기 UI가 이 목록 위에 선다. */
+export async function fetchAcknowledgedAssessments(
+  accessToken: string | null,
+): Promise<AcknowledgedItem[]> {
+  return resolve(accessToken, '/api/v1/purchasing-dashboard/acknowledged?limit=5', MOCK_ACKNOWLEDGED)
 }
 
 /** 심각 → 주의 → 정상 순으로 세울 때 쓰는 순위. 값이 클수록 위험하다. */

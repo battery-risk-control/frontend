@@ -11,14 +11,17 @@ import {
 } from '../../../api/public.api'
 import {
   acknowledgeAssessment,
+  fetchAcknowledgedAssessments,
   fetchMaterialRiskSummary,
   fetchPurchasingKpiSummary,
   fetchSupplierOverview,
+  unacknowledgeAssessment,
 } from '../../../api/publicPurchasingDashboard.api'
 import { fetchMaterialRiskOverview } from '../../../api/publicMaterialRisk.api'
 import { fetchRiskMonitoringEvents } from '../../../api/publicRiskMonitoring.api'
 import { fetchRecentAiBriefings } from '../../../api/publicAiBriefing.api'
 import type {
+  AcknowledgedItem,
   AiBriefingListItem,
   ExchangeRateBoard,
   GlobalRiskBoardItem,
@@ -52,6 +55,7 @@ import { PurchasingKpiRow } from '../components/PurchasingKpiRow'
 import { LiveNewsMarquee } from '../components/LiveNewsMarquee'
 import { LatestNewsPanel } from '../components/LatestNewsPanel'
 import { MaterialRiskGaugeGrid } from '../components/MaterialRiskGaugeGrid'
+import { AcknowledgedPanel } from '../components/AcknowledgedPanel'
 import { MaterialRiskSummaryTable } from '../components/MaterialRiskSummaryTable'
 import { SupplierOverviewPanel } from '../components/SupplierOverviewPanel'
 import { ImportDependencyRow } from '../../purchasing/components/ImportDependencyRow'
@@ -205,6 +209,9 @@ export function PublicDashboardPage() {
   const [materials, setMaterials] = useState<MaterialRiskItem[]>([])
   const [monitoringEvents, setMonitoringEvents] = useState<RiskMonitoringEvent[]>([])
   const [briefings, setBriefings] = useState<AiBriefingListItem[]>([])
+  /** 완료 처리 항목 — 되돌리기 목록. 완료/되돌리기 어느 쪽이든 reloadKey로 함께 다시 부른다. */
+  const [acknowledged, setAcknowledged] = useState<AcknowledgedItem[]>([])
+  const [acknowledgedLoading, setAcknowledgedLoading] = useState(true)
 
   // 기간 탭은 페이지가 소유한다 — 탭이 바뀌면 차트와 요약 카드를 **같은 days로** 함께 다시
   // 불러야 하고, 그 조회는 페이지 책임이다.
@@ -329,6 +336,7 @@ export function PublicDashboardPage() {
     setMaterialsLoading(true)
     setAlertsLoading(true)
     setBriefingsLoading(true)
+    setAcknowledgedLoading(true)
     fetchPurchasingKpiSummary(accessToken)
       .then((summary) => {
         if (!cancelled) setKpi(summary)
@@ -389,6 +397,16 @@ export function PublicDashboardPage() {
       .finally(() => {
         if (!cancelled) setBriefingsLoading(false)
       })
+    fetchAcknowledgedAssessments(accessToken)
+      .then((items) => {
+        if (!cancelled) setAcknowledged(items)
+      })
+      .catch((err) => {
+        console.error('완료 처리 항목 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setAcknowledgedLoading(false)
+      })
     return () => {
       cancelled = true
     }
@@ -407,6 +425,21 @@ export function PublicDashboardPage() {
       setReloadKey((key) => key + 1)
     } catch (err) {
       console.error('완료 처리 실패', err)
+    } finally {
+      setPendingAssessmentId(null)
+    }
+  }
+
+  /** 되돌리기. 완료 처리와 같은 reloadKey를 올려 KPI·표·이 목록을 한꺼번에 맞춘다 —
+      한쪽만 갱신하면 표에는 돌아왔는데 KPI는 그대로인 어긋난 화면이 된다. */
+  async function handleUndoAcknowledge(item: AcknowledgedItem) {
+    if (!accessToken) return
+    setPendingAssessmentId(item.assessment_id)
+    try {
+      await unacknowledgeAssessment(accessToken, item.assessment_id)
+      setReloadKey((key) => key + 1)
+    } catch (err) {
+      console.error('되돌리기 실패', err)
     } finally {
       setPendingAssessmentId(null)
     }
@@ -554,6 +587,13 @@ export function PublicDashboardPage() {
           {/* ── 목업에 없는 기존 구성 (아래) ───────────────────────
               목업이 화면 전체를 반영한 것이 아니라, 지우지 않고 아래로 내렸다. */}
           <MaterialRiskGaugeGrid items={materialRiskSummary} />
+          {/* 위 표에서 "대응 완료"로 내려간 항목이 여기로 옮겨진다. 되돌릴 자리가 여기뿐이다. */}
+          <AcknowledgedPanel
+            items={acknowledged}
+            isLoading={acknowledgedLoading}
+            pendingAssessmentId={pendingAssessmentId}
+            onUndo={handleUndoAcknowledge}
+          />
           <PublicMaterialRiskStatusPanel materials={materials} />
           <PublicErpImpactPanel materials={materials} />
           <PublicPurchasePriorityPanel materials={materials} isLoading={materialsLoading} />

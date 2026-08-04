@@ -200,7 +200,21 @@
     `react-hooks/set-state-in-effect` 2건 추가 발견 — tier1 원본(`DashboardSidePanel.tsx:292·305`)
     에도 동일 lint 에러가 남을 로컬 재현으로 확인, `eslint-disable-next-line`으로 처리.
     상세는 `docs/mock-schemas.md` 10번 섹션 D 항목 참고.
-  - [ ] 3차 배치(F): `AcknowledgedPanel`("완료 처리 항목" 되돌리기) 배선.
+  - [x] 3차 배치(F, 2026-08-04): `AcknowledgedPanel`("완료 처리 항목" 되돌리기) 신규 이식+배선
+    (1차 배치에서도 아직 파일 자체가 없었음 — `grep` 0건 확인, 이번이 첫 이식). `api/types.ts`에
+    `AcknowledgedItem` 신규. `publicPurchasingDashboard.api.ts`에 `unacknowledgeAssessment`/
+    `fetchAcknowledgedAssessments` 신규 — tier1 원본은 로그인 필수 화면이라 이 둘에 mock/
+    비로그인 분기가 없었으나, 기존 `acknowledgeAssessment`와 대칭인 3단계 분기를 새로 설계해
+    적용(①무동작/②비로그인 `LOGIN_REQUIRED_MESSAGE`/②로그인 `fetchWithAuth`).
+    `fetchAcknowledgedAssessments`의 ①단계 mock은 항상 빈 배열 — `acknowledgeAssessment`
+    ①단계가 무동작이라 mock 모드에서는 실제로 완료 처리되는 항목이 없어, 되돌릴 목업을
+    지어내면 앞뒤가 안 맞기 때문. `PublicDashboardPage.tsx`는 기존 KPI/원자재리스크/공급사/
+    자재 조회 effect(`[accessToken, reloadKey]`)에 합류(별도 트리거 불필요, tier1도 동일),
+    `handleUndoAcknowledge` 신규(기존 `pendingAssessmentId` state 공유). UX는 확인 모달 없이
+    즉시 실행(tier1 원본 그대로). 검증: `npm run typecheck`/`lint`/`build` 통과, Playwright
+    9/9 PASS, `git diff --stat -- src/features/purchasing/` 완전히 빈 결과(이 기능 자체가
+    `/purchasing`엔 없어 충돌 여지가 구조적으로 없음). 상세는 `docs/mock-schemas.md` 10번
+    섹션 F 항목 참고.
   - [ ] 4차 배치(H): `AiBriefingPage`/`ContractRagPage`/`MaterialRiskPage`/`RiskMonitoringPage`
     추가 기능(필터·페이징·PDF 다운로드 등), `fetchRecentAiBriefings` 페이징 계약 브레이킹
     체인지 흡수.

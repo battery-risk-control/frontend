@@ -535,39 +535,6 @@ export interface ContractDetailResponse {
 }
 
 /**
- * 3계층 경영진 대시보드 — mock-schemas.md "3. 3계층" 참고.
- * critical_count/avg_response_days는 Figma "경영진 대시보드" 프레임의 화면 설명 예시
- * ("이번 분기 리스크 탐지 32건, 심각 등급 5건, 평균 대응 소요 2.3일")에 맞춰 확장 원칙에 따라 추가했다.
- */
-export interface CumulativeRiskKpi {
-  detected_count: number
-  responded_count: number
-  response_rate: number
-  critical_count: number
-  avg_response_days: number
-}
-
-/** is_simulation은 항상 true로 고정 — product-overview.md 비예측 원칙에 따라 화면 표기를 강제하기 위한 필드. */
-export interface SavingsSimulation {
-  is_simulation: true
-  estimated_saving_krw: number
-  baseline_assumption: string
-}
-
-export interface EnterpriseRiskSummaryItem {
-  business_unit: string
-  exposure_score: number
-  trend: '상승' | '유지' | '하락'
-}
-
-export interface ExecutiveDashboardResponse {
-  period: string
-  cumulative_risk_kpi: CumulativeRiskKpi
-  savings_simulation: SavingsSimulation
-  enterprise_risk_summary: EnterpriseRiskSummaryItem[]
-}
-
-/**
  * 구매팀 대시보드 확장(Phase 9.4, surin RiskStepGauge 이식) — 원자재 리스크 개요 5칸 그리드 중
  * 게이지 카드 3장용. `grade`는 surin의 4단계(정상/주의/경고/심각) 대신 기존 3단계 `RiskGrade`를
  * 재사용한다(경고→심각 매핑) — docs/mock-schemas.md 참고.

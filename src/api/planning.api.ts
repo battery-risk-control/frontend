@@ -70,12 +70,8 @@ export async function fetchPlanningDashboard(token: string): Promise<PlanningDas
 /**
  * 2계층 경영기획팀 대시보드 mock. purchasing.api.ts의 risk_event mock 배열에서
  * risk_exposure_by_unit·vendor_risk_history를 파생시켜 같은 근원 데이터를 재사용한다.
- *
- * export하는 이유: 3계층 executive.api.ts의 `fetchExecutiveDashboard()`가
- * `risk_exposure_by_unit`을 그대로 압축 인용한다(mock-schemas.md 확장 원칙) — 3계층은
- * 이번 2계층 실 연동 작업 범위 밖이라 계속 이 mock을 직접 참조한다.
  */
-export function fetchPlanningDashboardMock(): PlanningDashboardResponse {
+function fetchPlanningDashboardMock(): PlanningDashboardResponse {
   const events = fetchRiskEvents()
 
   const criticalCount = events.filter((event) => event.grade === '심각').length

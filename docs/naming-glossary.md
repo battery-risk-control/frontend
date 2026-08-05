@@ -160,7 +160,6 @@
 | `LOGIN_REQUIRED_MESSAGE` | 로그인 필요 안내 문구 상수 | ②/③단계에서 비로그인 방문자가 호출할 때 던지는 에러 메시지 — 4개 `publicX.api.ts` 공통 이름 |
 | `fetchRiskMonitoringEvents` | 리스크 모니터링 이벤트 목록 조회 함수 | `accessToken: string \| null` — ①mock/②③비로그인=에러/②③로그인=fetchWithAuth 3단계 분기 |
 | `fetchRiskMonitoringEvent` | 리스크 모니터링 이벤트 상세 조회 함수 | 〃 |
-| `runErpImpactAnalysis` | ERP·계약 영향 분석 실행 함수 | mock 모드에서는 실제 재계산 없이 저장된 상세를 그대로 반환 |
 
 ### `api/publicMaterialRisk.api.ts`(신규, 2026-08-03)
 | physical | logical | 역할 |
@@ -183,7 +182,7 @@
 |---|---|---|
 | `fetchAiBriefingContext` | 분석 대상 프리필 조회 함수 | 3단계 분기, 멀티에이전트를 돌리지 않음 |
 | `generateAiBriefing` | LLM 브리핑 생성 함수 | mock 모드에서는 고정 브리핑을 반환(source/ref 무관하게 동일 본문) |
-| `fetchRecentAiBriefings` | 최근 브리핑 목록 조회 함수 | 3단계 분기 |
+| `fetchRecentAiBriefings` | 최근 브리핑 목록 조회 함수 | 3단계 분기. `(token, limit)`→`(token, AiBriefingListQuery)`, 반환 `AiBriefingListItem[]`→`ApiPage<AiBriefingListItem>`(H-1, 2026-08-05, main `d0fc23a` 대응) |
 | `fetchAiBriefing` | 브리핑 상세 재조회 함수 | 생성 결과와 같은 타입(`AiBriefingDetail`) |
 
 ### `api/publicPurchasingDashboard.api.ts`(신규, 2026-08-03, 9번 섹션)
@@ -256,7 +255,7 @@
 | `SourcingCountry` | 조달 국가 타입(2026-08-03 신규) | 국가코드/국가명 — `MaterialPriceSeries.countries`(선택)가 참조, 가격 추이 국가 필터용 |
 | `ExchangeRateItem` | 환율 밴드 통화 1건 타입(2026-08-03 신규) | 통화코드/통화명/고시단위/표기라벨/환율/등락액/등락률/등락라벨/고시출처/재정환율여부 |
 | `ExchangeRateBoard` | 환율 밴드 전체 타입(2026-08-03 신규) | 고시일(nullable)/기준통화/rates 배열 |
-| `RiskMonitoringEvent` | 리스크 모니터링 이벤트 목록 항목 타입(2026-08-03 신규) | 이벤트ID(숫자)/등급(nullable)/신뢰도/멀티에이전트완료여부/헤드라인(원문·번역여부)/자재/국가코드·국가명(nullable)/수집시각/출처 |
+| `RiskMonitoringEvent` | 리스크 모니터링 이벤트 목록 항목 타입(2026-08-03 신규) | 이벤트ID(숫자)/등급(nullable)/신뢰도/**브리핑ID(nullable, H-1 2026-08-05 신규 — 확정이면 not null이 불변식)**/멀티에이전트완료여부/헤드라인(원문·번역여부)/자재/국가코드·국가명(nullable)/수집시각/출처 |
 | `RiskExternalSignal` | 외부 신호 타입(2026-08-03 신규) | Goldstein/Tone/관련뉴스건수/위험점수/severity/사유코드 배열, 전부 nullable |
 | `ProcurementRiskAssessment` | 멀티에이전트 종합 평가 타입(2026-08-03 신규) | assessment_id/완료여부/위험단계/위험점수/외부신호·ERP노출·계약공백 점수/사유배열/검증통과여부/평가시각 |
 | `RiskMonitoringDetail` | 리스크 모니터링 이벤트 상세 타입(2026-08-03 신규) | `RiskMonitoringEvent` 확장 — 요약/영향도메인/좌표/원문URL/external_signal/procurement_risk/ERP영향분석가능여부·차단사유 |
@@ -286,6 +285,10 @@
 | `AiBriefingVerification` | 검증 메타데이터 타입(2026-08-03 신규) | 검증통과여부/LLM사용여부·에러/경고건수·배열/contract_id·페이지/가중치버전/mock여부 |
 | `AiBriefingDetail` | 브리핑 상세 타입(2026-08-03 신규) | 생성 응답과 재조회 응답이 공유. briefing_id/assessment_id/진입경로·참조값/제목/뉴스ID/분석ID/외부신호헤드라인/erp연결 3종/contract_id/자재명·대분류/영향도메인/composite여부/구매위험단계·점수/본문/사유·권고배열/erp_evidence/계약근거배열/evidence_chain/verification/생성시각 |
 | `AiBriefingListItem` | 최근 브리핑 카드 1건 타입(2026-08-03 신규) | briefing_id/진입경로/제목/뉴스ID/구매위험단계·점수/composite여부/검증통과여부(nullable)/생성시각 |
+| `ApiPage<T>` | 목록 API 공통 페이지 응답 타입(H-1, 2026-08-05 신규, main `d0fc23a` 대응) | content 배열/page/size/total_elements/total_pages — `fetchRecentAiBriefings`가 반환 |
+| `AiBriefingRiskLevel` | AI 브리핑 목록 필터용 등급 타입(H-1, 2026-08-05 신규) | `'CRITICAL' \| 'WARNING' \| 'NORMAL'` |
+| `AiBriefingReviewStatus` | AI 브리핑 목록 필터용 검증 상태 타입(H-1, 2026-08-05 신규) | `'PASSED' \| 'FAILED' \| 'PENDING'` |
+| `AiBriefingListQuery` | 최근 브리핑 조회 조건 타입(H-1, 2026-08-05 신규) | source/level/reviewStatus/days(전부 선택, null=전체) + page/size |
 
 ### `app/routes.tsx`
 | physical | logical | 역할 |

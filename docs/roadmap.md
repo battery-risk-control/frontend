@@ -230,7 +230,20 @@
     src/features/purchasing/` 빈 결과. 상세는 `docs/mock-schemas.md` 10번 섹션 참고.
   - [ ] 4차 배치(H): `AiBriefingPage`/`ContractRagPage`/`MaterialRiskPage`/`RiskMonitoringPage`
     추가 기능(필터·페이징·PDF 다운로드 등), `fetchRecentAiBriefings` 페이징 계약 브레이킹
-    체인지 흡수.
+    체인지 흡수. **origin/minji-tier1-dashboard가 아니라 origin/main 기준으로 재조사**(main이
+    계속 자체 진행 중이라 2026-08-05부터 유일한 기준으로 전환) — H-1/H-2/H-3 하위 배치로
+    분할.
+    - [x] H-1(2026-08-05): `fetchRecentAiBriefings` 브레이킹 체인지+신규 타입 4종
+      (`ApiPage`/`AiBriefingListQuery`/`AiBriefingRiskLevel`/`AiBriefingReviewStatus`),
+      `RiskMonitoringEvent.briefing_id` 신규 필드, 확정 배지 숨김 버그 수정(main `912c26b`
+      대응), 죽은 코드 `runErpImpactAnalysis` 삭제(main이 navigate 방식으로 이미 대체,
+      소비처 0곳 확인). 검증: typecheck/lint/build 통과, Playwright 4/4 PASS, 콘솔 에러
+      0건, `/purchasing` 무수정. 상세는 `docs/mock-schemas.md` "H 배치" 섹션 참고.
+    - [ ] H-2: PDF 다운로드(`downloadGetWithAuth`/`saveBlob` 신규) + AI 브리핑 카드 UX
+      (`ae97647`) + AiBriefingPage 로딩 자리표시자.
+    - [ ] H-3: `ContractEvidenceItem.clause_no`/`clause_title`(`e7afd83`) + 계약·RAG 검색
+      결과 병합/내부값 은닉(`99f9deb`) + 나머지 화면 로딩 자리표시자. 착수 전
+      `--color-primary-alt`(다크 섹션용 색) 오용 여부 `/public/*` 전수 확인 선행.
   - [ ] 5차 배치(G): 데이터 관리 화면(`DataManagementPage`) `PublicDataManagementPage`로 신규
     이식 — `/public/*` 원칙(완전 공개+mock 폴백) 적용 확정.
 

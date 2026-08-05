@@ -413,9 +413,9 @@ export function PublicDashboardPage() {
       .finally(() => {
         if (!cancelled) setAlertsLoading(false)
       })
-    fetchRecentAiBriefings(accessToken, RECENT_BRIEFING_LIMIT)
-      .then((items) => {
-        if (!cancelled) setBriefings(items)
+    fetchRecentAiBriefings(accessToken, { size: RECENT_BRIEFING_LIMIT })
+      .then((page) => {
+        if (!cancelled) setBriefings(page.content)
       })
       .catch((err) => {
         console.error('최근 브리핑 조회 실패', err)

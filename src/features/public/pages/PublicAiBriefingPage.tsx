@@ -145,8 +145,9 @@ export function PublicAiBriefingPage() {
       try {
         // 이 화면은 "최근 브리핑"이 전부인 화면이라 대시보드 사이드패널(5건)과 달리 넉넉히
         // 받는다. 기본값 5로 두면 그날 몇 건만 만들어도 이전 브리핑이 곧바로 묻혔다.
-        const items = await fetchRecentAiBriefings(token, RECENT_BRIEFING_LIMIT)
-        if (!cancelled) setRecent(items)
+        // TODO(H-2): 필터·페이징 UI로 전면 재작성 예정 — 지금은 breaking change만 흡수한 임시 형태.
+        const result = await fetchRecentAiBriefings(token, { size: RECENT_BRIEFING_LIMIT })
+        if (!cancelled) setRecent(result.content)
       } catch {
         // 최근 목록이 비어도 생성은 할 수 있어야 하므로 화면을 막지 않는다.
         if (!cancelled) setRecent([])

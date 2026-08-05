@@ -396,6 +396,11 @@ export interface RiskMonitoringEvent {
   /** 분석(F3)이 아직 없는 기사는 null — 화면이 등급 배지를 생략한다. */
   grade: RiskGrade | null
   confidence_label: ConfidenceLabel
+  /**
+   * 이 뉴스의 완결된 브리핑. 없으면 null이다.
+   * `confidence_label === '확정'`과 항상 짝을 이룬다 — 확정인데 null이면 백엔드 버그다.
+   */
+  briefing_id: string | null
   /** true면 종합 위험도 기준 확정 등급이라 잠정 배지를 숨긴다. */
   multi_agent_completed: boolean
   /** 번역본이 있으면 한국어, 없으면 원문 */
@@ -949,6 +954,42 @@ export interface AcknowledgedItem {
   /** 완료 처리한 사람. 계정이 지워졌으면 null. */
   acknowledged_by_name: string | null
   acknowledged_at: string
+}
+
+/**
+ * 목록 API 공통 페이지 응답. 백엔드 `PageResponse`와 1:1이다.
+ *
+ * `total_elements`가 있어야 마지막 페이지에서 "다음"을 잠글 수 있다 — 배열만 받으면 "지금
+ * 페이지가 비었다"와 "더 없다"를 구분할 방법이 없어 빈 페이지를 계속 넘기게 된다.
+ */
+export interface ApiPage<T> {
+  content: T[]
+  page: number
+  size: number
+  total_elements: number
+  total_pages: number
+}
+
+export type AiBriefingRiskLevel = 'CRITICAL' | 'WARNING' | 'NORMAL'
+
+/** `review_passed`의 세 상태 — TRUE(검증 통과) · FALSE(검토 필요) · NULL(미검증). */
+export type AiBriefingReviewStatus = 'PASSED' | 'FAILED' | 'PENDING'
+
+/**
+ * "최근 브리핑" 조회 조건. 각 축의 `null`은 "전체"이고 그 축은 요청에서 아예 빠진다.
+ *
+ * **필터와 페이징이 한 요청에 함께 간다.** 필터를 화면에서 걸면 서버가 먼저 자른 한 페이지
+ * 안에서만 걸러져, 뒷 페이지에 있어야 할 항목이 통째로 사라진다.
+ */
+export interface AiBriefingListQuery {
+  source?: AiBriefingSource | null
+  /** 평가 미완료(`composite=false`) 브리핑은 어느 등급으로도 걸리지 않는다. */
+  level?: AiBriefingRiskLevel | null
+  reviewStatus?: AiBriefingReviewStatus | null
+  /** 최근 N일. `null`이면 기간 제한 없음. */
+  days?: number | null
+  page?: number
+  size?: number
 }
 
 /**

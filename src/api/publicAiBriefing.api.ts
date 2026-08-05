@@ -1,5 +1,12 @@
 import { fetchWithAuth } from './http'
-import type { AiBriefingContext, AiBriefingDetail, AiBriefingListItem, AiBriefingSource } from './types'
+import type {
+  AiBriefingContext,
+  AiBriefingDetail,
+  AiBriefingListItem,
+  AiBriefingListQuery,
+  AiBriefingSource,
+  ApiPage,
+} from './types'
 
 /**
  * 비로그인 `/public/ai-briefing` 화면 API 클라이언트. 구매팀 1계층 `aiBriefing.api.ts`
@@ -172,23 +179,44 @@ export async function generateAiBriefing(
 }
 
 /**
- * 우측 하단 "최근 브리핑".
+ * 우측 하단 "최근 브리핑" 한 페이지.
+ *
+ * **필터와 페이징을 함께 서버로 보낸다.** 받아온 배열을 화면에서 거르면 서버가 이미 자른 한
+ * 페이지 안에서만 걸러져, 조건에 맞는데 뒷 페이지에 있는 브리핑이 통째로 사라진다.
+ *
+ * mock(①단계)은 데이터가 1건뿐이라 필터 축을 실제로 계산하지 않는다 — `source`가 걸리면
+ * 빈 페이지, 아니면 그 1건짜리 페이지를 돌려주는 것으로 충분하다(다른 축은 무시).
+ *
+ * mock(!API_BASE_URL) 분기의 반환 로직은 origin/main에 대응 코드가 없어 이 세션이
+ * 직접 설계한 것 — 실 백엔드 계약 확인 전까지는 추정치. (fetchWithAuth 분기 자체는
+ * origin/main d0fc23a를 그대로 포트한 것으로 추정 아님)
  *
  * 사용 예:
- *   const recent = await fetchRecentAiBriefings(accessToken, 5)
+ *   const page = await fetchRecentAiBriefings(accessToken, { source: 'NEWS', days: 7, page: 0 })
  */
 export async function fetchRecentAiBriefings(
   accessToken: string | null,
-  limit = 5,
-): Promise<AiBriefingListItem[]> {
+  query: AiBriefingListQuery = {},
+): Promise<ApiPage<AiBriefingListItem>> {
   if (!API_BASE_URL) {
-    return [MOCK_LIST_ITEM].slice(0, limit)
+    const content = query.source ? [] : [MOCK_LIST_ITEM]
+    return { content, page: 0, size: query.size ?? content.length, total_elements: content.length, total_pages: 1 }
   }
   if (!accessToken) {
     throw new Error(LOGIN_REQUIRED_MESSAGE)
   }
+  const params = new URLSearchParams()
+  if (query.source) params.set('source', query.source)
+  if (query.level) params.set('level', query.level)
+  if (query.reviewStatus) params.set('reviewStatus', query.reviewStatus)
+  if (query.days != null) params.set('days', String(query.days))
+  params.set('page', String(query.page ?? 0))
+  params.set('size', String(query.size ?? 5))
   return unwrap(
-    await fetchWithAuth<AiBriefingListItem[]>(`/api/v1/ai-briefing/briefings?limit=${limit}`, accessToken),
+    await fetchWithAuth<ApiPage<AiBriefingListItem>>(
+      `/api/v1/ai-briefing/briefings?${params.toString()}`,
+      accessToken,
+    ),
   )
 }
 

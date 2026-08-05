@@ -38,6 +38,7 @@ const MOCK_EVENTS: RiskMonitoringEvent[] = [
     event_id: 1,
     grade: '심각',
     confidence_label: '확정',
+    briefing_id: 'BRIEF-0001',
     multi_agent_completed: true,
     headline: '코발트 공급사의 납기 지연 가능성 확대',
     headline_original: 'Cobalt supplier delivery delay risk widens',
@@ -52,6 +53,7 @@ const MOCK_EVENTS: RiskMonitoringEvent[] = [
     event_id: 2,
     grade: '주의',
     confidence_label: '참고',
+    briefing_id: null,
     multi_agent_completed: false,
     headline: '니켈 항만 파업 장기화',
     headline_original: 'Nickel port strike prolonged',
@@ -66,6 +68,7 @@ const MOCK_EVENTS: RiskMonitoringEvent[] = [
     event_id: 3,
     grade: '주의',
     confidence_label: '참고',
+    briefing_id: null,
     multi_agent_completed: false,
     headline: '리튬 현물가격 변동 확대',
     headline_original: 'Lithium spot price volatility widens',
@@ -80,6 +83,7 @@ const MOCK_EVENTS: RiskMonitoringEvent[] = [
     event_id: 4,
     grade: '정상',
     confidence_label: '참고',
+    briefing_id: null,
     multi_agent_completed: false,
     headline: '흑연 생산량 회복',
     headline_original: 'Graphite output recovers',
@@ -94,6 +98,7 @@ const MOCK_EVENTS: RiskMonitoringEvent[] = [
     event_id: 5,
     grade: '정상',
     confidence_label: '참고',
+    briefing_id: null,
     multi_agent_completed: false,
     headline: '망간 항만 운영 정상화',
     headline_original: 'Manganese port operations normalize',
@@ -238,35 +243,6 @@ export async function fetchRiskMonitoringEvent(
   const result = await fetchWithAuth<RiskMonitoringDetail>(
     `/api/v1/risk-monitoring/events/${eventId}`,
     accessToken,
-  )
-  if ('error' in result) {
-    throw new Error(result.message)
-  }
-  return result
-}
-
-/**
- * "ERP·계약 영향 분석" 실행 — mock 모드에서는 실제 멀티에이전트가 없으므로 저장된
- * 상세를 그대로 돌려준다(버튼이 `erp_impact_available`로 이미 막혀 있어 호출될 일이 드물다).
- *
- * 사용 예:
- *   const updated = await runErpImpactAnalysis(accessToken, 1)
- */
-export async function runErpImpactAnalysis(
-  accessToken: string | null,
-  eventId: number,
-  useLlm = false,
-): Promise<RiskMonitoringDetail> {
-  if (!API_BASE_URL) {
-    return fetchRiskMonitoringEvent(accessToken, eventId)
-  }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
-  const result = await fetchWithAuth<RiskMonitoringDetail>(
-    `/api/v1/risk-monitoring/events/${eventId}/erp-impact?useLlm=${useLlm}`,
-    accessToken,
-    { method: 'POST' },
   )
   if ('error' in result) {
     throw new Error(result.message)

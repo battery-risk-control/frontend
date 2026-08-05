@@ -1186,3 +1186,73 @@ tier1엔 없던 분기지만, 확인 모달도 없는 단순 즉시-실행 UX라
     추정 — 향후 `taskkill` 결과를 한글 인코딩 깨진 출력만 보고 성공으로 단정하지 말고
     `netstat`로 재확인하는 습관 필요).
   - H(보고/회귀): 위 "검증" 항목에 기록, `git diff --stat` 결과(빔) 명시.
+
+## Phase 13(H 배치, origin/main 기준 재조사 + H-1) — (`feat/public-tier`, 2026-08-05)
+
+**배경**: 기존 H 배치 계획(`docs/roadmap.md`)은 `origin/minji-tier1-dashboard` 기준으로
+잡혀 있었으나, main이 그 이후로도 자체적으로 계속 진행 중임을 직전(F 배치 이후 "main 자체
+수정 동기화") 조사에서 이미 확인했었다 — 이번부터는 **origin/main을 유일한 기준**으로
+재조사했다.
+
+**0단계 조사(코드 수정 없음)**: `AiBriefingPage`/`ContractRagPage`/`MaterialRiskPage`/
+`RiskMonitoringPage` 4개 파일에 minji-tier1-dashboard 조사(Phase 12) 이후 main이 추가로
+쌓은 커밋 8개(`d0fc23a`/`5ee7823`/`f25dd62`/`912c26b`/`e7afd83`/`99f9deb`/`ae97647`/
+`c2dbe67`)를 `git log`로 확인 — 마지막(`c2dbe67`, 데이터 관리 요약 카드)은 G 배치 영역이라
+제외. `5ee7823`(AI 브리핑 진입 경로 3종 — `contextFromDetail`/`latest_briefing_id`/
+`toNewsEventRef` 3갈래 판정 등)은 실제로 우리 코드를 grep해 대조한 결과 **이미 전부
+반영돼 있음**을 확인해 작업 대상에서 제외했다(1차 배치 이전 시점부터 이미 들어와 있었던
+것으로 추정).
+
+나머지 7개 커밋을 파일 경계 기준으로 3개 하위 배치로 분할(사용자 결정, 2026-08-05): H-1
+(API·타입 기반+독립 버그 2건) → H-2(AI 브리핑 화면) → H-3(MaterialRisk+ContractRag 화면).
+각 배치 완료 시마다 검증·보고 후 다음 배치로 진행(전체를 한 번에 진행하지 않음).
+
+**계획 승인 전 사용자 재검토(2026-08-05)**: 최초 제시한 계획이 커밋 요약 수준에 그쳐
+"실제로 어떻게 고칠지"가 없다는 피드백을 받아, 관련 7개 커밋의 `git show` 전체 diff를
+직접 읽고 우리 코드베이스 현재 상태와 한 줄씩 대조한 구체적 diff/의사코드 계획으로
+재작성한 뒤 승인받았다(상세 diff는 세션 내 plan 파일, 이 문서엔 실행 결과만 기록).
+
+### H-1(완료, 2026-08-05)
+
+- **`fetchRecentAiBriefings` 브레이킹 체인지**(main `d0fc23a` 대응) — `api/types.ts`에
+  `ApiPage<T>`/`AiBriefingRiskLevel`/`AiBriefingReviewStatus`/`AiBriefingListQuery` 신규
+  추가. `publicAiBriefing.api.ts`의 `fetchRecentAiBriefings`를 `(token, limit)` →
+  `(token, AiBriefingListQuery)`, 반환 `AiBriefingListItem[]` → `ApiPage<AiBriefingListItem>`
+  로 재작성 — mock(①단계) 분기는 main에 없던 것이라 새로 설계(데이터가 1건뿐이라 `source`
+  필터가 걸리면 빈 페이지, 아니면 1건짜리 페이지). 소비처 2곳 중 `PublicDashboardPage.tsx`
+  는 정식 반영(`.then((page) => setBriefings(page.content))`), `PublicAiBriefingPage.tsx`는
+  H-2에서 필터·페이징 UI로 전면 재작성할 예정이라 이번엔 타입만 맞춘 임시 형태로 두었다
+  (typecheck를 깨지 않기 위한 최소 조치, TODO 주석 남김).
+- **`RiskMonitoringEvent.briefing_id: string | null` 신규 필드**(main 원본 그대로) — mock
+  이벤트 중 확정(event_id 1)에만 `'BRIEF-0001'`, 나머지는 `null`. 소비하는 화면 로직은
+  아직 없음(main도 없음, `git grep` 확인) — 타입·mock만 우선 반영.
+- **확정 배지 숨김 버그 수정**(main `912c26b` 대응) — `PublicRiskMonitoringPage.tsx` 목록·
+  상세 두 곳에서 `!multi_agent_completed &&` 조건을 제거해 `ConfidenceBadge`를 항상 노출.
+  잠정 사유 문장(`provisionalNote`)은 그대로 잠정일 때만 표시.
+- **`runErpImpactAnalysis` 죽은 코드 삭제** — main이 같은 기능을
+  `/purchasing/ai-briefing?source=NEWS&ref=...`로 navigate하는 방식으로 이미 대체했고,
+  우리 `PublicRiskMonitoringPage.tsx`의 `handleErpImpact`도 이미 같은 패턴을 쓰고 있어
+  이 함수는 소비처가 0곳인 죽은 코드였다(`grep -rn runErpImpactAnalysis src/` 사전·사후
+  확인). `docs/naming-glossary.md`의 해당 항목도 함께 제거.
+- 검증: `npm run typecheck`/`lint`/`build` 통과. Playwright 4/4 PASS(리스크 모니터링
+  목록·상세 확정 배지 노출, 비로그인 대시보드·AI 브리핑 페이지 정상 로드), 콘솔 에러 0건.
+  `git diff --stat -- src/features/purchasing/` 빈 결과.
+- `docs/qa-checklist.md` A~H:
+  - A(인증 상태 표시): 해당 없음.
+  - B(공용 컴포넌트 파급 범위): 이번 변경은 전부 `/public/*` 전용 파일(`publicAiBriefing.api.ts`/
+    `publicRiskMonitoring.api.ts`/`PublicRiskMonitoringPage.tsx`/`PublicDashboardPage.tsx`)이라
+    공용 컴포넌트 변경 없음 — `git diff --stat -- src/features/purchasing/` 빈 결과로 확인.
+  - C(접근 제어 피드백): 해당 없음.
+  - D(클릭 요소 시각 신호): 해당 없음.
+  - E(요구사항 커버리지): 확정 배지 수정은 Seq 20(리스크 판단 신뢰도 라벨 표시) 준수 강화 —
+    잠정일 때만 배지를 숨기던 것이 "판정이 끝난 항목일수록 신뢰도 정보가 사라지는" 부작용이
+    있었던 것을 바로잡음.
+  - F(공용 레이아웃 컴포넌트 일관성): 해당 없음(신규 카드형 UI 없음).
+  - G(트러블슈팅 잔존물): Playwright 검증 스크립트(`.scratch/verify-h1.mjs`)는 확인 후 삭제.
+    dev server는 사용 전 `netstat`로 좀비 프로세스 없음을 먼저 확인했고, 사용 후에도
+    `netstat`로 포트가 실제로 비었는지 재확인(이전 turn의 "taskkill 결과를 한글 깨진
+    출력만 보고 성공으로 단정하지 않는다" 교훈 적용).
+  - H(보고/회귀): 위 "검증" 항목에 기록, `git diff --stat -- src/features/purchasing/`
+    결과(빔) 명시.
+
+H-2/H-3은 후속 세션에서 진행 예정.

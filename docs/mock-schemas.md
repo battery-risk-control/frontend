@@ -565,6 +565,52 @@ main 조상 이력에서 빠짐), main이 자체적으로 얹은 수정 중 `/pu
   `git diff --stat -- src/features/purchasing/` 빈 결과(수정 대상 3개 파일 전부
   `/public/*`·공유 위젯).
 
+### H 배치(기존 4개 서브페이지 기능 추가) — origin/main 기준 재조사 + H-1 (2026-08-05)
+
+`docs/roadmap.md`가 H 배치를 "27커밋 재동기화" 계획 당시엔 `origin/minji-tier1-dashboard`
+기준으로 잡아 뒀으나, main이 그 이후로도 계속 자체 진행 중임을 위 "origin/main 자체 수정
+동기화" 조사에서 이미 확인했었다 — H 배치부터는 **origin/main을 유일한 기준**으로 삼아
+재조사했다(main HEAD `bb08fb9` 기준). `AiBriefingPage`/`ContractRagPage`/`MaterialRiskPage`/
+`RiskMonitoringPage` 4개 파일에 minji-tier1-dashboard 조사 이후 main이 추가로 쌓은 커밋
+8개(`d0fc23a`/`5ee7823`/`f25dd62`/`912c26b`/`e7afd83`/`99f9deb`/`ae97647`/`c2dbe67`, 마지막은
+G 배치 영역이라 제외)를 확인, 이 중 `5ee7823`(AI 브리핑 진입 경로 3종)은 이미 우리 코드에
+전부 반영돼 있어(`SelectedArticle.event_id`/`newsEventRef.ts`/`selectedArticle.ts`/
+`contextFromDetail` 전부 확인) 작업 대상에서 제외했다. 나머지를 파일 경계 기준으로
+H-1(API·타입 기반+독립 버그 2건)/H-2(AI 브리핑 화면)/H-3(MaterialRisk+ContractRag 화면) 3개
+하위 배치로 나눠 순서대로 진행하기로 했다(사용자 결정, 2026-08-05) — 배치 하나 끝날 때마다
+검증·보고 후 다음 배치로 넘어간다.
+
+**H-1(완료, 2026-08-05)**:
+- `fetchRecentAiBriefings` 브레이킹 체인지(main `d0fc23a` 대응) — `(token, limit)` →
+  `(token, AiBriefingListQuery)`, 반환 `AiBriefingListItem[]` → `ApiPage<AiBriefingListItem>`.
+  `ApiPage<T>`/`AiBriefingRiskLevel`/`AiBriefingReviewStatus`/`AiBriefingListQuery` 신규 타입
+  추가. mock(①단계)은 main에 없던 분기라 새로 설계 — 데이터가 1건뿐이라 `source` 필터가
+  걸리면 빈 페이지, 아니면 그 1건짜리 페이지를 반환하는 최소 구현. 소비처 2곳 중
+  `PublicDashboardPage.tsx`는 `.then((page) => setBriefings(page.content))`로 정식 반영,
+  `PublicAiBriefingPage.tsx`는 H-2에서 필터·페이징 UI로 전면 재작성할 예정이라 이번엔
+  타입만 맞춘 임시 형태(`{ size: RECENT_BRIEFING_LIMIT }` 호출 + `.content`만 취함)로
+  두었다.
+- `RiskMonitoringEvent.briefing_id: string | null` 신규 필드(main 원본 주석 "확정이면
+  not null이 불변식" 그대로 포함) — mock 이벤트 중 `confidence_label: '확정'`인 1건에만
+  실제 브리핑 id(`BRIEF-0001`, 기존 AI 브리핑 mock과 동일 값)를 채우고 나머지는 `null`.
+  아직 이 필드를 읽는 화면 로직은 없음(main도 없음, `git grep` 확인) — 타입·mock만 우선
+  반영.
+- 확정 배지 숨김 버그 수정(main `912c26b` 대응) — `PublicRiskMonitoringPage.tsx` 목록·상세
+  두 곳에서 `!event.multi_agent_completed &&`/`!detail.multi_agent_completed &&` 조건을
+  제거하고 `ConfidenceBadge`를 항상 표시. 잠정 사유 문장 안내(`provisionalNote`)는 그대로
+  잠정일 때만 표시(변경 없음).
+- `runErpImpactAnalysis`(`publicRiskMonitoring.api.ts`) 삭제 — main이 같은 기능을
+  `/purchasing/ai-briefing?source=NEWS&ref=...`로 navigate하는 방식으로 이미 대체했고,
+  우리 `PublicRiskMonitoringPage.tsx`의 `handleErpImpact`도 이미 같은 navigate 패턴을
+  쓰고 있어(1차 배치 이전부터) 이 함수는 소비처가 0곳인 죽은 코드였다(`grep` 확인).
+- 검증: `npm run typecheck`/`lint`/`build` 통과. Playwright 4/4 PASS(리스크 모니터링
+  목록·상세에서 확정 배지 노출, 대시보드·AI 브리핑 페이지 정상 로드), 콘솔 에러 0건.
+  `git diff --stat -- src/features/purchasing/` 빈 결과.
+
+H-2/H-3은 후속 배치로 진행 예정 — 상세 계획은 세션 내 plan 파일 참고(H-2: PDF 다운로드+
+AI 브리핑 카드 UX+로딩 자리표시자, H-3: `clause_no`/`clause_title`+계약·RAG 검색 결과 병합/
+내부값 은닉+나머지 로딩 자리표시자, `--color-primary-alt` 오용 여부 확인 선행).
+
 ## 임시 mock 값 (후속 정리 필요)
 
 Phase 9.3(원자재 가격 추이 "상세보기", surin `RiskMonitoring.tsx` 시각 이식)에서 시각 구성을 우선하기 위해 실제 계산 로직 없이 하드코딩한 필드 목록. 각 필드는 코드에도 `// mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요` 주석이 달려 있다. 앞으로도 실제 계산 로직 없이 mock 값으로 구현하는 필드가 생기면, 이 섹션에 반드시 등재하고 코드에도 `// mock 임시값 — 실제 계산 로직 미구현, 후속 검증 필요` 주석을 남긴다.

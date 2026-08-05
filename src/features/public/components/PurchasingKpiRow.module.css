@@ -1,0 +1,109 @@
+.section {
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* 시각적으로는 숨기되 스크린리더·PageSectionDots의 앵커 대상으로는 남긴다 — 목업의 KPI 행에는
+   제목이 없지만, 제목 없는 섹션은 도트 인디케이터가 가리킬 이름을 잃는다. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.grid {
+  display: grid;
+  /* 5칸 고정이 아니라 auto-fit — SideNav·알림 패널이 펼쳐져 폭이 좁아지면 줄바꿈된다.
+     고정 5열이면 좁은 폭에서 숫자가 잘린다. */
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--color-border);
+}
+
+.cell:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* 큰 숫자와 24h 보조 줄을 감싸는 <dd>. 마진 초기화는 여기서 하고, 색은 큰 숫자에만 준다 —
+   보조 줄까지 등급 색이 번지면 두 값이 같은 무게로 읽힌다. */
+.valueBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+}
+
+/* 24시간 보조 줄. 모집단이 달라 큰 숫자와 뺄셈하면 안 되는 값이라(컴포넌트 주석 참고),
+   증감처럼 보이지 않게 회색 + 작은 글씨로만 둔다. */
+.subValue {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.subLabel {
+  padding: 0 4px;
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.unit {
+  margin-left: 2px;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+}
+
+/* 심각·주의만 등급 색을 쓴다(RiskGradeBadge와 동일 토큰). 점수·건수 3칸은 등급이 아니라
+   지표라, 등급 색을 쓰면 "ERP 영향도 75점 = 심각"으로 잘못 읽힌다. */
+.critical {
+  color: var(--color-risk-critical);
+}
+
+.warning {
+  color: var(--color-risk-warning);
+}
+
+.erp {
+  color: var(--color-risk-normal);
+}
+
+.external {
+  color: var(--color-primary);
+}
+
+.briefing {
+  color: var(--color-risk-normal);
+}

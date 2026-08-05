@@ -1,0 +1,325 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.subheading {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* 상단 "분석 대상 · ERP 연결 · 생성 버튼". 좁아지면 세로로 쌓인다. */
+.targetBar {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+@media (max-width: 900px) {
+  .targetBar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}
+
+.targetField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.targetLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.targetValue {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.targetMeta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* 본문:근거 = 3:2. 우측은 sticky라 브리핑을 길게 스크롤해도 근거가 따라온다(다른 1계층 화면과 동일). */
+.split {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.briefingPanel,
+.sidePanel {
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-4));
+}
+
+@media (max-width: 1024px) {
+  .sideColumn {
+    position: static;
+  }
+}
+
+.panelHeading {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.briefingBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.briefingText {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+  color: var(--color-text);
+  white-space: pre-line;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+}
+
+.sectionText {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+.actionList,
+.reasonList {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+  color: var(--color-text);
+}
+
+.reasonList {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* 검증 메타데이터는 본문과 성격이 달라(재현용 기록) 배경으로 구분한다. */
+.metaBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.metaText {
+  margin: 0;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  color: var(--color-risk-normal);
+}
+
+.levelTag {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+}
+
+.toneCritical {
+  color: var(--color-risk-critical);
+}
+
+.toneWarning {
+  color: var(--color-risk-warning);
+}
+
+.toneNormal {
+  color: var(--color-risk-normal);
+}
+
+.toneNeutral {
+  color: var(--color-text);
+}
+
+/* 분석 근거 4칸. 라벨은 좌측, 값은 우측 정렬해 등급이 세로로 읽힌다. */
+.evidenceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  margin-bottom: var(--space-2);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.evidenceLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.evidenceValue {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.recentCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.recentCard:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+.recentTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.recentMeta {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.recentDate {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.primaryAction,
+.secondaryAction {
+  display: block;
+  padding: var(--space-3) var(--space-5);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.primaryAction {
+  color: var(--color-surface);
+  background: var(--color-risk-normal);
+}
+
+.secondaryAction {
+  width: 100%;
+  color: var(--color-surface);
+  background: var(--color-text);
+}
+
+.primaryAction:disabled,
+.secondaryAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.primaryAction:not(:disabled):hover,
+.secondaryAction:not(:disabled):hover {
+  opacity: 0.88;
+}
+
+.notice {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.blockedReason {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.footnote {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-risk-critical);
+}

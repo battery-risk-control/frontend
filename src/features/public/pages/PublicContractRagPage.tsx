@@ -51,7 +51,9 @@ export function PublicContractRagPage() {
   const { accessToken } = useAuthState()
   const navigate = useNavigate()
   const [contracts, setContracts] = useState<ContractSummary[]>([])
-  const [query, setQuery] = useState(DEFAULT_QUERY)
+  // 검색창은 비워 두고 예시는 결과 패널의 버튼으로 제공한다(구매팀과 동일) — 미리 채워두면
+  // 다른 걸 검색하려는 사람이 매번 지워야 한다.
+  const [query, setQuery] = useState('')
   const [scopeContractId, setScopeContractId] = useState<number | null>(null)
   const [search, setSearch] = useState<ContractClauseSearchResult | null>(null)
   const [selectedClause, setSelectedClause] = useState<ContractClauseHit | null>(null)
@@ -251,7 +253,7 @@ export function PublicContractRagPage() {
               onKeyDown={(event) => {
                 if (event.key === 'Enter') void handleSearch()
               }}
-              placeholder={DEFAULT_QUERY}
+              placeholder={`ex) ${DEFAULT_QUERY}`}
               aria-label="검색어"
             />
             <label className={styles.scopeSelect}>
@@ -302,9 +304,18 @@ export function PublicContractRagPage() {
 
               {searchError && <p className={styles.error}>{searchError}</p>}
               {!search && !searchError && (
-                <p className={styles.notice}>
-                  검색어를 넣고 "계약서 검색"을 누르면 의미가 가까운 조항을 유사도 순으로 보여줍니다.
-                </p>
+                <div className={styles.notice}>
+                  <p className={styles.emptyLead}>
+                    검색어를 넣고 "계약서 검색"을 누르면 의미가 가까운 조항을 유사도 순으로 보여줍니다.
+                  </p>
+                  <button
+                    type="button"
+                    className={styles.exampleQuery}
+                    onClick={() => setQuery(DEFAULT_QUERY)}
+                  >
+                    예시: {DEFAULT_QUERY}
+                  </button>
+                </div>
               )}
               {search && search.results.length === 0 && (
                 <p className={styles.notice}>

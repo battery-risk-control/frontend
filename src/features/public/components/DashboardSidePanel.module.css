@@ -76,6 +76,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg);
+  flex-shrink: 0;
 }
 
 .tab,
@@ -119,7 +120,9 @@
 }
 
 .tabPanel {
-  flex: 1;
+  /* 콘텐츠 높이 그대로 두고 넘치면 바깥 .panel이 스크롤한다. 예전 flex:1은 이 박스를 눌러
+     긴 알림이 넘쳐 스크롤·힌트가 죽었다(구매팀과 동일). */
+  flex: 0 0 auto;
   min-height: 0;
 }
 

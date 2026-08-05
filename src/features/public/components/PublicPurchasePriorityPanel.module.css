@@ -30,6 +30,11 @@
   font-weight: var(--font-weight-bold);
 }
 
+/* 평가 불가 목록의 번호. 순위(네이비)와 달리 회색으로 눌러 "급한 순서"가 아님을 드러낸다. */
+.rankMuted {
+  background: var(--color-text-muted);
+}
+
 .body {
   display: flex;
   flex-direction: column;

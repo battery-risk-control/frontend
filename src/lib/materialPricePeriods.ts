@@ -22,7 +22,9 @@ export const PERIOD_DAYS: Record<string, number> = {
 export const DEFAULT_PERIOD = '1개월'
 
 /**
- * 화면에 노출할 탭. "사용자 설정"은 날짜 범위 선택 UI가 있어야 성립해서 아직 비활성이다 —
- * 누를 수 있게 두면 버튼만 선택된 채 차트는 이전 구간 그대로라 조용히 거짓말을 하게 된다.
+ * 화면에 노출할 탭. 모두 {@link PERIOD_DAYS}에 대응하는 실제 조회 구간을 가진다.
+ *
+ * "사용자 설정"(날짜 범위 직접 선택) 탭은 제거했다 — 선택 UI가 없어 눌러도 차트는 그대로였고,
+ * 안내 툴팁만 뜨는 죽은 버튼이었다. 다시 붙이려면 날짜 범위 picker와 기간 파라미터부터 필요하다.
  */
-export const PERIOD_OPTIONS = [...Object.keys(PERIOD_DAYS), '사용자 설정']
+export const PERIOD_OPTIONS = [...Object.keys(PERIOD_DAYS)]

@@ -115,12 +115,13 @@
   color: var(--color-text);
 }
 
-/* 목록:상세 = 3:2. 상세는 sticky라 목록을 길게 스크롤해도 따라온다(리스크 모니터링과 동일). */
+/* 목록:상세 = 3:2. stretch로 '자재별 위험 현황' 목록 카드와 '자재 상세' 카드의 높이를 맞춘다
+   — 둘의 길이가 서로 달라 어긋나 보이던 것을 없앤다. */
 .split {
   display: grid;
   grid-template-columns: 3fr 2fr;
   gap: var(--space-4);
-  align-items: start;
+  align-items: stretch;
 }
 
 @media (max-width: 1024px) {

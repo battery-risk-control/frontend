@@ -83,27 +83,30 @@ export function PurchasePriorityPanel({
             ))}
           </ol>
 
-          {/* 평가하지 못한 자재. 순위를 붙이지 않는다 — 순위 목록의 숫자는 "얼마나 급한가"로
-              읽히는데, 확인이 안 된 것을 그 자리에 끼우면 두 뜻이 섞인다. 대신 별도 영역과
-              라벨로 드러내고 사유를 함께 적어 무엇을 채워야 하는지 바로 알 수 있게 한다. */}
+          {/* 평가하지 못한 자재. 위 순위 목록과 같은 번호 카드로 보여주되, 번호를 회색으로
+              눌러 "얼마나 급한가"의 순위가 아니라 "확인 못 한 목록의 나열"임을 시각적으로
+              구분한다. 별도 영역·라벨과 사유를 함께 적어 무엇을 채워야 하는지 바로 알게 한다. */}
           {unavailable.length > 0 && (
             <section className={styles.unavailableSection} aria-label="평가 불가 자재">
               <h3 className={styles.unavailableHeading}>
                 평가 불가 <span className={styles.unavailableCount}>{unavailable.length}</span>
               </h3>
-              <ul className={styles.unavailableList}>
-                {unavailable.map((material) => (
-                  <li key={material.erp_material_id} className={styles.unavailableItem}>
-                    <span className={styles.material}>
-                      {material.material_name}
-                      <span className={styles.unavailable}>평가 불가</span>
-                    </span>
-                    {material.unavailable_reason && (
-                      <span className={styles.recommendation}>{material.unavailable_reason}</span>
-                    )}
+              <ol className={styles.list}>
+                {unavailable.map((material, index) => (
+                  <li key={material.erp_material_id} className={styles.item}>
+                    <span className={`${styles.rank} ${styles.rankMuted}`}>{index + 1}</span>
+                    <div className={styles.body}>
+                      <span className={styles.material}>
+                        {material.material_name}
+                        <span className={styles.unavailable}>평가 불가</span>
+                      </span>
+                      {material.unavailable_reason && (
+                        <span className={styles.stockDays}>{material.unavailable_reason}</span>
+                      )}
+                    </div>
                   </li>
                 ))}
-              </ul>
+              </ol>
             </section>
           )}
         </>

@@ -1,16 +1,21 @@
+/* 도넛을 위, 범례를 아래로 세로 배치한다. 예전 가로 배치(도넛 옆 좁은 범례)는 도넛 아래
+   공백이 크고 "인도네시아"·"기타 9개국" 같은 라벨이 줄바꿈되던 문제가 있었다. */
 .body {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: var(--space-4);
 }
 
+/* 범례는 도넛 아래 2열 그리드. 열·행 간격을 넉넉히 벌려 값과 다음 라벨(예: 25.3% ↔ 중국)이
+   붙지 않고, 같은 열의 항목들(칠레·인도네시아·미국)도 여유 있게 떨어지도록 한다. */
 .legend {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-8);
+  margin: var(--space-2) 0 0;
+  padding: 0 var(--space-2);
   list-style: none;
 }
 
@@ -18,6 +23,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-4);
+  min-width: 0;
   font-size: var(--font-size-sm);
 }
 
@@ -25,12 +32,15 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
+  white-space: nowrap;
   color: var(--color-text-muted);
 }
 
 .legendDot {
   width: 8px;
   height: 8px;
+  flex-shrink: 0; /* 라벨이 길어 칸이 좁아져도 점이 눌려 타원으로 찌그러지지 않게 고정 */
   border-radius: 50%;
 }
 

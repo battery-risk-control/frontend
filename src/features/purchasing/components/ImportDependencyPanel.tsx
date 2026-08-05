@@ -66,6 +66,7 @@ export function ImportDependencyPanel({ data, blurred = false }: ImportDependenc
           data={slices.map((item) => ({ ...item, color: item.color ?? OTHERS_COLOR }))}
           centerValue={`${data.total}%`}
           centerLabel="전체 수입 의존도"
+          size={280}
         />
         <ul className={styles.legend}>
           {slices.map((item) => (

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import type { ContractUploadOptions, DataImportMode } from '../../../api/types'
+import { supplierStatusLabel } from '../lib/supplierStatus'
 import styles from './DataImportUploadPanel.module.css'
 
 /**
@@ -148,7 +149,9 @@ export function DataImportUploadPanel({
               {(options?.suppliers ?? []).map((supplier) => (
                 <option key={supplier.erp_supplier_id} value={supplier.erp_supplier_id}>
                   {supplier.supplier_name} ({supplier.erp_supplier_id})
-                  {supplier.supplier_status !== 'ACTIVE' ? ` · ${supplier.supplier_status}` : ''}
+                  {supplier.supplier_status && supplier.supplier_status !== 'ACTIVE'
+                    ? ` · ${supplierStatusLabel(supplier.supplier_status)}`
+                    : ''}
                 </option>
               ))}
             </select>

@@ -424,7 +424,11 @@ export function GlobalRiskBoard({ items, onSelectItem, mapHeight, onSelect }: Gl
       {!onSelect && (
         <>
           <div className={styles.panelHeader}>
-            <p className={styles.placeholder}>지도에서 마커를 클릭하면 관련 리스크 정보가 여기에 표시됩니다.</p>
+            <p className={styles.placeholder}>
+              {onSelectItem
+                ? '지도에서 국가를 클릭하면 오른쪽 뉴스 상세 패널에 리스크 정보가 표시됩니다.'
+                : '지도에서 마커를 클릭하면 관련 리스크 정보가 여기에 표시됩니다.'}
+            </p>
             <button
               type="button"
               className={styles.panelToggleButton}

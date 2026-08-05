@@ -218,32 +218,9 @@ function BriefingList({ briefings }: { briefings: AiBriefingListItem[] }) {
 }
 
 /**
- * 데이터 업로드 카드. 목업 우측 하단 자리다.
- *
- * **업로드를 여기서 처리하지 않고 기존 화면으로 보낸다.** 계약서는 계약·RAG 화면이 이미
- * 업로드·재처리·인덱싱 상태까지 다루고 있어 같은 기능을 두 곳에 두면 갈라진다. ERP CSV는
- * 백엔드에 업로드 엔드포인트 자체가 없어(`contract-rag` 쪽만 있다) 파일 선택창을 띄우면
- * 고를 수는 있는데 보낼 곳이 없는 상태가 된다.
- */
-function UploadCard() {
-  return (
-    <ScrollCard headingId="data-upload-heading" title="데이터 업로드">
-      <div className={styles.uploadBody}>
-        <Link to="/public/contract-rag" className={styles.uploadItem}>
-          <span className={styles.uploadTitle}>계약서 PDF / TXT</span>
-          <span className={styles.uploadHint}>계약 · RAG 화면에서 업로드 →</span>
-        </Link>
-        <div className={`${styles.uploadItem} ${styles.uploadDisabled}`}>
-          <span className={styles.uploadTitle}>ERP CSV</span>
-          <span className={styles.uploadHint}>업로드 API 준비 중 — 현재는 DB 적재로 반영됩니다</span>
-        </div>
-      </div>
-    </ScrollCard>
-  )
-}
-
-/**
- * 구매팀 대시보드 우측 패널 — 목업의 탭 3개(뉴스 상세 · 알림 · 브리핑) + 데이터 업로드 카드.
+ * 구매팀 대시보드 우측 패널 — 목업의 탭 3개(뉴스 상세 · 알림 · 브리핑).
+ * 비로그인 화면이라 데이터 업로드 카드는 제외한다 — 업로드는 로그인 필수 기능(구매팀
+ * 전용 쓰기 액션)이라 비로그인 사이드바에 둘 이유가 없다.
  *
  * 기존 `AlertsPanel`을 대체하되 **바깥 계약은 그대로 유지한다**(`expanded`/`isPreviewing`/
  * `onPreviewMouseEnter`/`onPreviewMouseLeave`). 헤더 벨(`AlertsBellButton`)의 토글·호버
@@ -388,8 +365,6 @@ export function DashboardSidePanel({
                   <BriefingList briefings={briefings} />
                 ))}
             </div>
-
-            <UploadCard />
           </div>
           {hasOverflowTop && (
             <div className={styles.overflowHintTop} aria-hidden="true">

@@ -207,6 +207,8 @@ const MOCK_CONTRACT_EVIDENCE: ContractEvidence = {
       document_type: 'CONTRACT',
       chunk_index: 6,
       page_number: 1,
+      clause_no: '제7조',
+      clause_title: '제7조 · 납기 지연 위약금',
       content: '지연 물량 금액의 0.1%를 1일당 위약금으로 부과하며 누계는 발주 금액의 10%를 상한으로 합니다.',
       similarity_score: 0.61,
       mock_embedding: true,
@@ -219,6 +221,8 @@ const MOCK_CONTRACT_EVIDENCE: ContractEvidence = {
       document_type: 'CONTRACT',
       chunk_index: 3,
       page_number: 1,
+      clause_no: '제4조',
+      clause_title: '제4조 · 납기 지연 통지',
       content: '공급자는 지연 사유, 예상 지연 일수 및 복구 계획을 구매자에게 서면 통지해야 합니다.',
       similarity_score: 0.6,
       mock_embedding: true,
@@ -231,6 +235,8 @@ const MOCK_CONTRACT_EVIDENCE: ContractEvidence = {
       document_type: 'CONTRACT',
       chunk_index: 4,
       page_number: 1,
+      clause_no: '제5조',
+      clause_title: '제5조 · 불가항력',
       content: '공급 차질을 유발한 불가항력 사유와 완화 의무, 계약 종료 조건을 확인합니다.',
       similarity_score: 0.43,
       mock_embedding: true,
@@ -255,12 +261,10 @@ export async function fetchMaterialRiskOverview(
   if (!API_BASE_URL) {
     return MOCK_OVERVIEW
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
+  // 조회 전용 API — 백엔드가 permitAll로 열어뒀으므로 비로그인 방문자도 그대로 부른다.
   const result = await fetchWithAuth<MaterialRiskOverview>(
     `/api/v1/material-risk/overview${refresh ? '?refresh=true' : ''}`,
-    accessToken,
+    accessToken ?? '',
   )
   if ('error' in result) {
     throw new Error(result.message)
@@ -285,12 +289,9 @@ export async function fetchMaterialRiskDetail(
     }
     return toMockDetail(item)
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
   const result = await fetchWithAuth<MaterialRiskDetail>(
     `/api/v1/material-risk/materials/${encodeURIComponent(erpMaterialId)}`,
-    accessToken,
+    accessToken ?? '',
   )
   if ('error' in result) {
     throw new Error(result.message)
@@ -311,12 +312,9 @@ export async function fetchContractEvidence(
   if (!API_BASE_URL) {
     return { ...MOCK_CONTRACT_EVIDENCE, erp_material_id: erpMaterialId }
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
   const result = await fetchWithAuth<ContractEvidence>(
     `/api/v1/material-risk/materials/${encodeURIComponent(erpMaterialId)}/contract-evidence`,
-    accessToken,
+    accessToken ?? '',
     { method: 'POST' },
   )
   if ('error' in result) {

@@ -156,6 +156,8 @@ const MOCK_DETAILS: Record<number, RiskMonitoringDetail> = {
     },
     erp_impact_available: false,
     erp_impact_blocked_reason: '이미 종합 위험도 평가가 완료된 이벤트입니다.',
+    latest_attempt_status: 'COMPLETED',
+    latest_attempt_at: '2026-07-31T14:20:00Z',
   },
 }
 
@@ -171,6 +173,8 @@ function toMockDetail(event: RiskMonitoringEvent): RiskMonitoringDetail {
       procurement_risk: null,
       erp_impact_available: event.grade !== null,
       erp_impact_blocked_reason: event.grade === null ? '분석이 아직 완료되지 않았습니다.' : null,
+      latest_attempt_status: 'NOT_RUN',
+      latest_attempt_at: null,
     }
   )
 }
@@ -207,12 +211,10 @@ export async function fetchRiskMonitoringEvents(
   if (!API_BASE_URL) {
     return applyFilters(MOCK_EVENTS, filters)
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
+  // 조회 전용 API — 백엔드가 permitAll로 열어뒀으므로 비로그인 방문자도 그대로 부른다.
   const result = await fetchWithAuth<RiskMonitoringEvent[]>(
     `/api/v1/risk-monitoring/events${toQuery(filters)}`,
-    accessToken,
+    accessToken ?? '',
   )
   if ('error' in result) {
     throw new Error(result.message)
@@ -237,12 +239,9 @@ export async function fetchRiskMonitoringEvent(
     }
     return toMockDetail(event)
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
   const result = await fetchWithAuth<RiskMonitoringDetail>(
     `/api/v1/risk-monitoring/events/${eventId}`,
-    accessToken,
+    accessToken ?? '',
   )
   if ('error' in result) {
     throw new Error(result.message)

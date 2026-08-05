@@ -378,43 +378,6 @@
   opacity: 0.9;
 }
 
-/* --- 데이터 업로드 --- */
-
-.uploadBody {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.uploadItem {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
-  text-decoration: none;
-}
-
-.uploadItem:hover:not(.uploadDisabled) {
-  border-color: var(--color-primary);
-}
-
-.uploadDisabled {
-  opacity: 0.6;
-}
-
-.uploadTitle {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text);
-}
-
-.uploadHint {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-}
-
 /* --- 스크롤 힌트 --- */
 
 .overflowHintTop,

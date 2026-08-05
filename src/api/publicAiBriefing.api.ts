@@ -137,13 +137,11 @@ export async function fetchAiBriefingContext(
       latest_briefing_id: MOCK_DETAIL_BASE.briefing_id,
     }
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
+  // 조회 전용 API — 백엔드가 permitAll로 열어뒀으므로 비로그인 방문자도 그대로 부른다.
   return unwrap(
     await fetchWithAuth<AiBriefingContext>(
       `/api/v1/ai-briefing/context?source=${source}&ref=${encodeURIComponent(ref)}`,
-      accessToken,
+      accessToken ?? '',
     ),
   )
 }
@@ -202,9 +200,6 @@ export async function fetchRecentAiBriefings(
     const content = query.source ? [] : [MOCK_LIST_ITEM]
     return { content, page: 0, size: query.size ?? content.length, total_elements: content.length, total_pages: 1 }
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
   const params = new URLSearchParams()
   if (query.source) params.set('source', query.source)
   if (query.level) params.set('level', query.level)
@@ -215,7 +210,7 @@ export async function fetchRecentAiBriefings(
   return unwrap(
     await fetchWithAuth<ApiPage<AiBriefingListItem>>(
       `/api/v1/ai-briefing/briefings?${params.toString()}`,
-      accessToken,
+      accessToken ?? '',
     ),
   )
 }
@@ -236,13 +231,10 @@ export async function fetchAiBriefing(
     }
     return { ...MOCK_DETAIL_BASE, source_type: 'NEWS', source_ref: MOCK_DETAIL_BASE.news_id }
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
   return unwrap(
     await fetchWithAuth<AiBriefingDetail>(
       `/api/v1/ai-briefing/briefings/${encodeURIComponent(briefingId)}`,
-      accessToken,
+      accessToken ?? '',
     ),
   )
 }

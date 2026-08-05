@@ -91,8 +91,8 @@ async function resolve<T extends object>(
   mock: T,
 ): Promise<T> {
   if (!API_BASE_URL) return mock
-  if (!accessToken) throw new Error(LOGIN_REQUIRED_MESSAGE)
-  const result = await fetchWithAuth<T>(path, accessToken)
+  // 조회 전용 API — 백엔드가 permitAll로 열어뒀으므로 비로그인 방문자도 그대로 부른다.
+  const result = await fetchWithAuth<T>(path, accessToken ?? '')
   if ('error' in result) {
     throw new Error(result.message)
   }

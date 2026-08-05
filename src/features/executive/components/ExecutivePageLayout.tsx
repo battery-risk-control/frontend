@@ -20,8 +20,11 @@ import {
   EXECUTIVE_SIDE_NAV_ITEMS,
 } from '../../../lib/executiveNav'
 import {
-  useNavigate,
-} from 'react-router-dom'
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
+import { ExecutiveSidePanel } from './ExecutiveSidePanel'
 import styles from '../pages/ExecutiveDashboardPage.module.css'
 
 interface ExecutivePageLayoutProps {
@@ -30,6 +33,7 @@ interface ExecutivePageLayoutProps {
   children: ReactNode
   aside?: ReactNode
   alertCount?: number
+  detailKey?: string | null
 }
 
 /**
@@ -40,12 +44,21 @@ interface ExecutivePageLayoutProps {
  */
 export function ExecutivePageLayout({
   title,
-  description,
   children,
   aside,
   alertCount = 0,
+  detailKey = null,
 }: ExecutivePageLayoutProps) {
-  const navigate = useNavigate()
+  const [sideTab, setSideTab] = useState<'detail' | 'alerts'>('detail')
+  const detailSectionRef = useRef<HTMLElement>(null)
+  const detailExpanded = Boolean(detailKey)
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date())
+
+  useEffect(() => {
+    if (detailKey) {
+      requestAnimationFrame(() => detailSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    }
+  }, [detailKey])
 
   return (
     <div className={styles.page}>
@@ -54,24 +67,13 @@ export function ExecutivePageLayout({
           <AlertsBellButton
             count={alertCount}
             onOpenAlerts={() => {
-              navigate('/executive/verification')
+              setSideTab('alerts')
             }}
             onMouseEnter={() => undefined}
             onMouseLeave={() => undefined}
           />
         }
-      >
-        <time
-          className={styles.headerDate}
-          dateTime={new Date().toISOString().slice(0, 10)}
-        >
-          {new Intl.DateTimeFormat('ko-KR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-          }).format(new Date())}
-        </time>
-      </Header>
+      />
 
       <div className={styles.body}>
         <SideNavToggleButton />
@@ -92,16 +94,31 @@ export function ExecutivePageLayout({
                 {title}
               </h1>
             </div>
-
-            <p className={styles.description}>
-              {description}
-            </p>
+            <time className={styles.headerDate} dateTime={today}>
+              {today.replaceAll('-', '.')} <span>기준</span>
+            </time>
           </div>
 
           {children}
+
+          {detailExpanded && aside && (
+            <section ref={detailSectionRef} className={styles.expandedDetail} aria-label="선택 항목 상세 정보">
+              <div className={styles.expandedDetailHeader}>
+                <div>
+                  <span>상세 근거</span>
+                  <h2>선택 항목 상세 정보</h2>
+                </div>
+              </div>
+              <div className={styles.expandedDetailContent}>{aside}</div>
+            </section>
+          )}
         </main>
 
-        {aside}
+        <ExecutiveSidePanel
+          detail={aside}
+          alertCount={alertCount}
+          requestedTab={sideTab}
+        />
       </div>
 
       <Footer />

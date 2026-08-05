@@ -102,13 +102,6 @@ export function ExecutiveRiskDetailPanel({
 
                   <dl>
                     <div>
-                      <dt>이벤트 ID</dt>
-                      <dd>
-                        {event.risk_event_id}
-                      </dd>
-                    </div>
-
-                    <div>
                       <dt>국가</dt>
                       <dd>
                         {event.country_name ??

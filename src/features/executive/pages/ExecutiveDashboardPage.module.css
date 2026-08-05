@@ -30,9 +30,18 @@
 .titleRow {
   display: flex;
   align-items: flex-start;
-  flex-direction: column;
-  gap: var(--space-1);
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
 }
+
+.expandedDetail { scroll-margin-top: calc(var(--header-height) + 20px); overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: 0 8px 24px rgba(10, 32, 58, .06); }
+.expandedDetailHeader { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--color-border); }
+.expandedDetailHeader span { color: #087f72; font-size: var(--font-size-xs); font-weight: var(--font-weight-bold); letter-spacing: .08em; }
+.expandedDetailHeader h2 { margin: 4px 0 0; font-size: var(--font-size-xl); }
+.expandedDetailHeader button { padding: 8px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); font: inherit; cursor: pointer; }
+.expandedDetailContent { padding: 24px; }
+.expandedDetailContent > aside { width: 100% !important; min-height: 0; margin: 0 !important; padding: 0; border: 0; border-radius: 0; box-shadow: none; }
 
 .titleRow > div {
   min-width: 0;
@@ -59,14 +68,21 @@
 .headerDate {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid rgb(255 255 255 / 45%);
-  border-radius: 6px;
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 600;
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   white-space: nowrap;
+}
+
+.headerDate span {
+  margin-left: 4px;
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
 }
 
 .mapSection {

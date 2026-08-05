@@ -4,11 +4,13 @@ import styles from './ExecutivePriorityAlert.module.css'
 interface ExecutivePriorityAlertProps {
   risk?: MaterialRiskRankItem
   reviewRequiredCount: number
+  onClick?: () => void
 }
 
 export function ExecutivePriorityAlert({
   risk,
   reviewRequiredCount,
+  onClick,
 }: ExecutivePriorityAlertProps) {
   if (!risk) {
     return (
@@ -23,7 +25,16 @@ export function ExecutivePriorityAlert({
   }
 
   return (
-    <section className={styles.alert} aria-label="핵심 위험 알림">
+    <section
+      className={styles.alert}
+      aria-label="핵심 위험 알림"
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={(event) => {
+        if (onClick && (event.key === 'Enter' || event.key === ' ')) onClick()
+      }}
+    >
       <span className={styles.badge}>{risk.grade}</span>
       <div className={styles.content}>
         <strong>{risk.material} 공급망 위험 우선 확인</strong>

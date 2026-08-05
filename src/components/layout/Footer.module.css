@@ -13,6 +13,31 @@
   color: var(--color-text-muted);
 }
 
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.links a {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+.links a:first-child {
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+}
+
+.links a:hover,
+.links a:focus-visible {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
 /* 외부 데이터 출처. 표기 의무는 지키되 운영기관 정보보다 뒤로 물러나야 하므로 한 단계 더 흐리게 둔다. */
 .credits {
   margin: var(--space-1) 0 0;

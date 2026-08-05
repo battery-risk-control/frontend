@@ -17,7 +17,12 @@ import styles from './Footer.module.css'
 export function Footer() {
   return (
     <footer className={styles.footer}>
-      <p className={styles.text}>배터리 원자재 공급망 리스크 관제 AI 에이전트</p>
+      <nav className={styles.links} aria-label="서비스 정책">
+        <a href="/privacy">개인정보처리방침</a>
+        <a href="/terms">이용약관</a>
+        <a href="/sources">데이터 출처</a>
+      </nav>
+      <p className={styles.text}>© 2026 Battery Risk Control · 배터리 원자재 공급망 리스크 관제</p>
       <p className={styles.credits}>
         환율{' '}
         <a

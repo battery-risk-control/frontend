@@ -4,9 +4,13 @@ import {
 import {
   ExecutiveSummaryPanel,
 } from '../components/ExecutiveSummaryPanel'
+import { ExecutiveEvidencePanel, type EvidenceTab } from '../components/ExecutiveEvidencePanel'
+import type { AiBriefingDetail } from '../../../api/types'
+import { useState } from 'react'
 import {
   useExecutiveDashboard,
 } from '../useExecutiveDashboard'
+import { useExecutiveEvidence } from '../useExecutiveEvidence'
 import styles from '../components/ExecutiveDashboardSections.module.css'
 
 export function ExecutiveRisksPage() {
@@ -15,6 +19,9 @@ export function ExecutiveRisksPage() {
     loading,
     errorMessage,
   } = useExecutiveDashboard()
+  const evidence = useExecutiveEvidence()
+  const [selected, setSelected] = useState<AiBriefingDetail | null>(null)
+  const [tab, setTab] = useState<EvidenceTab>('summary')
 
   return (
     <ExecutivePageLayout
@@ -26,7 +33,8 @@ export function ExecutiveRisksPage() {
         dashboard?.verification_summary
           .review_required_count ?? 0
       }
-      aside={
+      detailKey={selected?.briefing_id ?? null}
+      aside={selected ? <ExecutiveEvidencePanel item={selected} tab={tab} onTabChange={setTab} /> :
         <ExecutiveSummaryPanel
           dashboard={dashboard}
           loading={loading}
@@ -95,6 +103,14 @@ export function ExecutiveRisksPage() {
                         className={
                           styles.riskCard
                         }
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          const match = evidence.items.find((item) =>
+                            (item.material_name ?? item.material_category ?? '').toLowerCase().includes(risk.material.toLowerCase()),
+                          ) ?? evidence.items[0]
+                          if (match) { setSelected(match); setTab('summary') }
+                        }}
                       >
                         <div
                           className={

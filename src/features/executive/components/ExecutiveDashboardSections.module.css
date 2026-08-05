@@ -368,3 +368,17 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
+button.verificationItem,
+button.briefingItem,
+button.listItem {
+  width: 100%;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+button.verificationItem[aria-pressed='true'] {
+  outline: 2px solid #173b67;
+  outline-offset: 2px;
+}

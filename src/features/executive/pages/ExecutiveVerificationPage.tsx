@@ -1,275 +1,115 @@
-import {
-  ExecutivePageLayout,
-} from '../components/ExecutivePageLayout'
-import {
-  ExecutiveSummaryPanel,
-} from '../components/ExecutiveSummaryPanel'
-import {
-  useExecutiveDashboard,
-} from '../useExecutiveDashboard'
+import { useMemo, useState } from 'react'
+import type { AiBriefingDetail } from '../../../api/types'
+import { ExecutivePageLayout } from '../components/ExecutivePageLayout'
+import { ExecutiveEvidencePanel, type EvidenceTab } from '../components/ExecutiveEvidencePanel'
+import { useExecutiveDashboard } from '../useExecutiveDashboard'
+import { useExecutiveEvidence } from '../useExecutiveEvidence'
 import styles from '../components/ExecutiveDashboardSections.module.css'
 
+type Filter = 'all' | 'passed' | 'review' | 'erp' | 'contract' | 'llm'
+
 export function ExecutiveVerificationPage() {
-  const {
-    dashboard,
-    loading,
-    errorMessage,
-  } = useExecutiveDashboard()
+  const { dashboard, loading, errorMessage } = useExecutiveDashboard()
+  const evidence = useExecutiveEvidence()
+  const [filter, setFilter] = useState<Filter>('all')
+  const [selected, setSelected] = useState<AiBriefingDetail | null>(null)
+  const [tab, setTab] = useState<EvidenceTab>('verification')
+
+  const filtered = useMemo(() => evidence.items.filter((item) => {
+    if (filter === 'passed') return item.verification.review_passed === true
+    if (filter === 'review') return item.verification.review_passed !== true
+    if (filter === 'erp') return !item.erp_evidence
+    if (filter === 'contract') return item.contract_findings.length === 0
+    if (filter === 'llm') return Boolean(item.verification.llm_error) || item.verification.warnings.length > 0
+    return true
+  }), [evidence.items, filter])
+
+  function choose(item: AiBriefingDetail, nextTab: EvidenceTab = 'verification') {
+    setSelected(item)
+    setTab(nextTab)
+  }
+
+  const summary = dashboard?.verification_summary
 
   return (
     <ExecutivePageLayout
       title="AI 검증"
-      description={
-        'ERP 근거, 계약 RAG 근거와 멀티에이전트 검증 상태를 확인합니다.'
-      }
-      alertCount={
-        dashboard?.verification_summary
-          .review_required_count ?? 0
-      }
-      aside={
-        <ExecutiveSummaryPanel
-          dashboard={dashboard}
-          loading={loading}
-        />
-      }
+      description="ERP와 계약 RAG 근거가 최종 위험 판단에 올바르게 반영됐는지 확인합니다."
+      alertCount={summary?.review_required_count ?? 0}
+      detailKey={selected ? `${selected.briefing_id}:${tab}` : null}
+      aside={<ExecutiveEvidencePanel item={selected ?? filtered[0] ?? null} tab={tab} onTabChange={setTab} />}
     >
-      {loading && (
-        <Message>
-          검증 결과를 조회하고 있습니다.
-        </Message>
+      {(loading || evidence.loading) && <Message>검증 결과와 상세 근거를 조회하고 있습니다.</Message>}
+      {!loading && errorMessage && <Message>{errorMessage}</Message>}
+      {!evidence.loading && evidence.errorMessage && <Message>{evidence.errorMessage}</Message>}
+
+      {!loading && !errorMessage && dashboard && summary && (
+        <>
+          <section className={styles.section} aria-labelledby="executive-verification-heading">
+            <div className={styles.sectionHeader}><h2 id="executive-verification-heading">멀티에이전트 검증 요약</h2></div>
+            <div className={styles.verificationGrid}>
+              <VerificationItem label="전체 검증" value={summary.total_count} active={filter === 'all'} onClick={() => setFilter('all')} />
+              <VerificationItem label="검증 통과" value={summary.passed_count} tone="success" active={filter === 'passed'} onClick={() => setFilter('passed')} />
+              <VerificationItem label="검토 필요" value={summary.review_required_count} tone="warning" active={filter === 'review'} onClick={() => setFilter('review')} />
+              <VerificationItem label="ERP 근거 누락" value={summary.erp_evidence_missing_count} tone="warning" active={filter === 'erp'} onClick={() => setFilter('erp')} />
+              <VerificationItem label="계약 근거 누락" value={summary.contract_evidence_missing_count} tone="warning" active={filter === 'contract'} onClick={() => setFilter('contract')} />
+              <VerificationItem label="LLM 경고" value={summary.llm_warning_count} tone="critical" active={filter === 'llm'} onClick={() => setFilter('llm')} />
+            </div>
+          </section>
+
+          <section className={styles.section} aria-labelledby="verification-detail-heading">
+            <div className={styles.sectionHeader}>
+              <h2 id="verification-detail-heading">검증 대상</h2>
+              <span className={styles.count}>{filtered.length}건</span>
+            </div>
+            {filtered.length === 0 ? <Message>선택한 조건에 해당하는 검증 대상이 없습니다.</Message> : (
+              <div className={styles.list}>
+                {filtered.map((item) => (
+                  <button key={item.briefing_id} type="button" className={styles.listItem} onClick={() => choose(item)}>
+                    <div>
+                      <strong>{item.subject_title ?? item.source_headline ?? item.material_name ?? '공급망 위험 분석'}</strong>
+                      <span>{item.material_name ?? item.material_category ?? '원자재'} · 위험 {item.procurement_risk_score.toFixed(0)}점</span>
+                    </div>
+                    <span className={item.verification.review_passed ? styles.success : styles.warning}>
+                      {item.verification.review_passed ? '검증 통과' : '검토 필요'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className={styles.section} aria-labelledby="verification-evidence-heading">
+            <div className={styles.sectionHeader}><h2 id="verification-evidence-heading">근거 바로 확인</h2></div>
+            <div className={styles.twoColumn}>
+              <button type="button" className={styles.listItem} onClick={() => evidence.items[0] && choose(evidence.items[0], 'erp')}>
+                <div><strong>ERP 근거</strong><span>재고·입고 일정·공급사 의존도와 공급 공백을 확인합니다.</span></div>
+              </button>
+              <button type="button" className={styles.listItem} onClick={() => evidence.items[0] && choose(evidence.items[0], 'contract')}>
+                <div><strong>계약 RAG 근거</strong><span>검색된 계약 ID·페이지·납기 및 위약 조항을 확인합니다.</span></div>
+              </button>
+            </div>
+          </section>
+        </>
       )}
-
-      {!loading &&
-        errorMessage && (
-          <Message>
-            {errorMessage}
-          </Message>
-        )}
-
-      {!loading &&
-        !errorMessage &&
-        dashboard && (
-          <>
-            <section
-              className={styles.section}
-              aria-labelledby={
-                'executive-verification-heading'
-              }
-            >
-              <div
-                className={
-                  styles.sectionHeader
-                }
-              >
-                <div>
-                  <h2
-                    id={
-                      'executive-verification-heading'
-                    }
-                  >
-                    멀티에이전트 검증 요약
-                  </h2>
-                </div>
-              </div>
-
-              <div
-                className={
-                  styles.verificationGrid
-                }
-              >
-                <VerificationItem
-                  label="전체 검증"
-                  value={
-                    dashboard
-                      .verification_summary
-                      .total_count
-                  }
-                />
-
-                <VerificationItem
-                  label="검증 통과"
-                  value={
-                    dashboard
-                      .verification_summary
-                      .passed_count
-                  }
-                  tone="success"
-                />
-
-                <VerificationItem
-                  label="검토 필요"
-                  value={
-                    dashboard
-                      .verification_summary
-                      .review_required_count
-                  }
-                  tone="warning"
-                />
-
-                <VerificationItem
-                  label="ERP 근거 누락"
-                  value={
-                    dashboard
-                      .verification_summary
-                      .erp_evidence_missing_count
-                  }
-                  tone="warning"
-                />
-
-                <VerificationItem
-                  label="계약 근거 누락"
-                  value={
-                    dashboard
-                      .verification_summary
-                      .contract_evidence_missing_count
-                  }
-                  tone="warning"
-                />
-
-                <VerificationItem
-                  label="LLM 경고"
-                  value={
-                    dashboard
-                      .verification_summary
-                      .llm_warning_count
-                  }
-                  tone="critical"
-                />
-              </div>
-            </section>
-
-            <section
-              className={styles.section}
-              aria-labelledby={
-                'executive-verification-guide-heading'
-              }
-            >
-              <div
-                className={
-                  styles.sectionHeader
-                }
-              >
-                <div>
-                  <h2
-                    id={
-                      'executive-verification-guide-heading'
-                    }
-                  >
-                    검증 항목 설명
-                  </h2>
-                </div>
-              </div>
-
-              <div className={styles.twoColumn}>
-                <article
-                  className={styles.listItem}
-                >
-                  <div>
-                    <strong>
-                      ERP 근거
-                    </strong>
-
-                    <span>
-                      재고일수, 안전재고,
-                      입고 예정일과 공급사 의존도를
-                      검증합니다.
-                    </span>
-                  </div>
-                </article>
-
-                <article
-                  className={styles.listItem}
-                >
-                  <div>
-                    <strong>
-                      계약 RAG 근거
-                    </strong>
-
-                    <span>
-                      검색된 계약 ID와 페이지,
-                      납기·위약금·해지 조항의
-                      존재를 검증합니다.
-                    </span>
-                  </div>
-                </article>
-
-                <article
-                  className={styles.listItem}
-                >
-                  <div>
-                    <strong>
-                      위험 등급 일치
-                    </strong>
-
-                    <span>
-                      규칙 엔진의 최종 위험 단계와
-                      AI 브리핑 표현이 일치하는지
-                      확인합니다.
-                    </span>
-                  </div>
-                </article>
-
-                <article
-                  className={styles.listItem}
-                >
-                  <div>
-                    <strong>
-                      LLM 경고
-                    </strong>
-
-                    <span>
-                      입력에 없는 사실이나
-                      확인되지 않은 근거가 포함됐는지
-                      확인합니다.
-                    </span>
-                  </div>
-                </article>
-              </div>
-            </section>
-          </>
-        )}
     </ExecutivePageLayout>
   )
 }
 
-function Message({
-  children,
-}: {
-  children: string
-}) {
-  return (
-    <div className={styles.empty}>
-      {children}
-    </div>
-  )
+function Message({ children }: { children: string }) {
+  return <div className={styles.empty}>{children}</div>
 }
 
-function VerificationItem({
-  label,
-  value,
-  tone = 'neutral',
-}: {
+function VerificationItem({ label, value, tone = 'neutral', active, onClick }: {
   label: string
   value: number
-  tone?:
-    | 'success'
-    | 'warning'
-    | 'critical'
-    | 'neutral'
+  tone?: 'success' | 'warning' | 'critical' | 'neutral'
+  active: boolean
+  onClick: () => void
 }) {
   return (
-    <article
-      className={
-        styles.verificationItem
-      }
-    >
-      <span>
-        {label}
-      </span>
-
-      <strong className={styles[tone]}>
-        {value}건
-      </strong>
-    </article>
+    <button type="button" className={styles.verificationItem} onClick={onClick} aria-pressed={active}>
+      <span>{label}</span><strong className={styles[tone]}>{value}건</strong>
+    </button>
   )
 }

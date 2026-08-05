@@ -1,6 +1,11 @@
 import {
   useState,
 } from 'react'
+import type { AiBriefingDetail, NewsFeedItem, SelectedArticle } from '../../../api/types'
+import { useEffect } from 'react'
+import { fetchPublicNewsFeed } from '../../../api/public.api'
+import { fromNewsFeedItem } from '../../../lib/selectedArticle'
+import { LatestNewsPanel } from '../../purchasing/components/LatestNewsPanel'
 import {
   GlobalRiskBoard,
   type SelectedDetail,
@@ -17,12 +22,16 @@ import {
 import {
   ExecutiveRiskDetailPanel,
 } from '../components/ExecutiveRiskDetailPanel'
+import { ExecutiveEvidencePanel, type EvidenceTab } from '../components/ExecutiveEvidencePanel'
+import { ExecutiveNewsDetail } from '../components/ExecutiveNewsDetail'
 import {
   useExecutiveDashboard,
 } from '../useExecutiveDashboard'
+import { useExecutiveEvidence } from '../useExecutiveEvidence'
 import styles from './ExecutiveDashboardPage.module.css'
 
-const MAP_HEIGHT = 390
+// 구매팀 대시보드와 동일한 공용 지도 기본 높이.
+const MAP_HEIGHT = 220
 
 export function ExecutiveDashboardPage() {
   const {
@@ -37,6 +46,28 @@ export function ExecutiveDashboardPage() {
   ] = useState<SelectedDetail | null>(
     null,
   )
+  const evidence = useExecutiveEvidence()
+  const [selectedEvidence, setSelectedEvidence] = useState<AiBriefingDetail | null>(null)
+  const [evidenceTab, setEvidenceTab] = useState<EvidenceTab>('summary')
+  const [news, setNews] = useState<NewsFeedItem[]>([])
+  const [newsLoading, setNewsLoading] = useState(true)
+  const [selectedNews, setSelectedNews] = useState<SelectedArticle | null>(null)
+
+  useEffect(() => {
+    let active = true
+    fetchPublicNewsFeed(5, 0)
+      .then((items) => { if (active) setNews(items) })
+      .finally(() => { if (active) setNewsLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  function openEvidence(item: AiBriefingDetail | undefined) {
+    if (!item) return
+    setSelectedDetail(null)
+    setSelectedNews(null)
+    setSelectedEvidence(item)
+    setEvidenceTab('summary')
+  }
 
   return (
     <ExecutivePageLayout
@@ -48,8 +79,9 @@ export function ExecutiveDashboardPage() {
         dashboard?.verification_summary
           .review_required_count ?? 0
       }
+      detailKey={selectedNews?.id ?? selectedEvidence?.briefing_id ?? selectedDetail?.label ?? null}
       aside={
-        <ExecutiveRiskDetailPanel
+        selectedNews ? <ExecutiveNewsDetail article={selectedNews} /> : selectedEvidence ? <ExecutiveEvidencePanel item={selectedEvidence} tab={evidenceTab} onTabChange={setEvidenceTab} /> : <ExecutiveRiskDetailPanel
           selectedDetail={
             selectedDetail
           }
@@ -93,6 +125,7 @@ export function ExecutiveDashboardPage() {
                 dashboard.verification_summary
                   .review_required_count
               }
+              onClick={() => openEvidence(evidence.items[0])}
             />
 
             <section
@@ -109,10 +142,29 @@ export function ExecutiveDashboardPage() {
                 }
                 mapHeight={MAP_HEIGHT}
                 onSelect={
-                  setSelectedDetail
+                  (detail) => {
+                    setSelectedEvidence(null)
+                    setSelectedNews(null)
+                    setSelectedDetail(detail)
+                  }
                 }
               />
             </section>
+
+            <LatestNewsPanel
+              items={news}
+              isLoading={newsLoading}
+              selectedId={selectedNews?.id}
+              onSelect={(item) => {
+                setSelectedEvidence(null)
+                setSelectedDetail(null)
+                setSelectedNews(fromNewsFeedItem(item))
+              }}
+              page={0}
+              pageSize={5}
+              total={news.length}
+              onPageChange={() => undefined}
+            />
           </>
         )}
     </ExecutivePageLayout>

@@ -5,6 +5,7 @@ import { PublicRiskMonitoringPage } from '../features/public/pages/PublicRiskMon
 import { PublicMaterialRiskPage } from '../features/public/pages/PublicMaterialRiskPage'
 import { PublicContractRagPage } from '../features/public/pages/PublicContractRagPage'
 import { PublicAiBriefingPage } from '../features/public/pages/PublicAiBriefingPage'
+import { PolicyPage } from '../features/public/pages/PolicyPage'
 import { AuthPage } from '../features/auth/pages/AuthPage'
 import { PurchasingDashboardPage } from '../features/purchasing/pages/PurchasingDashboardPage'
 import { RiskMonitoringPage } from '../features/purchasing/pages/RiskMonitoringPage'
@@ -67,6 +68,9 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<PublicDashboardPage />} />
+      <Route path="/privacy" element={<PolicyPage />} />
+      <Route path="/terms" element={<PolicyPage />} />
+      <Route path="/sources" element={<PolicyPage />} />
       {/*
         비로그인 `/public/*` 4개 — 구매팀 1계층 사이드바 하위 화면(리스크 모니터링/원자재
         위험/계약·RAG/AI 브리핑)을 로그인 게이트 없이 이식(2026-08-03, minji 브랜치 기반,

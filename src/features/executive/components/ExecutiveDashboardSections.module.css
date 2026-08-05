@@ -5,7 +5,7 @@
 
 .section {
   min-width: 0;
-  padding: var(--space-5);
+  padding: var(--space-4) var(--space-6);
   scroll-margin-top: 90px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -16,31 +16,31 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 18px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .sectionHeader h2 {
   margin: 0;
-  color: #102a43;
-  font-size: 20px;
+  color: var(--color-text);
+  font-size: var(--font-size-base);
 }
 
 .count {
-  color: #627d98;
-  font-size: 13px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .twoColumn {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: var(--space-6);
 }
 
 .riskGrid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .riskCard {
@@ -48,11 +48,11 @@
   display: grid;
   min-width: 0;
   grid-template-columns: auto 1fr;
-  gap: 12px;
-  padding: 15px;
-  border: 1px solid #d9e2ec;
-  border-radius: 12px;
-  background: #f8fafc;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 
 .riskRank {
@@ -334,4 +334,37 @@
   .briefingItem p {
     text-align: left;
   }
+}
+
+/* 1·2계층의 카드 규격과 동일한 표면·간격을 사용한다. */
+.list,
+.briefingList,
+.verificationGrid {
+  gap: var(--space-3);
+}
+
+.listItem,
+.briefingItem {
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-color: var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.verificationItem {
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-color: var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.empty {
+  padding: var(--space-5);
+  border-color: var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }

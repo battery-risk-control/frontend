@@ -398,7 +398,7 @@ export function ContractRagPage() {
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') void handleSearch()
                 }}
-                placeholder={EXAMPLE_QUERY}
+                placeholder={`ex) ${EXAMPLE_QUERY}`}
                 aria-label="검색어"
               />
               <button

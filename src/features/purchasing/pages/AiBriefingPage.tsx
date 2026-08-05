@@ -413,7 +413,7 @@ export function AiBriefingPage() {
                 </div>
               )}
               {!isGenerating && !detail && !briefingId && (
-                <p className={styles.notice}>
+                <p className={`${styles.notice} ${styles.noticeEmpty}`}>
                   {source && ref
                     ? '"LLM 브리핑 생성"을 누르면 ERP · 계약 근거를 모아 브리핑을 만듭니다.'
                     : '리스크 이벤트 · 원자재 위험 · 계약 · RAG 화면에서 대상을 골라 오거나, 최근 브리핑을 열어 보세요.'}

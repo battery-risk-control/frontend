@@ -76,6 +76,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg);
+  flex-shrink: 0;
 }
 
 .tab,
@@ -119,8 +120,16 @@
 }
 
 .tabPanel {
-  flex: 1;
+  /* 콘텐츠 높이를 그대로 두고(줄이지 않음), 넘치면 바깥 .panel이 스크롤한다.
+     예전 flex:1은 이 박스를 좁게 눌러 긴 알림 목록이 박스를 넘쳐 아래 '데이터 업로드'
+     카드를 덮었고, .panel이 100%에 딱 맞아 스크롤·힌트 화살표가 죽어 있었다. */
+  flex: 0 0 auto;
   min-height: 0;
+}
+
+/* 탭 바와 업로드 카드는 줄어들지 않게 고정 — 알림이 길어지면 그 사이 목록만 스크롤된다. */
+.uploadCard {
+  flex-shrink: 0;
 }
 
 .empty {

@@ -390,7 +390,11 @@ export function DashboardSidePanel({
                 ))}
             </div>
 
-            {showUploadCard && <UploadCard />}
+            {showUploadCard && (
+              <div className={styles.uploadCard}>
+                <UploadCard />
+              </div>
+            )}
           </div>
           {hasOverflowTop && (
             <div className={styles.overflowHintTop} aria-hidden="true">

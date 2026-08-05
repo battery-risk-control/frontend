@@ -23,6 +23,10 @@ export function ExecutiveRisksPage() {
       description={
         '원자재별 위험 점수와 최근 위험 변화 추세를 확인합니다.'
       }
+      alertCount={
+        dashboard?.verification_summary
+          .review_required_count ?? 0
+      }
       aside={
         <ExecutiveSummaryPanel
           dashboard={dashboard}

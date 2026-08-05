@@ -19,7 +19,7 @@ import {
 } from '../useExecutiveDashboard'
 import styles from './ExecutiveDashboardPage.module.css'
 
-const MAP_HEIGHT = 500
+const MAP_HEIGHT = 390
 
 export function ExecutiveDashboardPage() {
   const {
@@ -41,6 +41,10 @@ export function ExecutiveDashboardPage() {
       title="경영진 공급망 위험 대시보드"
       description={
         'ERP·RAG·멀티에이전트 분석 결과를 경영진 관점으로 요약합니다.'
+      }
+      alertCount={
+        dashboard?.verification_summary
+          .review_required_count ?? 0
       }
       aside={
         <ExecutiveRiskDetailPanel

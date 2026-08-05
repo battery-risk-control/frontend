@@ -23,6 +23,10 @@ export function ExecutiveSupplyChainPage() {
       description={
         '국가별 수입 의존도와 공급사 위험 및 대체 공급사 후보를 확인합니다.'
       }
+      alertCount={
+        dashboard?.verification_summary
+          .review_required_count ?? 0
+      }
       aside={
         <ExecutiveSummaryPanel
           dashboard={dashboard}

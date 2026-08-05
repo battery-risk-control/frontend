@@ -16,22 +16,26 @@
   min-width: 0;
   flex: 1;
   flex-direction: column;
-  gap: 20px;
-  margin-right: 40px;
-  padding: 24px;
+  gap: 16px;
+  margin-right: 20px;
+  padding: 20px;
 }
 
 .body > aside:last-child {
-  width: 320px;
-  flex: 0 0 320px;
-  margin: 24px 24px 24px 0;
+  width: 272px;
+  flex: 0 0 272px;
+  margin: 20px 20px 20px 0;
 }
 
 .titleRow {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 20px;
+}
+
+.titleRow > div {
+  min-width: max-content;
 }
 
 .titleRow h1 {
@@ -40,6 +44,7 @@
   font-size: 26px;
   line-height: 1.3;
   letter-spacing: -0.03em;
+  white-space: nowrap;
 }
 
 .eyebrow {
@@ -52,12 +57,25 @@
 }
 
 .description {
-  max-width: 390px;
+  max-width: 330px;
   margin: 0;
   color: #627d98;
   font-size: 13px;
   line-height: 1.6;
   text-align: right;
+}
+
+.headerDate {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 45%);
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .mapSection {
@@ -114,6 +132,14 @@
     width: auto;
     flex: 1 1 100%;
     margin: 0 24px 24px;
+  }
+
+  .titleRow > div {
+    min-width: 0;
+  }
+
+  .titleRow h1 {
+    white-space: normal;
   }
 }
 

@@ -23,6 +23,10 @@ export function ExecutiveVerificationPage() {
       description={
         'ERP 근거, 계약 RAG 근거와 멀티에이전트 검증 상태를 확인합니다.'
       }
+      alertCount={
+        dashboard?.verification_summary
+          .review_required_count ?? 0
+      }
       aside={
         <ExecutiveSummaryPanel
           dashboard={dashboard}

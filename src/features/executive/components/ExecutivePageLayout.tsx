@@ -8,6 +8,9 @@ import {
   Header,
 } from '../../../components/layout/Header'
 import {
+  AlertsBellButton,
+} from '../../../components/layout/AlertsBellButton'
+import {
   SideNav,
 } from '../../../components/layout/SideNav'
 import {
@@ -16,6 +19,9 @@ import {
 import {
   EXECUTIVE_SIDE_NAV_ITEMS,
 } from '../../../lib/executiveNav'
+import {
+  useNavigate,
+} from 'react-router-dom'
 import styles from '../pages/ExecutiveDashboardPage.module.css'
 
 interface ExecutivePageLayoutProps {
@@ -24,6 +30,7 @@ interface ExecutivePageLayoutProps {
   description: string
   children: ReactNode
   aside?: ReactNode
+  alertCount?: number
 }
 
 /**
@@ -38,10 +45,35 @@ export function ExecutivePageLayout({
   description,
   children,
   aside,
+  alertCount = 0,
 }: ExecutivePageLayoutProps) {
+  const navigate = useNavigate()
+
   return (
     <div className={styles.page}>
-      <Header />
+      <Header
+        accountExtra={
+          <AlertsBellButton
+            count={alertCount}
+            onOpenAlerts={() => {
+              navigate('/executive/verification')
+            }}
+            onMouseEnter={() => undefined}
+            onMouseLeave={() => undefined}
+          />
+        }
+      >
+        <time
+          className={styles.headerDate}
+          dateTime={new Date().toISOString().slice(0, 10)}
+        >
+          {new Intl.DateTimeFormat('ko-KR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          }).format(new Date())}
+        </time>
+      </Header>
 
       <div className={styles.body}>
         <SideNavToggleButton />

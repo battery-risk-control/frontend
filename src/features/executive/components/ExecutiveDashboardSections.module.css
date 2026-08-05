@@ -5,7 +5,7 @@
 
 .section {
   min-width: 0;
-  padding: 20px;
+  padding: 16px;
   scroll-margin-top: 90px;
   border: 1px solid #d9e2ec;
   border-radius: 14px;
@@ -226,15 +226,20 @@
   min-width: 0;
   flex-direction: column;
   gap: 5px;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .listItem strong,
 .briefingItem strong {
-  overflow: hidden;
   color: #102a43;
   font-size: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .listItem div > span,
@@ -249,9 +254,16 @@
   align-items: center;
 }
 
+.briefingItem div strong {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .briefingItem p {
   flex: 0 0 auto;
+  max-width: 180px;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .verificationGrid {

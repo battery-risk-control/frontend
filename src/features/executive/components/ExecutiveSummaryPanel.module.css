@@ -1,12 +1,12 @@
 .panel {
   position: sticky;
   top: 76px;
-  width: 320px;
-  min-height: 520px;
+  width: 272px;
+  min-height: 0;
   align-self: flex-start;
-  flex: 0 0 320px;
-  margin: 24px 24px 24px 0;
-  padding: 20px;
+  flex: 0 0 272px;
+  margin: 20px 20px 20px 0;
+  padding: 16px;
   border: 1px solid #d9e2ec;
   border-radius: 14px;
   background: #ffffff;
@@ -44,7 +44,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 14px;
+  padding: 11px 12px;
   border: 1px solid #d9e2ec;
   border-radius: 11px;
   background: #f8fafc;

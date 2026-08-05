@@ -146,9 +146,14 @@ function NewsDetail({ news }: { news: SelectedArticle | null }) {
           .filter(Boolean)
           .join(' · ')}
       </p>
-      {/* 번역본이 떠 있을 때만 원문을 함께 보여준다. 번역이 없으면 headline이 곧 원문이라
-          같은 문장을 두 번 쓰게 된다. */}
-      {news.translated && <p className={styles.detailOriginal}>{news.headline_original}</p>}
+      {/* 영문 원문 자리에 분석이 만든 한국어 요약(summary_kr)을 보여준다 — 원문 헤드라인보다
+          내용 파악에 유용하다. 요약이 없으면(예전 뉴스·미분석·지도에서 온 항목) 번역본이 있을
+          때만 원문 헤드라인으로 폴백한다. */}
+      {news.summary ? (
+        <p className={styles.detailOriginal}>{news.summary}</p>
+      ) : (
+        news.translated && <p className={styles.detailOriginal}>{news.headline_original}</p>
+      )}
 
       <span className={styles.detailCaption}>관련 원자재</span>
       <span className={styles.materialChip}>{news.material}</span>

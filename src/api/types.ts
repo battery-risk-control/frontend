@@ -168,6 +168,8 @@ export interface SelectedArticle {
   /** 뉴스에서 온 항목만 있다 */
   collected_at?: string
   headline_original?: string
+  /** 분석이 만든 한국어 요약. 상세에서 영문 원문 대신 보여준다. 없으면 원문으로 폴백. */
+  summary?: string | null
   translated?: boolean
   url?: string | null
 }
@@ -296,6 +298,8 @@ export interface NewsFeedItem {
   headline: string
   /** 항상 영문 원문. 번역 여부와 무관하게 원문을 확인할 수 있다. */
   headline_original: string
+  /** 분석이 만든 한국어 요약(analyses.summary_kr). 없으면 null. 상세에서 원문 대신 보여준다. */
+  summary_kr: string | null
   /** headline이 번역본인지. false면 영문이 그대로 표시된다. */
   translated: boolean
   confidence_label: ConfidenceLabel

@@ -314,6 +314,8 @@ export function fetchNewsFeed(): NewsFeedItem[] {
       headline: event.market_context.event_summary,
       // mock 문구는 처음부터 한국어라 원문·표시용이 같고 번역 대상이 아니다.
       headline_original: event.market_context.event_summary,
+      // mock에는 분석이 만든 별도 요약이 없다. 상세는 헤드라인(=요약 문구)만 보여준다.
+      summary_kr: null,
       translated: false,
       confidence_label: event.confidence_label,
       country_code: event.market_context.country_code ?? null,

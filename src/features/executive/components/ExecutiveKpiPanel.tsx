@@ -50,26 +50,8 @@ export function ExecutiveKpiPanel({
   return (
     <section
       className={styles.panel}
-      aria-labelledby="executive-kpi-heading"
+      aria-label="핵심 위험 요약"
     >
-      <div className={styles.headingRow}>
-        <div>
-          <h2
-            id="executive-kpi-heading"
-            className={styles.heading}
-          >
-            핵심 위험 요약
-          </h2>
-        </div>
-
-        <p className={styles.updatedAt}>
-          최근 평가:{' '}
-          {formatAssessedAt(
-            kpi.latest_assessed_at,
-          )}
-        </p>
-      </div>
-
       <div className={styles.grid}>
         {items.map((item) => (
           <article
@@ -92,26 +74,4 @@ export function ExecutiveKpiPanel({
       </div>
     </section>
   )
-}
-
-function formatAssessedAt(
-  value: string | null,
-): string {
-  if (!value) {
-    return '분석 데이터 없음'
-  }
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return new Intl.DateTimeFormat(
-    'ko-KR',
-    {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    },
-  ).format(date)
 }

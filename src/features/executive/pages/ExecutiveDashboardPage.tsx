@@ -12,6 +12,9 @@ import {
   ExecutivePageLayout,
 } from '../components/ExecutivePageLayout'
 import {
+  ExecutivePriorityAlert,
+} from '../components/ExecutivePriorityAlert'
+import {
   ExecutiveRiskDetailPanel,
 } from '../components/ExecutiveRiskDetailPanel'
 import {
@@ -82,6 +85,14 @@ export function ExecutiveDashboardPage() {
           <>
             <ExecutiveKpiPanel
               kpi={dashboard.kpi}
+            />
+
+            <ExecutivePriorityAlert
+              risk={dashboard.top_risks[0]}
+              reviewRequiredCount={
+                dashboard.verification_summary
+                  .review_required_count
+              }
             />
 
             <section

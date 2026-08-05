@@ -17,14 +17,14 @@
   flex: 1;
   flex-direction: column;
   gap: var(--space-6);
-  margin-right: var(--space-4);
+  margin-right: 40px;
   padding: var(--space-6);
 }
 
 .body > aside:last-child {
-  width: 272px;
-  flex: 0 0 272px;
-  margin: var(--space-6) var(--space-6) var(--space-6) 0;
+  width: var(--side-panel-width);
+  flex: 0 0 var(--side-panel-width);
+  margin: 0;
 }
 
 .titleRow {

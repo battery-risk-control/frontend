@@ -18,7 +18,6 @@ export function ExecutiveRisksPage() {
 
   return (
     <ExecutivePageLayout
-      eyebrow="Core Risk"
       title="핵심 위험"
       description={
         '원자재별 위험 점수와 최근 위험 변화 추세를 확인합니다.'
@@ -63,10 +62,6 @@ export function ExecutiveRisksPage() {
                 }
               >
                 <div>
-                  <p className={styles.eyebrow}>
-                    Material Risk
-                  </p>
-
                   <h2
                     id={
                       'executive-material-risk-heading'
@@ -157,10 +152,6 @@ export function ExecutiveRisksPage() {
                 }
               >
                 <div>
-                  <p className={styles.eyebrow}>
-                    Risk Trend
-                  </p>
-
                   <h2
                     id={
                       'executive-risk-trend-heading'

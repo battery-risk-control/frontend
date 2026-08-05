@@ -54,10 +54,6 @@ export function ExecutiveKpiPanel({
     >
       <div className={styles.headingRow}>
         <div>
-          <p className={styles.eyebrow}>
-            Executive Summary
-          </p>
-
           <h2
             id="executive-kpi-heading"
             className={styles.heading}

@@ -37,7 +37,6 @@ export function ExecutiveDashboardPage() {
 
   return (
     <ExecutivePageLayout
-      eyebrow="Executive Risk Control"
       title="경영진 공급망 위험 대시보드"
       description={
         'ERP·RAG·멀티에이전트 분석 결과를 경영진 관점으로 요약합니다.'

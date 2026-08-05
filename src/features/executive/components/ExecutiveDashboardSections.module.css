@@ -1,16 +1,15 @@
 .sections {
   display: grid;
-  gap: 20px;
+  gap: var(--space-6);
 }
 
 .section {
   min-width: 0;
-  padding: 16px;
+  padding: var(--space-5);
   scroll-margin-top: 90px;
-  border: 1px solid #d9e2ec;
-  border-radius: 14px;
-  background: #ffffff;
-  box-shadow: 0 4px 16px rgb(15 42 68 / 7%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 
 .sectionHeader {
@@ -25,15 +24,6 @@
   margin: 0;
   color: #102a43;
   font-size: 20px;
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  color: #0f766e;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .count {

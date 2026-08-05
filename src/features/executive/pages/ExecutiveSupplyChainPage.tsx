@@ -18,7 +18,6 @@ export function ExecutiveSupplyChainPage() {
 
   return (
     <ExecutivePageLayout
-      eyebrow="Supply Chain"
       title="공급망 현황"
       description={
         '국가별 수입 의존도와 공급사 위험 및 대체 공급사 후보를 확인합니다.'
@@ -63,10 +62,6 @@ export function ExecutiveSupplyChainPage() {
                 }
               >
                 <div>
-                  <p className={styles.eyebrow}>
-                    Import Dependency
-                  </p>
-
                   <h2
                     id={
                       'executive-dependency-heading'
@@ -143,10 +138,6 @@ export function ExecutiveSupplyChainPage() {
                 }
               >
                 <div>
-                  <p className={styles.eyebrow}>
-                    Supplier Status
-                  </p>
-
                   <h2
                     id={
                       'executive-supplier-heading'

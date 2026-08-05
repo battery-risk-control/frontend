@@ -18,7 +18,6 @@ export function ExecutiveVerificationPage() {
 
   return (
     <ExecutivePageLayout
-      eyebrow="Agent Verification"
       title="AI 검증"
       description={
         'ERP 근거, 계약 RAG 근거와 멀티에이전트 검증 상태를 확인합니다.'
@@ -63,10 +62,6 @@ export function ExecutiveVerificationPage() {
                 }
               >
                 <div>
-                  <p className={styles.eyebrow}>
-                    Verification Summary
-                  </p>
-
                   <h2
                     id={
                       'executive-verification-heading'
@@ -155,10 +150,6 @@ export function ExecutiveVerificationPage() {
                 }
               >
                 <div>
-                  <p className={styles.eyebrow}>
-                    Validation Guide
-                  </p>
-
                   <h2
                     id={
                       'executive-verification-guide-heading'

@@ -25,7 +25,6 @@ import {
 import styles from '../pages/ExecutiveDashboardPage.module.css'
 
 interface ExecutivePageLayoutProps {
-  eyebrow: string
   title: string
   description: string
   children: ReactNode
@@ -40,7 +39,6 @@ interface ExecutivePageLayoutProps {
  * 모든 경영진 페이지에서 동일하게 유지한다.
  */
 export function ExecutivePageLayout({
-  eyebrow,
   title,
   description,
   children,
@@ -90,10 +88,6 @@ export function ExecutivePageLayout({
         >
           <div className={styles.titleRow}>
             <div>
-              <p className={styles.eyebrow}>
-                {eyebrow}
-              </p>
-
               <h1>
                 {title}
               </h1>

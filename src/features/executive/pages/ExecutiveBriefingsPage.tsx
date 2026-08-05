@@ -18,7 +18,6 @@ export function ExecutiveBriefingsPage() {
 
   return (
     <ExecutivePageLayout
-      eyebrow="AI Briefing"
       title="AI 브리핑"
       description={
         '멀티에이전트가 생성한 최근 공급망 위험 브리핑을 확인합니다.'
@@ -62,10 +61,6 @@ export function ExecutiveBriefingsPage() {
               }
             >
               <div>
-                <p className={styles.eyebrow}>
-                  Recent Briefings
-                </p>
-
                 <h2
                   id={
                     'executive-briefings-heading'

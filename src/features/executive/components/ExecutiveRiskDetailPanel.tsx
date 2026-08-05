@@ -19,10 +19,6 @@ export function ExecutiveRiskDetailPanel({
     >
       <div className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>
-            Risk Detail
-          </p>
-
           <h2
             id="executive-risk-detail-heading"
             className={styles.heading}

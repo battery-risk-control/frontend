@@ -62,10 +62,18 @@ export function AiBriefingDetailPage() {
                 <section className={styles.section}>
                   <h2 className={styles.sectionTitle}>계약 근거</h2>
                   {detail.contract_findings && detail.contract_findings.length > 0 ? (
-                    <ul className={styles.pointList}>
+                    <ul className={styles.findingList}>
                       {detail.contract_findings.map((finding, index) => (
-                        <li key={index}>
-                          <pre className={styles.findingJson}>{JSON.stringify(finding, null, 2)}</pre>
+                        <li key={index} className={styles.findingCard}>
+                          <div className={styles.findingHeader}>
+                            <span className={styles.findingClause}>{finding.clause_name_kr ?? '조항'}</span>
+                            {typeof finding.similarity_score === 'number' && (
+                              <span className={styles.findingScore}>
+                                유사도 {Math.round(finding.similarity_score * 100)}%
+                              </span>
+                            )}
+                          </div>
+                          <p className={styles.findingText}>{finding.evidence_text ?? JSON.stringify(finding)}</p>
                         </li>
                       ))}
                     </ul>

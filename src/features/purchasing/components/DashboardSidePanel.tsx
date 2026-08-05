@@ -58,6 +58,8 @@ interface DashboardSidePanelProps {
   isPreviewing: boolean
   onPreviewMouseEnter: () => void
   onPreviewMouseLeave: () => void
+  /** 우측 하단 "데이터 업로드" 카드 표시 여부 (기본값: true). 경영기획팀 등 미사용 화면에서 숨긴다. */
+  showUploadCard?: boolean
 }
 
 function AlertIcon() {
@@ -168,13 +170,7 @@ function NewsDetail({ news }: { news: SelectedArticle | null }) {
             기사 원문 열기 ↗
           </a>
         )}
-        {briefingRef === null ? (
-          /* ref를 만들 수 없는 건 수집 원본이 없는 placeholder 폴백뿐이다. 그 항목은 실제
-             기사가 아니라 브리핑을 만들 대상이 없으므로 목록 화면으로만 보낸다. */
-          <Link to="/purchasing/risk-monitoring" className={styles.secondaryAction}>
-            리스크 모니터링에서 브리핑 생성
-          </Link>
-        ) : (
+        {briefingRef !== null && (
           <Link
             to={`/purchasing/ai-briefing?source=NEWS&ref=${encodeURIComponent(briefingRef)}`}
             className={styles.secondaryAction}
@@ -274,6 +270,7 @@ export function DashboardSidePanel({
   isPreviewing,
   onPreviewMouseEnter,
   onPreviewMouseLeave,
+  showUploadCard = true,
 }: DashboardSidePanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>('news')
 
@@ -393,7 +390,7 @@ export function DashboardSidePanel({
                 ))}
             </div>
 
-            <UploadCard />
+            {showUploadCard && <UploadCard />}
           </div>
           {hasOverflowTop && (
             <div className={styles.overflowHintTop} aria-hidden="true">

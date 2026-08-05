@@ -20,7 +20,7 @@ export const planningKeys = {
   importDependency: () => ['planning', 'import-dependency'] as const,
   supplierAnalysis: () => ['planning', 'supplier-analysis'] as const,
   contractStatus: () => ['planning', 'contracts'] as const,
-  aiBriefing: () => ['planning', 'ai-briefing'] as const,
+  aiBriefing: (page: number) => ['planning', 'ai-briefing', page] as const,
   dataQuality: () => ['planning', 'data-quality'] as const,
   aiBriefingDetail: (analysisId: string) => ['planning', 'ai-briefing', analysisId] as const,
   contractDetail: (contractNumber: string) => ['planning', 'contracts', contractNumber] as const,
@@ -72,11 +72,11 @@ export function useContractStatus() {
   })
 }
 
-export function useAiBriefing() {
+export function useAiBriefing(page: number) {
   const { accessToken } = useAuthState()
   return useQuery({
-    queryKey: planningKeys.aiBriefing(),
-    queryFn: () => fetchAiBriefingSummaryDashboard(accessToken!),
+    queryKey: planningKeys.aiBriefing(page),
+    queryFn: () => fetchAiBriefingSummaryDashboard(accessToken!, page),
     enabled: !!accessToken,
   })
 }

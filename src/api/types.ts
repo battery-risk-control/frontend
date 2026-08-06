@@ -168,6 +168,8 @@ export interface SelectedArticle {
   /** 뉴스에서 온 항목만 있다 */
   collected_at?: string
   headline_original?: string
+  /** 분석이 만든 한국어 요약. 상세에서 영문 원문 대신 보여준다. 없으면 원문으로 폴백. */
+  summary?: string | null
   translated?: boolean
   url?: string | null
 }
@@ -296,6 +298,8 @@ export interface NewsFeedItem {
   headline: string
   /** 항상 영문 원문. 번역 여부와 무관하게 원문을 확인할 수 있다. */
   headline_original: string
+  /** 분석이 만든 한국어 요약(analyses.summary_kr). 없으면 null. 상세에서 원문 대신 보여준다. */
+  summary_kr: string | null
   /** headline이 번역본인지. false면 영문이 그대로 표시된다. */
   translated: boolean
   confidence_label: ConfidenceLabel
@@ -469,6 +473,8 @@ export interface AiBriefingSummaryDashboardResponse {
   kpi_summary: KpiSummaryItem[]
   by_unit: RankedBarItem[]
   recent: BriefingSummaryItem[]
+  /** recent의 전체 건수(페이지네이션용) — recent 자체는 요청한 페이지 분량만 담는다. */
+  recent_total_count: number
 }
 
 /** 데이터 품질 탭 — 전 필드 mock 임시값(docs/mock-schemas.md "임시 mock 값" 표 참고). */
@@ -479,6 +485,27 @@ export interface DataQualityStatus {
   material_coverage_total: number
   last_updated_label: string
   confidence_distribution: { label: ConfidenceLabel; ratio: number }[]
+}
+
+/**
+ * 계약 근거 1건 — RAG(ChromaDB) 검색 결과. 실 백엔드 실측(2026-08-05)으로 필드 구성을
+ * 확인했으나 `procurement_risk_assessments.contract_findings`(JSONB) 자체는 구조가
+ * 고정된 스키마가 아니라서, 화면은 이 필드들이 없어도 깨지지 않게 전부 optional로 둔다.
+ */
+export interface ContractFindingItem {
+  contract_id?: number
+  document_id?: string
+  page?: number
+  clause_type?: string
+  /** 조항 유형의 한글 표시명(예: "단가·가격조정 조항") — 화면에 이걸 우선 노출한다. */
+  clause_name_kr?: string
+  /** 0~1 사이 코사인 유사도. */
+  similarity_score?: number
+  /** 계약서 원문에서 발췌한 근거 텍스트. */
+  evidence_text?: string
+  material_id?: number
+  supplier_id?: number
+  source_type?: string
 }
 
 /**
@@ -496,8 +523,7 @@ export interface AiBriefingDetailResponse {
   event_content: string
   briefing: string | null
   recommended_actions: string[] | null
-  /** 백엔드 procurement_risk_assessments.contract_findings 그대로 — 구조가 고정돼 있지 않아 임의 객체 배열. */
-  contract_findings: Record<string, unknown>[] | null
+  contract_findings: ContractFindingItem[] | null
   warnings: string[] | null
   assessed_at: string | null
 }

@@ -261,12 +261,10 @@ export async function fetchMaterialRiskOverview(
   if (!API_BASE_URL) {
     return MOCK_OVERVIEW
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
+  // 조회 전용 API — 백엔드가 permitAll로 열어뒀으므로 비로그인 방문자도 그대로 부른다.
   const result = await fetchWithAuth<MaterialRiskOverview>(
     `/api/v1/material-risk/overview${refresh ? '?refresh=true' : ''}`,
-    accessToken,
+    accessToken ?? '',
   )
   if ('error' in result) {
     throw new Error(result.message)
@@ -291,12 +289,9 @@ export async function fetchMaterialRiskDetail(
     }
     return toMockDetail(item)
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
   const result = await fetchWithAuth<MaterialRiskDetail>(
     `/api/v1/material-risk/materials/${encodeURIComponent(erpMaterialId)}`,
-    accessToken,
+    accessToken ?? '',
   )
   if ('error' in result) {
     throw new Error(result.message)
@@ -317,12 +312,9 @@ export async function fetchContractEvidence(
   if (!API_BASE_URL) {
     return { ...MOCK_CONTRACT_EVIDENCE, erp_material_id: erpMaterialId }
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
   const result = await fetchWithAuth<ContractEvidence>(
     `/api/v1/material-risk/materials/${encodeURIComponent(erpMaterialId)}/contract-evidence`,
-    accessToken,
+    accessToken ?? '',
     { method: 'POST' },
   )
   if ('error' in result) {

@@ -337,20 +337,26 @@ function fetchContractStatusDashboardMock(): ContractStatusDashboardResponse {
  * 사용 예:
  *   const dashboard = await fetchAiBriefingSummaryDashboard(accessToken)
  */
-export async function fetchAiBriefingSummaryDashboard(token: string): Promise<AiBriefingSummaryDashboardResponse> {
-  if (!API_BASE_URL) return fetchAiBriefingSummaryDashboardMock()
-  const result = await fetchWithAuth<AiBriefingSummaryDashboardResponse>('/api/v1/planning/ai-briefing', token)
+export async function fetchAiBriefingSummaryDashboard(
+  token: string,
+  page = 0,
+  size = 10,
+): Promise<AiBriefingSummaryDashboardResponse> {
+  if (!API_BASE_URL) return fetchAiBriefingSummaryDashboardMock(page, size)
+  const result = await fetchWithAuth<AiBriefingSummaryDashboardResponse>(
+    `/api/v1/planning/ai-briefing?page=${page}&size=${size}`,
+    token,
+  )
   if ('error' in result) throw new Error(result.message)
   return result
 }
 
 /** risk_event mock의 rag_view/grade를 사업부 단위로 취합한다. */
-function fetchAiBriefingSummaryDashboardMock(): AiBriefingSummaryDashboardResponse {
+function fetchAiBriefingSummaryDashboardMock(page: number, size: number): AiBriefingSummaryDashboardResponse {
   const events = fetchRiskEvents()
 
-  const recent: BriefingSummaryItem[] = [...events]
+  const recentAll: BriefingSummaryItem[] = [...events]
     .sort((a, b) => (parseRiskEventDate(a.risk_event_id) < parseRiskEventDate(b.risk_event_id) ? 1 : -1))
-    .slice(0, 3)
     .map((event) => ({
       risk_event_id: event.risk_event_id,
       material: event.market_context.material,
@@ -358,6 +364,8 @@ function fetchAiBriefingSummaryDashboardMock(): AiBriefingSummaryDashboardRespon
       headline: event.market_context.event_summary,
       business_unit: BUSINESS_UNIT_BY_MATERIAL[event.market_context.material] ?? '기타',
     }))
+  const recent = recentAll.slice(page * size, page * size + size)
+  const recent_total_count = recentAll.length
 
   const countByUnit = new Map<string, number>()
   for (const event of events) {
@@ -379,7 +387,7 @@ function fetchAiBriefingSummaryDashboardMock(): AiBriefingSummaryDashboardRespon
     { label: '임원 보고 지정', value: 4, unit: '건' },
   ]
 
-  return { kpi_summary, by_unit, recent }
+  return { kpi_summary, by_unit, recent, recent_total_count }
 }
 
 /**
@@ -433,7 +441,8 @@ export async function fetchAiBriefingDetail(token: string, analysisId: string): 
  * 합성한다. `recent`에 없는 id는 찾을 수 없음으로 처리(1계층 BriefingDetailPage와 동일 관례).
  */
 function fetchAiBriefingDetailMock(analysisId: string): AiBriefingDetailResponse {
-  const { recent } = fetchAiBriefingSummaryDashboardMock()
+  // 전체 목록에서 찾아야 하므로 페이지네이션 없이 한 번에 크게 요청한다.
+  const { recent } = fetchAiBriefingSummaryDashboardMock(0, 1000)
   const item = recent.find((entry) => entry.risk_event_id === analysisId)
   if (!item) {
     throw new Error('해당 브리핑을 찾을 수 없습니다.')

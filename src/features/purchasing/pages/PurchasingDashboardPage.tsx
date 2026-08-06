@@ -261,12 +261,7 @@ export function PurchasingDashboardPage() {
 
   // 주요 알림은 두 원천이 섞인다 — 멀티에이전트 판정이 심각·주의인 뉴스 + 변동성이 큰 자재(정보).
   // 가격 쪽은 기간 탭(period)에 따라 함께 바뀐다. 같은 구간에서 파생한 값이라 그게 맞다.
-  const alerts = buildDashboardAlerts(
-    monitoringEvents,
-    priceSeries,
-    priceSummaries,
-    PURCHASING_ALERT_TARGETS,
-  )
+  const alerts = buildDashboardAlerts(monitoringEvents, priceSeries, priceSummaries, PURCHASING_ALERT_TARGETS)
 
   const { expanded: alertsExpanded, open: openAlertsPanel } = useAlertsPanelState()
   const [isPreviewing, setIsPreviewing] = useState(false)
@@ -379,6 +374,9 @@ export function PurchasingDashboardPage() {
   // 환율·지도·가격까지 전부 다시 불린다.
   useEffect(() => {
     let cancelled = false
+    // 화살표로 페이지를 넘길 때마다 다시 불러오므로 로딩을 되켠다 — 이게 없으면 첫 조회
+    // 이후로는 자리표시자가 영영 안 뜨고, 넘긴 뒤에도 이전 페이지 목록이 그대로 남아
+    // "화살표가 안 먹는다"처럼 보인다.
     // 자리표시자는 위쪽 렌더 중 조정(prevNewsPage 비교)에서 이미 켰다.
     fetchPublicNewsFeed(NEWS_FEED_PAGE_SIZE, newsPage * NEWS_FEED_PAGE_SIZE)
       .then((items) => {

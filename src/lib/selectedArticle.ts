@@ -18,6 +18,7 @@ export function fromNewsFeedItem(item: NewsFeedItem): SelectedArticle {
     country_code: item.country_code,
     collected_at: item.collected_at,
     headline_original: item.headline_original,
+    summary: item.summary_kr ?? null,
     translated: item.translated,
     url: item.url,
   }

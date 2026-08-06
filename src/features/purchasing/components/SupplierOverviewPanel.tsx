@@ -1,6 +1,7 @@
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { Skeleton, SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
 import type { SupplierOverview } from '../../../api/types'
+import { SUPPLIER_STATUS_LABEL } from '../lib/supplierStatus'
 import styles from './SupplierOverviewPanel.module.css'
 
 interface SupplierOverviewPanelProps {
@@ -9,20 +10,12 @@ interface SupplierOverviewPanelProps {
   isLoading?: boolean
 }
 
-/** ERP 상태 코드 → 화면 표기. 표에 없는 값은 코드를 그대로 보여준다(지어내지 않는다). */
-const STATUS_LABEL: Record<string, string> = {
-  ACTIVE: '거래중',
-  APPROVED: '승인',
-  REVIEW: '검토 필요',
-  SUSPENDED: '거래중지',
-  BLOCKED: '거래불가',
-}
-
-/** 상태별 색. 승인 계열은 초록, 검토는 주황, 나머지는 회색. */
+/** 상태별 색. 승인 계열은 초록, 검토는 주황, 나머지는 회색. 라벨은 SUPPLIER_STATUS_LABEL 공유. */
 const STATUS_CLASS: Record<string, string> = {
   ACTIVE: styles.statusOk,
   APPROVED: styles.statusOk,
   REVIEW: styles.statusReview,
+  UNDER_REVIEW: styles.statusReview,
   SUSPENDED: styles.statusBlocked,
   BLOCKED: styles.statusBlocked,
 }
@@ -31,7 +24,7 @@ function StatusChip({ status }: { status: string | null }) {
   if (!status) return <span className={styles.muted}>상태 미상</span>
   return (
     <span className={`${styles.status} ${STATUS_CLASS[status] ?? styles.statusUnknown}`}>
-      {STATUS_LABEL[status] ?? status}
+      {SUPPLIER_STATUS_LABEL[status] ?? status}
     </span>
   )
 }

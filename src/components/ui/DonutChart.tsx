@@ -11,6 +11,8 @@ interface DonutChartProps {
   data: DonutDatum[]
   centerLabel?: string
   centerValue?: string
+  /** 도넛 지름(px). 반지름은 %로 잡아 이 값에 비례해 링이 커진다. 기본 180. */
+  size?: number
 }
 
 /**
@@ -22,20 +24,21 @@ interface DonutChartProps {
  * 사용 예:
  *   <DonutChart data={[{ label: '중국', value: 54.1, color: '#2f5adb' }]} centerValue="82.3%" centerLabel="전체 수입 의존도" />
  */
-export function DonutChart({ data, centerLabel, centerValue }: DonutChartProps) {
+export function DonutChart({ data, centerLabel, centerValue, size = 180 }: DonutChartProps) {
   return (
-    <div className={styles.wrapper}>
+    <div className={styles.wrapper} style={{ width: size, height: size }}>
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           {/* isAnimationActive={false} — recharts 3 + React 19 조합에서 진입 애니메이션이
               시작되지 않아 조각이 빈 <g>로만 남고 path가 그려지지 않는다(실측: 도넛이 통째로
               공백). 애니메이션을 끄면 첫 프레임부터 최종 형태로 그린다. */}
+          {/* 반지름을 %로 두어 size에 비례해 링이 커진다(기존 180px에서 55/80px과 같은 비율). */}
           <Pie
             data={data}
             dataKey="value"
             nameKey="label"
-            innerRadius={55}
-            outerRadius={80}
+            innerRadius="61%"
+            outerRadius="89%"
             paddingAngle={1}
             stroke="none"
             isAnimationActive={false}

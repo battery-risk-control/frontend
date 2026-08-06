@@ -145,8 +145,9 @@ export function PublicAiBriefingPage() {
       try {
         // 이 화면은 "최근 브리핑"이 전부인 화면이라 대시보드 사이드패널(5건)과 달리 넉넉히
         // 받는다. 기본값 5로 두면 그날 몇 건만 만들어도 이전 브리핑이 곧바로 묻혔다.
-        const items = await fetchRecentAiBriefings(token, RECENT_BRIEFING_LIMIT)
-        if (!cancelled) setRecent(items)
+        // TODO(H-2): 필터·페이징 UI로 전면 재작성 예정 — 지금은 breaking change만 흡수한 임시 형태.
+        const result = await fetchRecentAiBriefings(token, { size: RECENT_BRIEFING_LIMIT })
+        if (!cancelled) setRecent(result.content)
       } catch {
         // 최근 목록이 비어도 생성은 할 수 있어야 하므로 화면을 막지 않는다.
         if (!cancelled) setRecent([])
@@ -283,7 +284,7 @@ export function PublicAiBriefingPage() {
                 <p className={styles.notice}>브리핑을 불러오는 중…</p>
               )}
               {!isGenerating && !detail && !briefingId && (
-                <p className={styles.notice}>
+                <p className={`${styles.notice} ${styles.noticeEmpty}`}>
                   {source && ref
                     ? '"LLM 브리핑 생성"을 누르면 ERP · 계약 근거를 모아 브리핑을 만듭니다.'
                     : '리스크 이벤트 · 원자재 위험 · 계약 · RAG 화면에서 대상을 골라 오거나, 최근 브리핑을 열어 보세요.'}

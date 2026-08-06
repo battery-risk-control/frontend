@@ -4,7 +4,7 @@ import { Skeleton } from '../ui/Skeleton/Skeleton'
 import { ScrollCard } from '../ui/ScrollCard/ScrollCard'
 import { RiskGradeBadge } from '../ui/RiskGradeBadge'
 import type { MaterialPriceSeries, MaterialPriceSummary } from '../../api/types'
-import { PERIOD_DAYS, PERIOD_OPTIONS } from '../../lib/materialPricePeriods'
+import { PERIOD_OPTIONS } from '../../lib/materialPricePeriods'
 import styles from './MaterialPriceDetail.module.css'
 
 interface MaterialPriceDetailProps {
@@ -207,21 +207,16 @@ export function MaterialPriceDetail({
             </div>
 
             <div className={styles.periodGroup}>
-              {PERIOD_OPTIONS.map((label) => {
-                const supported = label in PERIOD_DAYS
-                return (
-                  <button
-                    key={label}
-                    type="button"
-                    className={label === period ? styles.periodButtonActive : styles.periodButton}
-                    onClick={() => onPeriodChange(label)}
-                    disabled={!supported}
-                    title={supported ? undefined : '날짜 범위 선택은 아직 준비 중입니다.'}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
+              {PERIOD_OPTIONS.map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  className={label === period ? styles.periodButtonActive : styles.periodButton}
+                  onClick={() => onPeriodChange(label)}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 

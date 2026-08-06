@@ -55,6 +55,7 @@
   margin: 0;
   font-size: var(--font-size-sm);
   color: var(--color-text);
+  white-space: pre-line;
 }
 
 .pointList {
@@ -67,13 +68,45 @@
   color: var(--color-text);
 }
 
-.findingJson {
+.findingList {
   margin: 0;
-  padding: var(--space-2);
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.findingCard {
+  padding: var(--space-3);
   background: var(--color-bg);
   border-radius: var(--radius-sm);
+}
+
+.findingHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.findingClause {
   font-size: var(--font-size-xs);
-  white-space: pre-wrap;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+.findingScore {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.findingText {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+  white-space: pre-line;
   word-break: break-word;
 }
 

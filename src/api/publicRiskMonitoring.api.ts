@@ -38,8 +38,8 @@ const MOCK_EVENTS: RiskMonitoringEvent[] = [
     event_id: 1,
     grade: '심각',
     confidence_label: '확정',
+    briefing_id: 'BRIEF-0001',
     multi_agent_completed: true,
-    briefing_id: 'brf-001',
     headline: '코발트 공급사의 납기 지연 가능성 확대',
     headline_original: 'Cobalt supplier delivery delay risk widens',
     translated: true,
@@ -53,8 +53,8 @@ const MOCK_EVENTS: RiskMonitoringEvent[] = [
     event_id: 2,
     grade: '주의',
     confidence_label: '참고',
-    multi_agent_completed: false,
     briefing_id: null,
+    multi_agent_completed: false,
     headline: '니켈 항만 파업 장기화',
     headline_original: 'Nickel port strike prolonged',
     translated: true,
@@ -68,8 +68,8 @@ const MOCK_EVENTS: RiskMonitoringEvent[] = [
     event_id: 3,
     grade: '주의',
     confidence_label: '참고',
-    multi_agent_completed: false,
     briefing_id: null,
+    multi_agent_completed: false,
     headline: '리튬 현물가격 변동 확대',
     headline_original: 'Lithium spot price volatility widens',
     translated: true,
@@ -83,8 +83,8 @@ const MOCK_EVENTS: RiskMonitoringEvent[] = [
     event_id: 4,
     grade: '정상',
     confidence_label: '참고',
-    multi_agent_completed: false,
     briefing_id: null,
+    multi_agent_completed: false,
     headline: '흑연 생산량 회복',
     headline_original: 'Graphite output recovers',
     translated: true,
@@ -98,8 +98,8 @@ const MOCK_EVENTS: RiskMonitoringEvent[] = [
     event_id: 5,
     grade: '정상',
     confidence_label: '참고',
-    multi_agent_completed: false,
     briefing_id: null,
+    multi_agent_completed: false,
     headline: '망간 항만 운영 정상화',
     headline_original: 'Manganese port operations normalize',
     translated: true,
@@ -156,7 +156,6 @@ const MOCK_DETAILS: Record<number, RiskMonitoringDetail> = {
     },
     erp_impact_available: false,
     erp_impact_blocked_reason: '이미 종합 위험도 평가가 완료된 이벤트입니다.',
-    // 이 건만 멀티에이전트까지 끝난 것으로 채우므로 실행 이력도 완료로 둔다.
     latest_attempt_status: 'COMPLETED',
     latest_attempt_at: '2026-07-31T14:20:00Z',
   },
@@ -174,7 +173,6 @@ function toMockDetail(event: RiskMonitoringEvent): RiskMonitoringDetail {
       procurement_risk: null,
       erp_impact_available: event.grade !== null,
       erp_impact_blocked_reason: event.grade === null ? '분석이 아직 완료되지 않았습니다.' : null,
-      // 상세 mock이 없는 이벤트는 평가가 한 번도 안 돌았다는 뜻이다 — 시각도 null로 둔다.
       latest_attempt_status: 'NOT_RUN',
       latest_attempt_at: null,
     }
@@ -213,12 +211,10 @@ export async function fetchRiskMonitoringEvents(
   if (!API_BASE_URL) {
     return applyFilters(MOCK_EVENTS, filters)
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
+  // 조회 전용 API — 백엔드가 permitAll로 열어뒀으므로 비로그인 방문자도 그대로 부른다.
   const result = await fetchWithAuth<RiskMonitoringEvent[]>(
     `/api/v1/risk-monitoring/events${toQuery(filters)}`,
-    accessToken,
+    accessToken ?? '',
   )
   if ('error' in result) {
     throw new Error(result.message)
@@ -243,41 +239,9 @@ export async function fetchRiskMonitoringEvent(
     }
     return toMockDetail(event)
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
   const result = await fetchWithAuth<RiskMonitoringDetail>(
     `/api/v1/risk-monitoring/events/${eventId}`,
-    accessToken,
-  )
-  if ('error' in result) {
-    throw new Error(result.message)
-  }
-  return result
-}
-
-/**
- * "ERP·계약 영향 분석" 실행 — mock 모드에서는 실제 멀티에이전트가 없으므로 저장된
- * 상세를 그대로 돌려준다(버튼이 `erp_impact_available`로 이미 막혀 있어 호출될 일이 드물다).
- *
- * 사용 예:
- *   const updated = await runErpImpactAnalysis(accessToken, 1)
- */
-export async function runErpImpactAnalysis(
-  accessToken: string | null,
-  eventId: number,
-  useLlm = false,
-): Promise<RiskMonitoringDetail> {
-  if (!API_BASE_URL) {
-    return fetchRiskMonitoringEvent(accessToken, eventId)
-  }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
-  const result = await fetchWithAuth<RiskMonitoringDetail>(
-    `/api/v1/risk-monitoring/events/${eventId}/erp-impact?useLlm=${useLlm}`,
-    accessToken,
-    { method: 'POST' },
+    accessToken ?? '',
   )
   if ('error' in result) {
     throw new Error(result.message)

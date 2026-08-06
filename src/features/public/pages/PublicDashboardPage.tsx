@@ -11,14 +11,17 @@ import {
 } from '../../../api/public.api'
 import {
   acknowledgeAssessment,
+  fetchAcknowledgedAssessments,
   fetchMaterialRiskSummary,
   fetchPurchasingKpiSummary,
   fetchSupplierOverview,
+  unacknowledgeAssessment,
 } from '../../../api/publicPurchasingDashboard.api'
 import { fetchMaterialRiskOverview } from '../../../api/publicMaterialRisk.api'
 import { fetchRiskMonitoringEvents } from '../../../api/publicRiskMonitoring.api'
 import { fetchRecentAiBriefings } from '../../../api/publicAiBriefing.api'
 import type {
+  AcknowledgedItem,
   AiBriefingListItem,
   ExchangeRateBoard,
   GlobalRiskBoardItem,
@@ -37,6 +40,7 @@ import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
+import { SidePanelToggleButton } from '../../../components/layout/SidePanelToggleButton'
 import { AlertsBellButton } from '../../../components/layout/AlertsBellButton'
 import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
 import { PageSectionDots } from '../../../components/ui/PageSectionDots/PageSectionDots'
@@ -51,6 +55,7 @@ import { PurchasingKpiRow } from '../components/PurchasingKpiRow'
 import { LiveNewsMarquee } from '../components/LiveNewsMarquee'
 import { LatestNewsPanel } from '../components/LatestNewsPanel'
 import { MaterialRiskGaugeGrid } from '../components/MaterialRiskGaugeGrid'
+import { AcknowledgedPanel } from '../components/AcknowledgedPanel'
 import { MaterialRiskSummaryTable } from '../components/MaterialRiskSummaryTable'
 import { SupplierOverviewPanel } from '../components/SupplierOverviewPanel'
 import { ImportDependencyRow } from '../../purchasing/components/ImportDependencyRow'
@@ -183,9 +188,6 @@ export function PublicDashboardPage() {
    * 패널별 로딩 상태. 하나로 묶지 않는 이유는 조회가 **서로 다른 시점에 끝나기** 때문이다 —
    * 전역 플래그 하나로 두면 가장 느린 응답이 올 때까지 이미 도착한 패널까지 자리표시자로
    * 붙잡아 둔다. 실패해도 로딩은 끝난 것이므로 `.finally`에서 내린다.
-   *
-   * 알림(모니터링 이벤트)·브리핑 로딩은 우측 DashboardSidePanel 탭 스켈레톤과 함께 다음
-   * 배치에서 배선한다(이번 배치는 본문 패널만).
    */
   const [newsLoading, setNewsLoading] = useState(true)
   const [priceLoading, setPriceLoading] = useState(true)
@@ -193,6 +195,8 @@ export function PublicDashboardPage() {
   const [materialRiskLoading, setMaterialRiskLoading] = useState(true)
   const [supplierLoading, setSupplierLoading] = useState(true)
   const [materialsLoading, setMaterialsLoading] = useState(true)
+  const [alertsLoading, setAlertsLoading] = useState(true)
+  const [briefingsLoading, setBriefingsLoading] = useState(true)
 
   // --- 인증 API 4종(mock 폴백 있음) ---
   const [kpi, setKpi] = useState<PurchasingKpiSummary | null>(null)
@@ -205,6 +209,9 @@ export function PublicDashboardPage() {
   const [materials, setMaterials] = useState<MaterialRiskItem[]>([])
   const [monitoringEvents, setMonitoringEvents] = useState<RiskMonitoringEvent[]>([])
   const [briefings, setBriefings] = useState<AiBriefingListItem[]>([])
+  /** 완료 처리 항목 — 되돌리기 목록. 완료/되돌리기 어느 쪽이든 reloadKey로 함께 다시 부른다. */
+  const [acknowledged, setAcknowledged] = useState<AcknowledgedItem[]>([])
+  const [acknowledgedLoading, setAcknowledgedLoading] = useState(true)
 
   // 기간 탭은 페이지가 소유한다 — 탭이 바뀌면 차트와 요약 카드를 **같은 days로** 함께 다시
   // 불러야 하고, 그 조회는 페이지 책임이다.
@@ -212,31 +219,55 @@ export function PublicDashboardPage() {
   // 우측 "뉴스 상세" 탭이 보여줄 항목. 두 곳에서 선택된다 — 최신 뉴스 목록과 위험 지도 마커.
   const [selectedNews, setSelectedNews] = useState<SelectedArticle | null>(null)
 
+  /*
+   * 조회 조건이 바뀌면 자리표시자를 다시 켠다 — effect가 아니라 렌더 중에 직전 값과
+   * 비교한다("props가 바뀔 때 state 조정"의 표준 패턴).
+   *
+   * 로딩 상태의 초기값은 전부 `true`라 첫 조회는 이미 자리표시자로 시작한다. 여기서 다루는
+   * 건 재조회다. 이게 없으면 기간 탭을 눌러도 이전 구간 차트가 그대로 떠 있고, 뉴스
+   * 페이지를 넘겨도 이전 목록이 남아 "안 먹는다"처럼 보인다.
+   *
+   * effect에서 setState하면 화면이 한 번 그려진 뒤 다시 그려지는 연쇄 렌더가 되고
+   * (react-hooks/set-state-in-effect), 그 사이 한 프레임 동안 옛 데이터가 "로딩 아님"으로
+   * 보인다. 렌더 중 조정은 React가 그 자리에서 다시 렌더해 중간 상태가 화면에 나가지 않는다.
+   */
+  const [prevPeriod, setPrevPeriod] = useState(period)
+  if (period !== prevPeriod) {
+    setPrevPeriod(period)
+    setPriceLoading(true)
+  }
+
+  const [prevNewsPage, setPrevNewsPage] = useState(newsPage)
+  if (newsPage !== prevNewsPage) {
+    setPrevNewsPage(newsPage)
+    setNewsLoading(true)
+  }
+
+  // 인증 조회 묶음은 "대응 완료/되돌리기"(reloadKey)와 토큰 교체에 함께 반응한다 — 한쪽만
+  // 갱신하면 KPI 건수와 표가 어긋난 채로 남는다.
+  const authQueryKey = `${accessToken ?? ''}|${reloadKey}`
+  const [prevAuthQueryKey, setPrevAuthQueryKey] = useState(authQueryKey)
+  if (authQueryKey !== prevAuthQueryKey) {
+    setPrevAuthQueryKey(authQueryKey)
+    setKpiLoading(true)
+    setMaterialRiskLoading(true)
+    setSupplierLoading(true)
+    setMaterialsLoading(true)
+    setBriefingsLoading(true)
+    setAcknowledgedLoading(true)
+    // 알림은 1분 폴링이 따로 돌지만, 자리표시자는 첫 조회와 재조회에서만 띄운다
+    // (폴링 중에 자리표시자로 바뀌면 읽던 알림이 사라진다).
+    setAlertsLoading(true)
+  }
+
   // 주요 알림은 두 원천이 섞인다 — 멀티에이전트 판정이 심각·주의인 뉴스 + 변동성이 큰 자재(정보).
-  const alerts = buildDashboardAlerts(
-    monitoringEvents,
-    priceSeries,
-    priceSummaries,
-    PUBLIC_ALERT_TARGETS,
-  )
+  const alerts = buildDashboardAlerts(monitoringEvents, priceSeries, priceSummaries, PUBLIC_ALERT_TARGETS)
 
   const { expanded: alertsExpanded, open: openAlertsPanel } = useAlertsPanelState()
   const [isPreviewing, setIsPreviewing] = useState(false)
   /** 알림 벨을 누른 횟수. 우측 패널이 "주요 알림" 탭으로 옮겨야 할 때를 알린다. */
   const [alertsFocusToken, setAlertsFocusToken] = useState(0)
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  /**
-   * 헤더 알림 벨 클릭 — 패널을 열고 "주요 알림" 탭으로 옮긴다(1계층 대시보드와 동일 동작).
-   *
-   * 토글이 아니라 열기다. 브리핑 탭을 보다가 알림을 보려고 눌렀는데 패널이 닫히면 안 된다.
-   * 열고 닫기는 패널 가장자리의 `SidePanelToggleButton`이 맡는다.
-   */
-  const handleOpenAlerts = useCallback(() => {
-    openAlertsPanel()
-    setAlertsFocusToken((previous) => previous + 1)
-    setIsPreviewing(false)
-  }, [openAlertsPanel])
 
   // 공개 API — 토큰이 필요 없으므로 마운트 시 한 번만 부른다(기간 탭에 반응하는 가격 2종 제외).
   useEffect(() => {
@@ -280,11 +311,7 @@ export function PublicDashboardPage() {
   // 가격 차트·요약 카드만 기간 탭에 반응한다.
   useEffect(() => {
     let cancelled = false
-    // 기간 탭을 바꾸면 다시 불러오므로 로딩을 되켠다 — 초기값 true만으로는 첫 조회에만
-    // 자리표시자가 뜨고, 이후 재조회는 이전 구간 데이터를 띄운 채로 조용히 바뀐다. 탭을
-    // 누른 즉시 자리표시자가 보여야 하므로 fetch 시작 전 동기 호출이 의도된 것이다.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- 재조회 시작을 알리는 동기 리셋(의도됨)
-    setPriceLoading(true)
+    // 자리표시자는 위쪽 렌더 중 조정(prevPeriod 비교)에서 이미 켰다.
     const days = PERIOD_DAYS[period]
     fetchPublicPriceTrends(days)
       .then((series) => {
@@ -311,10 +338,7 @@ export function PublicDashboardPage() {
   // 뉴스 목록은 페이지가 바뀔 때마다 다시 부른다.
   useEffect(() => {
     let cancelled = false
-    // 화살표로 페이지를 넘길 때마다 다시 불러오므로 로딩을 되켠다 — 이게 없으면 첫 조회
-    // 이후로는 자리표시자가 영영 안 뜨고, 넘긴 뒤에도 이전 페이지 목록이 그대로 남는다.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- 재조회 시작을 알리는 동기 리셋(의도됨)
-    setNewsLoading(true)
+    // 자리표시자는 위쪽 렌더 중 조정(prevNewsPage 비교)에서 이미 켰다.
     fetchPublicNewsFeed(NEWS_FEED_PAGE_SIZE, newsPage * NEWS_FEED_PAGE_SIZE)
       .then((items) => {
         if (cancelled) return
@@ -338,12 +362,7 @@ export function PublicDashboardPage() {
   // 위 컴포넌트 주석 "원본과의 차이" 참고).
   useEffect(() => {
     let cancelled = false
-    // "대응 완료" 후 reloadKey로 다시 부를 때도 자리표시자가 떠야 한다.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- 재조회 시작을 알리는 동기 리셋(의도됨)
-    setKpiLoading(true)
-    setMaterialRiskLoading(true)
-    setSupplierLoading(true)
-    setMaterialsLoading(true)
+    // 자리표시자는 위쪽 렌더 중 조정(authQueryKey 비교)에서 이미 켰다.
     fetchPurchasingKpiSummary(accessToken)
       .then((summary) => {
         if (!cancelled) setKpi(summary)
@@ -391,12 +410,28 @@ export function PublicDashboardPage() {
       .catch((err) => {
         console.error('리스크 이벤트 조회 실패', err)
       })
-    fetchRecentAiBriefings(accessToken, RECENT_BRIEFING_LIMIT)
-      .then((items) => {
-        if (!cancelled) setBriefings(items)
+      .finally(() => {
+        if (!cancelled) setAlertsLoading(false)
+      })
+    fetchRecentAiBriefings(accessToken, { size: RECENT_BRIEFING_LIMIT })
+      .then((page) => {
+        if (!cancelled) setBriefings(page.content)
       })
       .catch((err) => {
         console.error('최근 브리핑 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setBriefingsLoading(false)
+      })
+    fetchAcknowledgedAssessments(accessToken)
+      .then((items) => {
+        if (!cancelled) setAcknowledged(items)
+      })
+      .catch((err) => {
+        console.error('완료 처리 항목 조회 실패', err)
+      })
+      .finally(() => {
+        if (!cancelled) setAcknowledgedLoading(false)
       })
     return () => {
       cancelled = true
@@ -421,9 +456,54 @@ export function PublicDashboardPage() {
     }
   }
 
+  /** 되돌리기. 완료 처리와 같은 reloadKey를 올려 KPI·표·이 목록을 한꺼번에 맞춘다 —
+      한쪽만 갱신하면 표에는 돌아왔는데 KPI는 그대로인 어긋난 화면이 된다. */
+  async function handleUndoAcknowledge(item: AcknowledgedItem) {
+    if (!accessToken) return
+    setPendingAssessmentId(item.assessment_id)
+    try {
+      await unacknowledgeAssessment(accessToken, item.assessment_id)
+      setReloadKey((key) => key + 1)
+    } catch (err) {
+      console.error('되돌리기 실패', err)
+    } finally {
+      setPendingAssessmentId(null)
+    }
+  }
+
   function handleTierTabClick(path: string) {
     navigate(orgTier ? path : '/auth')
   }
+
+  /**
+   * 헤더 알림 벨 클릭 — 패널을 열고 "주요 알림" 탭으로 옮긴다.
+   *
+   * 토글이 아니라 열기다. 브리핑 탭을 보다가 알림을 보려고 눌렀는데 패널이 닫히면 안 된다.
+   * 열고 닫기는 패널 가장자리의 `SidePanelToggleButton`이 맡는다.
+   *
+   * 미리보기도 함께 내린다 — 패널이 열리면 그 안에 같은 내용이 있어서, 오버레이가 남아 있으면
+   * 같은 목록이 두 겹으로 보인다.
+   */
+  const handleOpenAlerts = useCallback(() => {
+    openAlertsPanel()
+    setAlertsFocusToken((previous) => previous + 1)
+    setIsPreviewing(false)
+  }, [openAlertsPanel])
+
+  /**
+   * 지도 마커·최신 뉴스에서 기사를 고르면 우측 패널을 함께 연다.
+   *
+   * 패널이 접혀 있을 때 제목을 눌러도 화면이 아무 반응도 하지 않아, 클릭이 먹지 않은 것처럼
+   * 보였다 — 선택은 바뀌었는데 그걸 보여줄 자리가 닫혀 있었다. "뉴스 상세" 탭으로 옮기는 것은
+   * `DashboardSidePanel`이 `selectedNews` 참조 변경을 보고 이미 하고 있다.
+   */
+  const handleSelectArticle = useCallback(
+    (article: SelectedArticle) => {
+      setSelectedNews(article)
+      openAlertsPanel()
+    },
+    [openAlertsPanel],
+  )
 
   function handlePreviewMouseEnter() {
     if (closeTimeoutRef.current) {
@@ -499,14 +579,14 @@ export function PublicDashboardPage() {
           ) : (
             <GlobalRiskBoard
               items={riskBoardItems}
-              onSelectItem={(item) => setSelectedNews(fromRiskBoardItem(item))}
+              onSelectItem={(item) => handleSelectArticle(fromRiskBoardItem(item))}
             />
           )}
           <LatestNewsPanel
             items={newsItems}
             isLoading={newsLoading}
             selectedId={selectedNews?.id}
-            onSelect={(item) => setSelectedNews(fromNewsFeedItem(item))}
+            onSelect={(item) => handleSelectArticle(fromNewsFeedItem(item))}
             page={newsPage}
             pageSize={NEWS_FEED_PAGE_SIZE}
             total={newsTotal}
@@ -533,14 +613,27 @@ export function PublicDashboardPage() {
           {/* ── 목업에 없는 기존 구성 (아래) ───────────────────────
               목업이 화면 전체를 반영한 것이 아니라, 지우지 않고 아래로 내렸다. */}
           <MaterialRiskGaugeGrid items={materialRiskSummary} />
+          {/* 위 표에서 "대응 완료"로 내려간 항목이 여기로 옮겨진다. 되돌릴 자리가 여기뿐이다. */}
+          <AcknowledgedPanel
+            items={acknowledged}
+            isLoading={acknowledgedLoading}
+            pendingAssessmentId={pendingAssessmentId}
+            onUndo={handleUndoAcknowledge}
+          />
           <PublicMaterialRiskStatusPanel materials={materials} />
           <PublicErpImpactPanel materials={materials} />
           <PublicPurchasePriorityPanel materials={materials} isLoading={materialsLoading} />
           <SupplierOverviewPanel overview={supplierOverview} isLoading={supplierLoading} />
         </main>
         <PageSectionDots variant="withAside" sections={SECTION_DOTS_SECTIONS} />
+        {/* 패널이 접히면 폭이 0이 되어 안쪽에 토글을 둘 수 없다 — 좌측 SideNavToggleButton과
+            같은 이유로 패널 바깥에 따로 세운다. */}
+        <SidePanelToggleButton />
         <DashboardSidePanel
           selectedNews={selectedNews}
+          isNewsLoading={newsLoading}
+          isAlertsLoading={alertsLoading}
+          isBriefingsLoading={briefingsLoading}
           alerts={alerts}
           briefings={briefings}
           expanded={alertsExpanded}

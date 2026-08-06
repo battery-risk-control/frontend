@@ -14,6 +14,7 @@ const STATUS_LABEL: Record<string, string> = {
   ACTIVE: '거래중',
   APPROVED: '승인',
   REVIEW: '검토 필요',
+  UNDER_REVIEW: '거래 자격 검토 중',
   SUSPENDED: '거래중지',
   BLOCKED: '거래불가',
 }
@@ -23,6 +24,7 @@ const STATUS_CLASS: Record<string, string> = {
   ACTIVE: styles.statusOk,
   APPROVED: styles.statusOk,
   REVIEW: styles.statusReview,
+  UNDER_REVIEW: styles.statusReview,
   SUSPENDED: styles.statusBlocked,
   BLOCKED: styles.statusBlocked,
 }

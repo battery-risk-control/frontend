@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import type { ExchangeRateItem, NewsFeedItem } from '../../../api/types'
 import styles from './LiveNewsMarquee.module.css'
 
@@ -16,6 +16,31 @@ const RATE_ROTATE_MS = 4000
  * 남아 있다가 다음 교체와 겹친다(길면).
  */
 const RATE_SWAP_MS = 450
+
+/**
+ * 헤드라인 표시 방식.
+ *   'flip'    — 우측 환율 칩처럼 한 건씩 아래→위로 세로 전환(기본).
+ *   'marquee' — 예전 가로(우→좌) 흐름 띠.
+ *
+ * **롤백은 이 값만 'marquee'로 바꾸면 된다.** 옛 가로 흐름 구현(`MarqueeItems`,
+ * `.track`/`@keyframes marquee`, `.clone`)은 지우지 않고 그대로 남겨 뒀다.
+ */
+const NEWS_MODE: 'flip' | 'marquee' = 'flip'
+
+/** flip 모드에서 다음 기사로 넘어가는 간격(ms). 환율 칩(RATE_ROTATE_MS)과 같은 리듬. */
+const NEWS_ROTATE_MS = 4000
+
+/**
+ * flip 모드 세로 전환 시간(ms). **CSS의 `--news-swap-ms`와 같아야 한다** — JS가 이 시간 뒤에
+ * 나가는 기사를 DOM에서 지운다(환율 칩 RATE_SWAP_MS와 같은 계약).
+ */
+const NEWS_SWAP_MS = 450
+
+/**
+ * flip 모드에서 밴드 폭을 넘는 긴 기사를 좌로 흘릴 픽셀 속도(px/s). 클수록 빨리 흐른다.
+ * 짧은 기사는 흐르지 않고 정적으로 두고, 넘치는 기사만 이 속도로 스크롤해 전체가 읽히게 한다.
+ */
+const NEWS_SCROLL_PX_PER_SEC = 90
 
 interface LiveNewsMarqueeProps {
   /** 흐를 헤드라인. 목업은 5건 기준이며, 페이지가 `limit`으로 줄여 넘긴다. */
@@ -58,6 +83,108 @@ function MarqueeItems({ items }: { items: NewsFeedItem[] }) {
         </span>
       ))}
     </>
+  )
+}
+
+/** 한 건짜리 헤드라인(자재 칩 · 제목). flip 모드에서 들어오는/나가는 기사가 같은 모양이라 뺐다. */
+function NewsLine({ item }: { item: NewsFeedItem }) {
+  return (
+    <span className={styles.item}>
+      <span className={styles.material}>{item.material}</span>
+      {item.url ? (
+        <a className={styles.headlineLink} href={item.url} target="_blank" rel="noopener noreferrer">
+          {item.headline}
+        </a>
+      ) : (
+        <span className={styles.headline}>{item.headline}</span>
+      )}
+    </span>
+  )
+}
+
+/**
+ * 세로 전환 헤드라인(하이브리드) — 우측 환율 칩과 같은 방식으로 기사를 한 건씩 보여준다.
+ * 이전 기사가 위로 빠지며 흐려지고(`.newsLeave`), 새 기사가 아래에서 올라온다(`.newsEnter`).
+ * 나가는 쪽은 `position:absolute`로 띄워 레이아웃을 밀지 않는다(칩 rateLeave와 같은 처리).
+ *
+ * **긴 기사는 잘리지 않게 좌로 흘린다.** 한 줄에 다 안 들어가면(측정: `scrollWidth`) 그 기사만
+ * 우→좌로 스크롤해 전체가 읽히고, 다 읽을 시간을 주도록 머무는 시간(dwell)을 늘린다. 짧은
+ * 기사는 그대로 세로 전환만 한다.
+ *
+ * 마우스를 올리면 순환·가로 스크롤이 모두 멈추고(WCAG 2.2.2, 링크 클릭용), 애니메이션 축소
+ * 요청 시 순환하지 않고 첫 기사만 보여준다 — 마퀴·환율 칩과 같은 규칙이다.
+ */
+function FlipNews({ items }: { items: NewsFeedItem[] }) {
+  const [index, setIndex] = useState(0)
+  // 전환 중에만 채워지는 "빠져나가는 기사"(어느 index에서 나갔는지 key로 함께 들고 있다).
+  const [leaving, setLeaving] = useState<{ item: NewsFeedItem; key: number } | null>(null)
+  const [paused, setPaused] = useState(false)
+  // 현재 기사가 한 줄을 넘는 픽셀. 0이면 가로 스크롤 없이 정적으로 둔다.
+  const clipRef = useRef<HTMLSpanElement>(null)
+  const [overflow, setOverflow] = useState(0)
+
+  // 조회가 늦게 끝나 건수가 줄어도 항상 유효한 자리를 가리키게 한다(칩 rate와 같은 방어).
+  const current = items[index % items.length]
+
+  // 현재 기사를 그린 뒤 넘침 폭을 잰다 — 넘칠 때만 가로 스크롤한다(하이브리드).
+  useLayoutEffect(() => {
+    const el = clipRef.current
+    if (!el) return
+    const over = el.scrollWidth - el.clientWidth
+    setOverflow(over > 16 ? over : 0)
+  }, [current])
+
+  // 넘치는 기사는 다 흘러 보일 때까지 더 오래 머문다. 양끝 정지 구간(0.8) 몫까지 더한다.
+  const scrollMs = overflow > 0 ? Math.round(((overflow / NEWS_SCROLL_PX_PER_SEC) * 1000) / 0.8) : 0
+  const dwellMs = Math.max(NEWS_ROTATE_MS, scrollMs + 700)
+
+  useEffect(() => {
+    if (items.length <= 1 || paused) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const timer = setTimeout(() => {
+      setLeaving({ item: current, key: index })
+      setIndex((i) => (i + 1) % items.length)
+    }, dwellMs)
+    return () => clearTimeout(timer)
+  }, [index, current, items, paused, dwellMs])
+
+  useEffect(() => {
+    if (!leaving) return
+    const timer = setTimeout(() => setLeaving(null), NEWS_SWAP_MS)
+    return () => clearTimeout(timer)
+  }, [leaving])
+
+  return (
+    <div
+      className={styles.flip}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {leaving && (
+        <span key={`${leaving.key}-out`} className={styles.newsLeave}>
+          <span className={styles.newsClip}>
+            <span className={styles.newsInner}>
+              <NewsLine item={leaving.item} />
+            </span>
+          </span>
+        </span>
+      )}
+      {/* key를 index로 두면 넘어갈 때마다 새 요소가 마운트되어 진입 애니메이션이 다시 걸린다. */}
+      <span key={`${index}-in`} className={styles.newsEnter}>
+        <span ref={clipRef} className={styles.newsClip}>
+          <span
+            className={overflow > 0 ? `${styles.newsInner} ${styles.newsScrolling}` : styles.newsInner}
+            style={
+              overflow > 0
+                ? ({ '--news-scroll-x': `-${overflow}px`, '--news-scroll-ms': `${scrollMs}ms` } as CSSProperties)
+                : undefined
+            }
+          >
+            <NewsLine item={current} />
+          </span>
+        </span>
+      </span>
+    </div>
   )
 }
 
@@ -126,18 +253,22 @@ export function LiveNewsMarquee({ items, rates }: LiveNewsMarqueeProps) {
         실시간 뉴스 헤드라인
       </h2>
       <span className={styles.liveBadge}>LIVE</span>
-      <div className={styles.viewport}>
-        {items.length === 0 ? (
+      {items.length === 0 ? (
+        <div className={styles.viewport}>
           <span className={styles.empty}>수집된 뉴스가 없습니다.</span>
-        ) : (
+        </div>
+      ) : NEWS_MODE === 'flip' ? (
+        <FlipNews items={items} />
+      ) : (
+        <div className={styles.viewport}>
           <div className={styles.track}>
             <MarqueeItems items={items} />
             <span aria-hidden="true" className={styles.clone}>
               <MarqueeItems items={items} />
             </span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
       {rate && (
         <span
           className={styles.rateChip}

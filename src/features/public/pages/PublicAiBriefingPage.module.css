@@ -75,12 +75,13 @@
   overflow-wrap: anywhere;
 }
 
-/* 본문:근거 = 3:2. 우측은 sticky라 브리핑을 길게 스크롤해도 근거가 따라온다(다른 1계층 화면과 동일). */
+/* 본문:근거 = 3:2. stretch로 좌측 '구매 위험 브리핑' 패널이 우측 컬럼 높이에 맞춰 함께 늘고 준다
+   — 생성 전 좌측이 안내문 한 줄만 담아 짧게 쪼그라들던 여백을 없앤다(구매팀과 동일). */
 .split {
   display: grid;
   grid-template-columns: 3fr 2fr;
   gap: var(--space-4);
-  align-items: start;
+  align-items: stretch;
 }
 
 @media (max-width: 1024px) {
@@ -95,6 +96,12 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+}
+
+/* 헤더는 위에 두고, 생성 전 안내문은 남는 공간에서 세로 중앙에 오게 한다(빈 상단 여백 제거). */
+.briefingPanel {
+  display: flex;
+  flex-direction: column;
 }
 
 .sideColumn {
@@ -302,6 +309,14 @@
   font-size: var(--font-size-sm);
   line-height: 1.6;
   color: var(--color-text-muted);
+}
+
+/* 생성 전 빈 상태 안내문 — 늘어난 패널의 남는 공간 세로 중앙에 놓는다. */
+.noticeEmpty {
+  margin: auto 0;
+  align-self: center;
+  max-width: 44ch;
+  text-align: center;
 }
 
 .blockedReason {

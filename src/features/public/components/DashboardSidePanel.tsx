@@ -4,6 +4,7 @@ import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { useScrollOverflowHint } from '../../../lib/useScrollOverflowHint'
+import { Skeleton, SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
 import { toNewsEventRef } from '../../../lib/newsEventRef'
 import { formatCollectedAt } from '../../../lib/formatCollectedAt'
 import type { AiBriefingListItem, DashboardAlert, SelectedArticle } from '../../../api/types'
@@ -36,12 +37,19 @@ interface DashboardSidePanelProps {
   /** 이미 `buildDashboardAlerts`로 걸러지고 정렬된 목록 — 이 컴포넌트는 순서를 바꾸지 않는다. */
   alerts: DashboardAlert[]
   briefings: AiBriefingListItem[]
+  /**
+   * 탭별 로딩. 세 탭의 원천이 달라 각각 다른 시점에 도착하므로 하나로 묶지 않는다 —
+   * 묶으면 이미 온 탭까지 가장 느린 응답을 기다린다.
+   */
+  isNewsLoading?: boolean
+  isAlertsLoading?: boolean
+  isBriefingsLoading?: boolean
   expanded: boolean
   /**
    * 헤더 알림 벨을 누를 때마다 1씩 오르는 값. 오르면 "주요 알림" 탭으로 옮긴다.
    *
    * boolean이 아니라 카운터인 이유: 이미 알림 탭에 있다가 브리핑 탭으로 옮긴 뒤 벨을 다시
-   * 눌러도 알림으로 돌아와야 하는데, boolean은 값이 그대로라 전환이 다시 일어나지 않는다.
+   * 눌러도 알림으로 돌아와야 하는데, boolean은 값이 그대로라 effect가 다시 돌지 않는다.
    * `selectedNews`가 참조 변경으로 같은 일을 하는 것과 같은 방식이다.
    *
    * 0은 "아직 누른 적 없음"이라 첫 렌더에서는 기본 탭(뉴스 상세)을 밀어내지 않는다.
@@ -136,9 +144,13 @@ function NewsDetail({ news }: { news: SelectedArticle | null }) {
           .filter(Boolean)
           .join(' · ')}
       </p>
-      {/* 번역본이 떠 있을 때만 원문을 함께 보여준다. 번역이 없으면 headline이 곧 원문이라
-          같은 문장을 두 번 쓰게 된다. */}
-      {news.translated && <p className={styles.detailOriginal}>{news.headline_original}</p>}
+      {/* 영문 원문 자리에 분석이 만든 한국어 요약(summary_kr)을 보여준다. 요약이 없으면
+          번역본이 있을 때만 원문 헤드라인으로 폴백한다(구매팀과 동일). */}
+      {news.summary ? (
+        <p className={styles.detailOriginal}>{news.summary}</p>
+      ) : (
+        news.translated && <p className={styles.detailOriginal}>{news.headline_original}</p>
+      )}
 
       <span className={styles.detailCaption}>관련 원자재</span>
       <span className={styles.materialChip}>{news.material}</span>
@@ -210,32 +222,9 @@ function BriefingList({ briefings }: { briefings: AiBriefingListItem[] }) {
 }
 
 /**
- * 데이터 업로드 카드. 목업 우측 하단 자리다.
- *
- * **업로드를 여기서 처리하지 않고 기존 화면으로 보낸다.** 계약서는 계약·RAG 화면이 이미
- * 업로드·재처리·인덱싱 상태까지 다루고 있어 같은 기능을 두 곳에 두면 갈라진다. ERP CSV는
- * 백엔드에 업로드 엔드포인트 자체가 없어(`contract-rag` 쪽만 있다) 파일 선택창을 띄우면
- * 고를 수는 있는데 보낼 곳이 없는 상태가 된다.
- */
-function UploadCard() {
-  return (
-    <ScrollCard headingId="data-upload-heading" title="데이터 업로드">
-      <div className={styles.uploadBody}>
-        <Link to="/public/contract-rag" className={styles.uploadItem}>
-          <span className={styles.uploadTitle}>계약서 PDF / TXT</span>
-          <span className={styles.uploadHint}>계약 · RAG 화면에서 업로드 →</span>
-        </Link>
-        <div className={`${styles.uploadItem} ${styles.uploadDisabled}`}>
-          <span className={styles.uploadTitle}>ERP CSV</span>
-          <span className={styles.uploadHint}>업로드 API 준비 중 — 현재는 DB 적재로 반영됩니다</span>
-        </div>
-      </div>
-    </ScrollCard>
-  )
-}
-
-/**
- * 구매팀 대시보드 우측 패널 — 목업의 탭 3개(뉴스 상세 · 알림 · 브리핑) + 데이터 업로드 카드.
+ * 구매팀 대시보드 우측 패널 — 목업의 탭 3개(뉴스 상세 · 알림 · 브리핑).
+ * 비로그인 화면이라 데이터 업로드 카드는 제외한다 — 업로드는 로그인 필수 기능(구매팀
+ * 전용 쓰기 액션)이라 비로그인 사이드바에 둘 이유가 없다.
  *
  * 기존 `AlertsPanel`을 대체하되 **바깥 계약은 그대로 유지한다**(`expanded`/`isPreviewing`/
  * `onPreviewMouseEnter`/`onPreviewMouseLeave`). 헤더 벨(`AlertsBellButton`)의 토글·호버
@@ -254,6 +243,9 @@ export function DashboardSidePanel({
   selectedNews,
   alerts,
   briefings,
+  isNewsLoading = false,
+  isAlertsLoading = false,
+  isBriefingsLoading = false,
   expanded,
   focusAlertsToken = 0,
   isPreviewing,
@@ -263,17 +255,24 @@ export function DashboardSidePanel({
   const [activeTab, setActiveTab] = useState<TabId>('news')
 
   /*
-   * 부모가 보낸 신호에 맞춰 탭을 옮긴다 — **effect가 아니라 렌더 중에** 직전 값과 비교한다
-   * (1계층 `features/purchasing/components/DashboardSidePanel`과 동일 규칙).
+   * 부모가 보낸 신호에 맞춰 탭을 옮긴다 — effect가 아니라 렌더 중에 직전 값과 비교한다
+   * ("props가 바뀔 때 state 조정"의 표준 패턴, React 문서 "Storing information from
+   * previous renders" 참고). effect에서 하면 탭이 한 번 잘못 그려진 뒤 다시 그려지고
+   * (react-hooks/set-state-in-effect에 걸린다), 렌더 중 조정은 React가 그 자리에서 다시
+   * 렌더해 중간 상태가 화면에 나가지 않는다.
    *
+   * 두 가지 전환이 있다.
    *   1. 기사를 고르면 "뉴스 상세"로 돌아온다. 브리핑 탭을 보던 중에 "최신 뉴스"나 위험
-   *      지도에서 기사를 눌러도 탭이 그대로면 클릭이 먹지 않은 것처럼 보인다. id가 아니라
-   *      객체 참조를 보므로 같은 기사를 다시 눌러도 탭이 돌아오고, 목록이 갱신돼도 참조는
-   *      그대로라 브리핑 탭을 보는 중에 끌려가지 않는다.
-   *   2. 헤더 알림 벨을 누르면 "주요 알림"으로 옮긴다.
+   *      지도에서 기사를 눌러도 탭이 그대로라 클릭이 먹지 않은 것처럼 보였다.
+   *      id가 아니라 객체 참조를 본다 — 부모가 클릭할 때마다 fromNewsFeedItem/
+   *      fromRiskBoardItem으로 새 객체를 만들어 넣으므로 같은 기사를 다시 눌러도 탭이
+   *      돌아오고, 목록이 주기적으로 갱신돼도 참조는 그대로라 브리핑 탭을 보는 중에
+   *      끌려가지 않는다.
+   *   2. 헤더 알림 벨을 누르면 "주요 알림"으로 옮긴다. 벨을 눌렀는데 뉴스 상세가 열리면
+   *      트리거와 결과가 어긋난다.
    *
-   * 알림 검사가 뉴스 검사보다 **뒤에** 온다 — 둘이 같은 렌더에서 바뀌면 나중 것이 이기고,
-   * 벨을 누른 의도가 더 최근이다.
+   * 알림 검사를 뉴스 검사보다 뒤에 둔다. 둘이 같은 렌더에서 함께 바뀌면 나중 것이 이기는데,
+   * 벨을 누른 의도가 더 최근이다(예전 effect 두 개의 선언 순서와 같은 규칙).
    */
   const [prevSelectedNews, setPrevSelectedNews] = useState(selectedNews)
   if (selectedNews !== prevSelectedNews) {
@@ -332,7 +331,16 @@ export function DashboardSidePanel({
               aria-labelledby={`side-panel-tab-${activeTab}`}
               className={styles.tabPanel}
             >
-              {activeTab === 'news' && <NewsDetail news={selectedNews} />}
+              {activeTab === 'news' &&
+                (isNewsLoading && !selectedNews ? (
+                  <div className={styles.newsDetail} aria-busy="true">
+                    <Skeleton width="7em" />
+                    <SkeletonText lines={2} lastLineWidth="65%" />
+                    <Skeleton width="45%" />
+                  </div>
+                ) : (
+                  <NewsDetail news={selectedNews} />
+                ))}
               {activeTab === 'alerts' && (
                 <>
                   <div className={styles.panelHead}>
@@ -343,13 +351,24 @@ export function DashboardSidePanel({
                       전체 보기
                     </Link>
                   </div>
-                  <AlertList alerts={alerts} />
+                  {isAlertsLoading ? (
+                    <div aria-busy="true">
+                      <SkeletonText lines={5} lastLineWidth="50%" />
+                    </div>
+                  ) : (
+                    <AlertList alerts={alerts} />
+                  )}
                 </>
               )}
-              {activeTab === 'briefings' && <BriefingList briefings={briefings} />}
+              {activeTab === 'briefings' &&
+                (isBriefingsLoading ? (
+                  <div aria-busy="true">
+                    <SkeletonText lines={6} lastLineWidth="40%" />
+                  </div>
+                ) : (
+                  <BriefingList briefings={briefings} />
+                ))}
             </div>
-
-            <UploadCard />
           </div>
           {hasOverflowTop && (
             <div className={styles.overflowHintTop} aria-hidden="true">

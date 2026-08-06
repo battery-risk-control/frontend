@@ -5,7 +5,6 @@ import { PublicRiskMonitoringPage } from '../features/public/pages/PublicRiskMon
 import { PublicMaterialRiskPage } from '../features/public/pages/PublicMaterialRiskPage'
 import { PublicContractRagPage } from '../features/public/pages/PublicContractRagPage'
 import { PublicAiBriefingPage } from '../features/public/pages/PublicAiBriefingPage'
-import { PolicyPage } from '../features/public/pages/PolicyPage'
 import { AuthPage } from '../features/auth/pages/AuthPage'
 import { PurchasingDashboardPage } from '../features/purchasing/pages/PurchasingDashboardPage'
 import { RiskMonitoringPage } from '../features/purchasing/pages/RiskMonitoringPage'
@@ -68,15 +67,10 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<PublicDashboardPage />} />
-      <Route path="/privacy" element={<PolicyPage />} />
-      <Route path="/terms" element={<PolicyPage />} />
-      <Route path="/sources" element={<PolicyPage />} />
       {/*
         비로그인 `/public/*` 4개 — 구매팀 1계층 사이드바 하위 화면(리스크 모니터링/원자재
-        위험/계약·RAG/AI 브리핑)을 로그인 게이트 없이 이식(2026-08-03, minji 브랜치 기반,
-        사용자 결정 "완전 공개 + mock 폴백 신규 작성"). `/purchasing/*`의 인증 필수 버전
-        (구매팀 담당자 범위, 별도 진행)과는 완전히 분리된 컴포넌트·API라 RequireAuth로
-        감싸지 않는다.
+        위험/계약·RAG/AI 브리핑)을 로그인 게이트 없이 이식. `/purchasing/*`의 인증 필수 버전과는
+        완전히 분리된 컴포넌트·API라 RequireAuth로 감싸지 않는다.
       */}
       <Route path="/public/risk-monitoring" element={<PublicRiskMonitoringPage />} />
       <Route path="/public/materials" element={<PublicMaterialRiskPage />} />

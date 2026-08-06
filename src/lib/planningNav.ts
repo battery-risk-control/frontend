@@ -13,5 +13,4 @@ export const PLANNING_SIDE_NAV_ITEMS: SideNavItem[] = [
   { label: '계약 현황', href: '/planning/contracts' },
   { label: 'AI 브리핑', href: '/planning/briefings' },
   { label: '데이터 품질', href: '/planning/data-quality' },
-  { label: '설정', href: '/planning#settings' },
 ]

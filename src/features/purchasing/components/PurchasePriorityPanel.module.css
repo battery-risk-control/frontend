@@ -30,6 +30,11 @@
   font-weight: var(--font-weight-bold);
 }
 
+/* 평가 불가 목록의 번호. 순위(네이비)와 달리 회색으로 눌러 "급한 순서"가 아님을 드러낸다. */
+.rankMuted {
+  background: var(--color-text-muted);
+}
+
 .body {
   display: flex;
   flex-direction: column;
@@ -47,10 +52,6 @@
 
 .stockDays {
   color: var(--color-text-muted);
-}
-
-.recommendation {
-  color: var(--color-text);
 }
 
 /* MaterialRiskStatusPanel과 같은 표식 — "평가 불가"는 위험도가 아니라 상태라 등급 색을 안 쓴다. */
@@ -94,19 +95,4 @@
   color: var(--color-text-muted);
   background: var(--color-bg);
   border-radius: 999px;
-}
-
-.unavailableList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.unavailableItem {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
 }

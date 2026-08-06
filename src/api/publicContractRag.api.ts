@@ -133,13 +133,11 @@ export async function fetchContracts(
   if (!API_BASE_URL) {
     return [MOCK_CONTRACT]
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
+  // 조회 전용 API — 백엔드가 permitAll로 열어뒀으므로 비로그인 방문자도 그대로 부른다.
   return unwrap(
     await fetchWithAuth<ContractSummary[]>(
       `/api/v1/contract-rag/contracts?include_unindexed=${includeUnindexed}`,
-      accessToken,
+      accessToken ?? '',
     ),
   )
 }
@@ -170,11 +168,8 @@ export async function searchClauses(
       results,
     }
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
   return unwrap(
-    await fetchWithAuth<ContractClauseSearchResult>('/api/v1/contract-rag/search', accessToken, {
+    await fetchWithAuth<ContractClauseSearchResult>('/api/v1/contract-rag/search', accessToken ?? '', {
       method: 'POST',
       body: JSON.stringify({
         query,
@@ -201,11 +196,8 @@ export async function fetchContractDetail(
     }
     return MOCK_CONTRACT_DETAIL
   }
-  if (!accessToken) {
-    throw new Error(LOGIN_REQUIRED_MESSAGE)
-  }
   return unwrap(
-    await fetchWithAuth<ContractDetail>(`/api/v1/contract-rag/contracts/${contractId}`, accessToken),
+    await fetchWithAuth<ContractDetail>(`/api/v1/contract-rag/contracts/${contractId}`, accessToken ?? ''),
   )
 }
 

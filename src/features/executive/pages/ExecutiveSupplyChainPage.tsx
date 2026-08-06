@@ -4,6 +4,8 @@ import {
 import {
   ExecutiveSummaryPanel,
 } from '../components/ExecutiveSummaryPanel'
+import type { EntityBadgeItem, SupplierRiskRankItem } from '../../../api/types'
+import { useState } from 'react'
 import {
   useExecutiveDashboard,
 } from '../useExecutiveDashboard'
@@ -15,16 +17,23 @@ export function ExecutiveSupplyChainPage() {
     loading,
     errorMessage,
   } = useExecutiveDashboard()
+  const [selectedSupplier, setSelectedSupplier] = useState<SupplierRiskRankItem | null>(null)
+  const [selectedAlternative, setSelectedAlternative] = useState<EntityBadgeItem | null>(null)
 
   return (
     <ExecutivePageLayout
-      eyebrow="Supply Chain"
       title="공급망 현황"
       description={
         '국가별 수입 의존도와 공급사 위험 및 대체 공급사 후보를 확인합니다.'
       }
-      aside={
-        <ExecutiveSummaryPanel
+      alertCount={
+        dashboard?.verification_summary
+          .review_required_count ?? 0
+      }
+      detailKey={selectedSupplier || selectedAlternative ? JSON.stringify(selectedSupplier ?? selectedAlternative) : null}
+      aside={selectedSupplier || selectedAlternative ? (
+        <SupplierDetail supplier={selectedSupplier} alternative={selectedAlternative} />
+      ) : <ExecutiveSummaryPanel
           dashboard={dashboard}
           loading={loading}
         />
@@ -59,10 +68,6 @@ export function ExecutiveSupplyChainPage() {
                 }
               >
                 <div>
-                  <p className={styles.eyebrow}>
-                    Import Dependency
-                  </p>
-
                   <h2
                     id={
                       'executive-dependency-heading'
@@ -139,10 +144,6 @@ export function ExecutiveSupplyChainPage() {
                 }
               >
                 <div>
-                  <p className={styles.eyebrow}>
-                    Supplier Status
-                  </p>
-
                   <h2
                     id={
                       'executive-supplier-heading'
@@ -181,6 +182,9 @@ export function ExecutiveSupplyChainPage() {
                             className={
                               styles.listItem
                             }
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => { setSelectedSupplier(supplier); setSelectedAlternative(null) }}
                           >
                             <div>
                               <strong>
@@ -240,6 +244,9 @@ export function ExecutiveSupplyChainPage() {
                             className={
                               styles.listItem
                             }
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => { setSelectedAlternative(supplier); setSelectedSupplier(null) }}
                           >
                             <div>
                               <strong>
@@ -317,4 +324,36 @@ function clampPercent(
     100,
     Math.max(0, value),
   )
+}
+
+function SupplierDetail({ supplier, alternative }: {
+  supplier: SupplierRiskRankItem | null
+  alternative: EntityBadgeItem | null
+}) {
+  return (
+    <aside className={styles.section}>
+      <div className={styles.sectionHeader}><h2>공급사 상세</h2></div>
+      {supplier ? (
+        <div className={styles.list}>
+          <Detail label="공급사" value={supplier.vendor_name} />
+          <Detail label="ERP 공급사 ID" value={supplier.vendor_id} />
+          <Detail label="최근 90일 위험" value={`${supplier.risk_count_90d}건`} />
+          <Detail label="승인 상태" value={supplier.approved_status} />
+          <Detail label="연결 사업부" value={supplier.linked_units.length ? supplier.linked_units.join(', ') : '연결 정보 없음'} />
+        </div>
+      ) : alternative ? (
+        <div className={styles.list}>
+          <Detail label="대체 공급사" value={alternative.primary} />
+          <Detail label="후보 ID" value={alternative.id} />
+          <Detail label="추천 사유" value={alternative.secondary ?? '검토 필요'} />
+          <Detail label="승인 상태" value={alternative.badge?.label ?? '확인 필요'} />
+          <p className={styles.empty}>구매팀은 공급 가능 수량과 납기를 확인한 뒤 전환 여부를 결정합니다.</p>
+        </div>
+      ) : null}
+    </aside>
+  )
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return <div className={styles.listItem}><span>{label}</span><strong>{value}</strong></div>
 }

@@ -4,9 +4,13 @@ import {
 import {
   ExecutiveSummaryPanel,
 } from '../components/ExecutiveSummaryPanel'
+import { ExecutiveEvidencePanel, type EvidenceTab } from '../components/ExecutiveEvidencePanel'
+import type { AiBriefingDetail } from '../../../api/types'
+import { useState } from 'react'
 import {
   useExecutiveDashboard,
 } from '../useExecutiveDashboard'
+import { useExecutiveEvidence } from '../useExecutiveEvidence'
 import styles from '../components/ExecutiveDashboardSections.module.css'
 
 export function ExecutiveRisksPage() {
@@ -15,15 +19,22 @@ export function ExecutiveRisksPage() {
     loading,
     errorMessage,
   } = useExecutiveDashboard()
+  const evidence = useExecutiveEvidence()
+  const [selected, setSelected] = useState<AiBriefingDetail | null>(null)
+  const [tab, setTab] = useState<EvidenceTab>('summary')
 
   return (
     <ExecutivePageLayout
-      eyebrow="Core Risk"
       title="핵심 위험"
       description={
         '원자재별 위험 점수와 최근 위험 변화 추세를 확인합니다.'
       }
-      aside={
+      alertCount={
+        dashboard?.verification_summary
+          .review_required_count ?? 0
+      }
+      detailKey={selected?.briefing_id ?? null}
+      aside={selected ? <ExecutiveEvidencePanel item={selected} tab={tab} onTabChange={setTab} /> :
         <ExecutiveSummaryPanel
           dashboard={dashboard}
           loading={loading}
@@ -59,10 +70,6 @@ export function ExecutiveRisksPage() {
                 }
               >
                 <div>
-                  <p className={styles.eyebrow}>
-                    Material Risk
-                  </p>
-
                   <h2
                     id={
                       'executive-material-risk-heading'
@@ -96,6 +103,14 @@ export function ExecutiveRisksPage() {
                         className={
                           styles.riskCard
                         }
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          const match = evidence.items.find((item) =>
+                            (item.material_name ?? item.material_category ?? '').toLowerCase().includes(risk.material.toLowerCase()),
+                          ) ?? evidence.items[0]
+                          if (match) { setSelected(match); setTab('summary') }
+                        }}
                       >
                         <div
                           className={
@@ -153,10 +168,6 @@ export function ExecutiveRisksPage() {
                 }
               >
                 <div>
-                  <p className={styles.eyebrow}>
-                    Risk Trend
-                  </p>
-
                   <h2
                     id={
                       'executive-risk-trend-heading'

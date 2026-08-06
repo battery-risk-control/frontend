@@ -1,6 +1,11 @@
 import {
   useState,
 } from 'react'
+import type { AiBriefingDetail, NewsFeedItem, SelectedArticle } from '../../../api/types'
+import { useEffect } from 'react'
+import { fetchPublicNewsFeed } from '../../../api/public.api'
+import { fromNewsFeedItem } from '../../../lib/selectedArticle'
+import { LatestNewsPanel } from '../../purchasing/components/LatestNewsPanel'
 import {
   GlobalRiskBoard,
   type SelectedDetail,
@@ -12,16 +17,25 @@ import {
   ExecutivePageLayout,
 } from '../components/ExecutivePageLayout'
 import {
+  ExecutivePriorityAlert,
+} from '../components/ExecutivePriorityAlert'
+import {
   ExecutiveRiskDetailPanel,
 } from '../components/ExecutiveRiskDetailPanel'
+import { ExecutiveEvidencePanel, type EvidenceTab } from '../components/ExecutiveEvidencePanel'
+import { ExecutiveNewsDetail } from '../components/ExecutiveNewsDetail'
 import {
   useExecutiveDashboard,
 } from '../useExecutiveDashboard'
+import { useExecutiveEvidence } from '../useExecutiveEvidence'
+import { useLiveRefresh } from '../../../lib/useLiveRefresh'
 import styles from './ExecutiveDashboardPage.module.css'
 
-const MAP_HEIGHT = 500
+// 구매팀 대시보드와 동일한 공용 지도 기본 높이.
+const MAP_HEIGHT = 220
 
 export function ExecutiveDashboardPage() {
+  const liveRefreshKey = useLiveRefresh()
   const {
     dashboard,
     loading,
@@ -34,16 +48,42 @@ export function ExecutiveDashboardPage() {
   ] = useState<SelectedDetail | null>(
     null,
   )
+  const evidence = useExecutiveEvidence()
+  const [selectedEvidence, setSelectedEvidence] = useState<AiBriefingDetail | null>(null)
+  const [evidenceTab, setEvidenceTab] = useState<EvidenceTab>('summary')
+  const [news, setNews] = useState<NewsFeedItem[]>([])
+  const [newsLoading, setNewsLoading] = useState(true)
+  const [selectedNews, setSelectedNews] = useState<SelectedArticle | null>(null)
+
+  useEffect(() => {
+    let active = true
+    fetchPublicNewsFeed(5, 0)
+      .then((items) => { if (active) setNews(items) })
+      .finally(() => { if (active) setNewsLoading(false) })
+    return () => { active = false }
+  }, [liveRefreshKey])
+
+  function openEvidence(item: AiBriefingDetail | undefined) {
+    if (!item) return
+    setSelectedDetail(null)
+    setSelectedNews(null)
+    setSelectedEvidence(item)
+    setEvidenceTab('summary')
+  }
 
   return (
     <ExecutivePageLayout
-      eyebrow="Executive Risk Control"
       title="경영진 공급망 위험 대시보드"
       description={
         'ERP·RAG·멀티에이전트 분석 결과를 경영진 관점으로 요약합니다.'
       }
+      alertCount={
+        dashboard?.verification_summary
+          .review_required_count ?? 0
+      }
+      detailKey={selectedNews?.id ?? selectedEvidence?.briefing_id ?? selectedDetail?.label ?? null}
       aside={
-        <ExecutiveRiskDetailPanel
+        selectedNews ? <ExecutiveNewsDetail article={selectedNews} /> : selectedEvidence ? <ExecutiveEvidencePanel item={selectedEvidence} tab={evidenceTab} onTabChange={setEvidenceTab} /> : <ExecutiveRiskDetailPanel
           selectedDetail={
             selectedDetail
           }
@@ -81,6 +121,15 @@ export function ExecutiveDashboardPage() {
               kpi={dashboard.kpi}
             />
 
+            <ExecutivePriorityAlert
+              risk={dashboard.top_risks[0]}
+              reviewRequiredCount={
+                dashboard.verification_summary
+                  .review_required_count
+              }
+              onClick={() => openEvidence(evidence.items[0])}
+            />
+
             <section
               className={
                 styles.mapSection
@@ -95,10 +144,29 @@ export function ExecutiveDashboardPage() {
                 }
                 mapHeight={MAP_HEIGHT}
                 onSelect={
-                  setSelectedDetail
+                  (detail) => {
+                    setSelectedEvidence(null)
+                    setSelectedNews(null)
+                    setSelectedDetail(detail)
+                  }
                 }
               />
             </section>
+
+            <LatestNewsPanel
+              items={news}
+              isLoading={newsLoading}
+              selectedId={selectedNews?.id}
+              onSelect={(item) => {
+                setSelectedEvidence(null)
+                setSelectedDetail(null)
+                setSelectedNews(fromNewsFeedItem(item))
+              }}
+              page={0}
+              pageSize={5}
+              total={news.length}
+              onPageChange={() => undefined}
+            />
           </>
         )}
     </ExecutivePageLayout>

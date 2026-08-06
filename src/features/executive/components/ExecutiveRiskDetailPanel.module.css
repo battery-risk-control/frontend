@@ -1,13 +1,15 @@
 .panel {
   position: sticky;
-  top: 76px;
+  top: var(--header-height);
   align-self: start;
-  min-height: 520px;
-  padding: 20px;
-  border: 1px solid #d9e2ec;
-  border-radius: 14px;
-  background: #ffffff;
-  box-shadow: 0 4px 16px rgb(15 42 68 / 7%);
+  width: var(--side-panel-width);
+  flex: 0 0 var(--side-panel-width);
+  min-height: calc(100vh - var(--header-height));
+  padding: var(--space-4);
+  border: 0;
+  border-left: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-surface);
 }
 
 .header {
@@ -17,15 +19,6 @@
   gap: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid #e4eaf0;
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  color: #0f766e;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .heading {
@@ -53,7 +46,7 @@
 
 .empty {
   display: flex;
-  min-height: 390px;
+  min-height: 330px;
   align-items: center;
   justify-content: center;
   flex-direction: column;
@@ -157,6 +150,7 @@
   margin: 12px 0 7px;
   color: #102a43;
   font-size: 16px;
+  overflow-wrap: anywhere;
 }
 
 .eventCard p {
@@ -164,6 +158,7 @@
   color: #486581;
   font-size: 13px;
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .eventCard dl {

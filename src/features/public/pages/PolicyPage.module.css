@@ -1,0 +1,7 @@
+.page { display: flex; min-height: 100vh; flex-direction: column; background: var(--color-bg); }
+.main { width: min(860px, calc(100% - 32px)); flex: 1; margin: 0 auto; padding: 48px 0; }
+.back { color: var(--color-primary); font-size: var(--font-size-sm); text-decoration: none; }
+.main article { margin-top: 24px; padding: 36px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.main h1 { margin: 0 0 24px; color: var(--color-text); font-size: var(--font-size-xl); }
+.main p { color: var(--color-text-muted); line-height: 1.8; }
+.date { padding-top: 20px; border-top: 1px solid var(--color-border); font-size: var(--font-size-xs); }

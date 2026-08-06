@@ -8,6 +8,9 @@ import {
   Header,
 } from '../../../components/layout/Header'
 import {
+  AlertsBellButton,
+} from '../../../components/layout/AlertsBellButton'
+import {
   SideNav,
 } from '../../../components/layout/SideNav'
 import {
@@ -16,14 +19,21 @@ import {
 import {
   EXECUTIVE_SIDE_NAV_ITEMS,
 } from '../../../lib/executiveNav'
+import {
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
+import { ExecutiveSidePanel } from './ExecutiveSidePanel'
 import styles from '../pages/ExecutiveDashboardPage.module.css'
 
 interface ExecutivePageLayoutProps {
-  eyebrow: string
   title: string
   description: string
   children: ReactNode
   aside?: ReactNode
+  alertCount?: number
+  detailKey?: string | null
 }
 
 /**
@@ -33,15 +43,37 @@ interface ExecutivePageLayoutProps {
  * 모든 경영진 페이지에서 동일하게 유지한다.
  */
 export function ExecutivePageLayout({
-  eyebrow,
   title,
-  description,
   children,
   aside,
+  alertCount = 0,
+  detailKey = null,
 }: ExecutivePageLayoutProps) {
+  const [sideTab, setSideTab] = useState<'detail' | 'alerts'>('detail')
+  const detailSectionRef = useRef<HTMLElement>(null)
+  const detailExpanded = Boolean(detailKey)
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date())
+
+  useEffect(() => {
+    if (detailKey) {
+      requestAnimationFrame(() => detailSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    }
+  }, [detailKey])
+
   return (
     <div className={styles.page}>
-      <Header />
+      <Header
+        accountExtra={
+          <AlertsBellButton
+            count={alertCount}
+            onOpenAlerts={() => {
+              setSideTab('alerts')
+            }}
+            onMouseEnter={() => undefined}
+            onMouseLeave={() => undefined}
+          />
+        }
+      />
 
       <div className={styles.body}>
         <SideNavToggleButton />
@@ -58,24 +90,35 @@ export function ExecutivePageLayout({
         >
           <div className={styles.titleRow}>
             <div>
-              <p className={styles.eyebrow}>
-                {eyebrow}
-              </p>
-
               <h1>
                 {title}
               </h1>
             </div>
-
-            <p className={styles.description}>
-              {description}
-            </p>
+            <time className={styles.headerDate} dateTime={today}>
+              {today.replaceAll('-', '.')} <span>기준</span>
+            </time>
           </div>
 
           {children}
+
+          {detailExpanded && aside && (
+            <section ref={detailSectionRef} className={styles.expandedDetail} aria-label="선택 항목 상세 정보">
+              <div className={styles.expandedDetailHeader}>
+                <div>
+                  <span>상세 근거</span>
+                  <h2>선택 항목 상세 정보</h2>
+                </div>
+              </div>
+              <div className={styles.expandedDetailContent}>{aside}</div>
+            </section>
+          )}
         </main>
 
-        {aside}
+        <ExecutiveSidePanel
+          detail={aside}
+          alertCount={alertCount}
+          requestedTab={sideTab}
+        />
       </div>
 
       <Footer />

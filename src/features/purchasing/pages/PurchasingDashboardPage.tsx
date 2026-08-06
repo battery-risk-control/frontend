@@ -45,10 +45,11 @@ import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
 import { PageSectionDots } from '../../../components/ui/PageSectionDots/PageSectionDots'
 import { useAlertsPanelState } from '../../../lib/useAlertsPanelState'
 import { useAuthState } from '../../../lib/useAuthState'
-import { buildDashboardAlerts } from '../../../lib/dashboardAlerts'
+import { buildDashboardAlerts, PURCHASING_ALERT_TARGETS } from '../../../lib/dashboardAlerts'
 import { fromNewsFeedItem, fromRiskBoardItem } from '../../../lib/selectedArticle'
 import { PURCHASING_SIDE_NAV_ITEMS } from '../../../lib/purchasingNav'
 import { DEFAULT_PERIOD, PERIOD_DAYS } from '../../../lib/materialPricePeriods'
+import { useLiveRefresh } from '../../../lib/useLiveRefresh'
 import { PurchasingDashboardHeader } from '../components/PurchasingDashboardHeader'
 import { PurchasingKpiRow } from '../components/PurchasingKpiRow'
 import { LiveNewsMarquee } from '../components/LiveNewsMarquee'
@@ -151,6 +152,7 @@ const SECTION_DOTS_SECTIONS = [
  */
 export function PurchasingDashboardPage() {
   const { accessToken } = useAuthState()
+  const liveRefreshKey = useLiveRefresh()
 
   // --- 공개 API 6종 ---
   const [riskBoardItems, setRiskBoardItems] = useState<GlobalRiskBoardItem[]>([])
@@ -261,7 +263,7 @@ export function PurchasingDashboardPage() {
 
   // 주요 알림은 두 원천이 섞인다 — 멀티에이전트 판정이 심각·주의인 뉴스 + 변동성이 큰 자재(정보).
   // 가격 쪽은 기간 탭(period)에 따라 함께 바뀐다. 같은 구간에서 파생한 값이라 그게 맞다.
-  const alerts = buildDashboardAlerts(monitoringEvents, priceSeries, priceSummaries)
+  const alerts = buildDashboardAlerts(monitoringEvents, priceSeries, priceSummaries, PURCHASING_ALERT_TARGETS)
 
   const { expanded: alertsExpanded, open: openAlertsPanel } = useAlertsPanelState()
   const [isPreviewing, setIsPreviewing] = useState(false)
@@ -339,7 +341,7 @@ export function PurchasingDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [liveRefreshKey])
 
   // 가격 차트·요약 카드만 기간 탭에 반응한다. 위 훅과 분리한 이유는 지도·뉴스·환율까지 탭을
   // 누를 때마다 다시 부를 이유가 없어서다. 둘을 반드시 **같은 days로** 부른다.
@@ -367,7 +369,7 @@ export function PurchasingDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [period])
+  }, [period, liveRefreshKey])
 
   // 뉴스 목록은 페이지가 바뀔 때마다 다시 부른다. 위 공개 API 묶음에서 떼어낸 이유는 그쪽이
   // 마운트 1회용인데 여기만 newsPage에 의존하기 때문이다 — 같이 두면 화살표를 누를 때마다
@@ -397,7 +399,7 @@ export function PurchasingDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [newsPage])
+  }, [newsPage, liveRefreshKey])
 
   // 인증 API — 토큰이 준비된 뒤에만 부른다. RequireAuth가 이 화면을 지키므로 실제로는 항상
   // 값이 있지만, 없을 때 401을 만들지 않도록 가드를 둔다.
@@ -474,7 +476,7 @@ export function PurchasingDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [accessToken, reloadKey])
+  }, [accessToken, reloadKey, liveRefreshKey])
 
   /**
    * 평가 1건을 완료 처리하고 두 집계를 다시 부른다.

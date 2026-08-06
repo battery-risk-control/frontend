@@ -7,7 +7,37 @@ import type {
 import { formatCollectedAt } from './formatCollectedAt'
 
 /**
- * 구매팀 대시보드 우측 "주요 알림" 목록을 만든다.
+ * 알림을 클릭했을 때 열 화면. 같은 알림 목록을 **로그인 구매팀 대시보드와 비로그인
+ * 대시보드가 함께 쓰는데** 각자 갈 곳이 다르다 — 비로그인 화면에서 `/purchasing/*`으로
+ * 보내면 로그인 게이트에 막혀 클릭이 죽는다.
+ *
+ * 두 경로를 각각 받는 이유는 모양이 서로 안 맞아서다. 리스크 모니터링은 양쪽 다 하위
+ * 경로(`/purchasing/risk-monitoring`·`/public/risk-monitoring`)지만, 가격 추이는 구매팀은
+ * 하위 경로(`/purchasing#...`)이고 비로그인은 루트(`/#...`)라 접두사 하나로 조립할 수 없다.
+ */
+export interface DashboardAlertTargets {
+  /** 뉴스 알림이 여는 리스크 모니터링 화면 */
+  riskMonitoringPath: string
+  /** 가격 알림이 여는 대시보드 안 가격 추이 섹션(앵커 포함) */
+  priceDetailPath: string
+}
+
+/** 로그인 구매팀 대시보드(`/purchasing`)용 링크 묶음. */
+export const PURCHASING_ALERT_TARGETS: DashboardAlertTargets = {
+  riskMonitoringPath: '/purchasing/risk-monitoring',
+  priceDetailPath: '/purchasing#material-price-detail-heading',
+}
+
+/** 비로그인 대시보드(`/`)용 링크 묶음. */
+export const PUBLIC_ALERT_TARGETS: DashboardAlertTargets = {
+  riskMonitoringPath: '/public/risk-monitoring',
+  priceDetailPath: '/#material-price-detail-heading',
+}
+
+/**
+ * 대시보드 우측 "주요 알림" 목록을 만든다. 구매팀(로그인)과 비로그인 대시보드가 같은 규칙을
+ * 쓰고 링크 목적지만 `targets`로 갈린다 — 판정 기준이 화면마다 갈리면 같은 사건이 한쪽에서만
+ * 심각으로 뜬다.
  *
  * `selectAlertEvents`(등급 심각 또는 신뢰도 경고)를 대체한다. 바뀐 점은 두 가지다.
  *
@@ -24,14 +54,15 @@ import { formatCollectedAt } from './formatCollectedAt'
  * 두 묶음으로 나눠 세운다(목업의 배치와도 같은 결과다 — 정보가 맨 아래).
  *
  * 사용 예:
- *   const alerts = buildDashboardAlerts(events, priceSeries, priceSummaries)
+ *   const alerts = buildDashboardAlerts(events, priceSeries, priceSummaries, PURCHASING_ALERT_TARGETS)
  */
 export function buildDashboardAlerts(
   events: RiskMonitoringEvent[],
   priceSeries: MaterialPriceSeries[],
   priceSummaries: MaterialPriceSummary[],
+  targets: DashboardAlertTargets,
 ): DashboardAlert[] {
-  return [...toNewsAlerts(events), ...toPriceAlerts(priceSeries, priceSummaries)]
+  return [...toNewsAlerts(events, targets), ...toPriceAlerts(priceSeries, priceSummaries, targets)]
 }
 
 /**
@@ -46,7 +77,10 @@ export function buildDashboardAlerts(
  * `briefing_id`까지 확인하는 이유는 둘이 어긋나면 그게 버그이고, 알림에서만 조용히
  * 통과시키면 그 버그가 안 보이기 때문이다.
  */
-function toNewsAlerts(events: RiskMonitoringEvent[]): DashboardAlert[] {
+function toNewsAlerts(
+  events: RiskMonitoringEvent[],
+  targets: DashboardAlertTargets,
+): DashboardAlert[] {
   return events
     .filter(
       (event) =>
@@ -63,7 +97,7 @@ function toNewsAlerts(events: RiskMonitoringEvent[]): DashboardAlert[] {
       // 목록 API에는 기사 요약이 없다(상세 조회에만 있다). 자재·국가만으로도 "무엇이 왜 떴는지"는
       // 전달되고, 자재 수만큼 상세를 부르면 대시보드 진입이 그만큼 느려진다.
       detail: [event.material, event.country_name ?? event.country_code].filter(Boolean).join(' · '),
-      href: `/purchasing/risk-monitoring?eventId=${event.event_id}`,
+      href: `${targets.riskMonitoringPath}?eventId=${event.event_id}`,
     }))
 }
 
@@ -80,6 +114,7 @@ function toNewsAlerts(events: RiskMonitoringEvent[]): DashboardAlert[] {
 function toPriceAlerts(
   series: MaterialPriceSeries[],
   summaries: MaterialPriceSummary[],
+  targets: DashboardAlertTargets,
 ): DashboardAlert[] {
   return summaries
     .filter((summary) => summary.grade === '심각' || summary.grade === '주의')
@@ -109,7 +144,7 @@ function toPriceAlerts(
         ]
           .filter(Boolean)
           .join(' · '),
-        href: '/purchasing#material-price-detail-heading',
+        href: targets.priceDetailPath,
       }
     })
 }

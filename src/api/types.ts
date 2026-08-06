@@ -349,18 +349,6 @@ export interface ExchangeRateBoard {
   rates: ExchangeRateItem[]
 }
 
-/**
- * 환율정보 롤링 티커용(2차 데모, `NewsExchangeTicker`). risk_event 계열과 무관한 완전
- * 신규 개념이라 대응 스키마가 없다 — rate/change_label 모두 실제 계산 로직 없는
- * mock 임시값이다. docs/mock-schemas.md "임시 mock 값" 표 참고.
- */
-export interface ExchangeRateItem {
-  currency_code: string
-  currency_name: string
-  rate: number
-  change_label: string
-}
-
 /** 2계층 경영기획팀 대시보드 — mock-schemas.md "2. 2계층" 참고. */
 export interface KpiSummaryItem {
   label: string

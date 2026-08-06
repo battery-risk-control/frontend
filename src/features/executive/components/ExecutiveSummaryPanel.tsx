@@ -18,10 +18,6 @@ export function ExecutiveSummaryPanel({
       aria-labelledby="executive-summary-heading"
     >
       <div className={styles.header}>
-        <p className={styles.eyebrow}>
-          Executive Summary
-        </p>
-
         <h2 id="executive-summary-heading">
           경영 요약
         </h2>

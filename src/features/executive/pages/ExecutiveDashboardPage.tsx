@@ -28,12 +28,14 @@ import {
   useExecutiveDashboard,
 } from '../useExecutiveDashboard'
 import { useExecutiveEvidence } from '../useExecutiveEvidence'
+import { useLiveRefresh } from '../../../lib/useLiveRefresh'
 import styles from './ExecutiveDashboardPage.module.css'
 
 // 구매팀 대시보드와 동일한 공용 지도 기본 높이.
 const MAP_HEIGHT = 220
 
 export function ExecutiveDashboardPage() {
+  const liveRefreshKey = useLiveRefresh()
   const {
     dashboard,
     loading,
@@ -59,7 +61,7 @@ export function ExecutiveDashboardPage() {
       .then((items) => { if (active) setNews(items) })
       .finally(() => { if (active) setNewsLoading(false) })
     return () => { active = false }
-  }, [])
+  }, [liveRefreshKey])
 
   function openEvidence(item: AiBriefingDetail | undefined) {
     if (!item) return

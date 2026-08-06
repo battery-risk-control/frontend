@@ -12,6 +12,14 @@ import {
 } from '../../../api/planning.api'
 import { fetchPublicRiskBoard } from '../../../api/public.api'
 import { useAuthState } from '../../../lib/useAuthState'
+import { LIVE_REFRESH_INTERVAL_MS } from '../../../lib/useLiveRefresh'
+
+const liveQueryOptions = {
+  staleTime: 30_000,
+  refetchInterval: LIVE_REFRESH_INTERVAL_MS,
+  refetchIntervalInBackground: false,
+  refetchOnWindowFocus: true,
+} as const
 
 /** 2계층 7탭 + 드릴다운 2개 + 글로벌 리스크 관제 맵 공용 쿼리키 팩토리. */
 export const planningKeys = {
@@ -33,6 +41,7 @@ export function useStrategyDashboard() {
     queryKey: planningKeys.strategyDashboard(),
     queryFn: () => fetchPlanningDashboard(accessToken!),
     enabled: !!accessToken,
+    ...liveQueryOptions,
   })
 }
 
@@ -42,6 +51,7 @@ export function useMaterialRisk() {
     queryKey: planningKeys.materialRisk(),
     queryFn: () => fetchMaterialRiskDashboard(accessToken!),
     enabled: !!accessToken,
+    ...liveQueryOptions,
   })
 }
 
@@ -51,6 +61,7 @@ export function useImportDependency() {
     queryKey: planningKeys.importDependency(),
     queryFn: () => fetchImportDependencyDashboard(accessToken!),
     enabled: !!accessToken,
+    ...liveQueryOptions,
   })
 }
 
@@ -60,6 +71,7 @@ export function useSupplierAnalysis() {
     queryKey: planningKeys.supplierAnalysis(),
     queryFn: () => fetchSupplierAnalysisDashboard(accessToken!),
     enabled: !!accessToken,
+    ...liveQueryOptions,
   })
 }
 
@@ -69,6 +81,7 @@ export function useContractStatus() {
     queryKey: planningKeys.contractStatus(),
     queryFn: () => fetchContractStatusDashboard(accessToken!),
     enabled: !!accessToken,
+    ...liveQueryOptions,
   })
 }
 
@@ -78,6 +91,7 @@ export function useAiBriefing(page: number) {
     queryKey: planningKeys.aiBriefing(page),
     queryFn: () => fetchAiBriefingSummaryDashboard(accessToken!, page),
     enabled: !!accessToken,
+    ...liveQueryOptions,
   })
 }
 
@@ -87,6 +101,7 @@ export function useDataQuality() {
     queryKey: planningKeys.dataQuality(),
     queryFn: () => fetchDataQualityStatus(accessToken!),
     enabled: !!accessToken,
+    ...liveQueryOptions,
   })
 }
 
@@ -96,6 +111,7 @@ export function useAiBriefingDetail(analysisId: string) {
     queryKey: planningKeys.aiBriefingDetail(analysisId),
     queryFn: () => fetchAiBriefingDetail(accessToken!, analysisId),
     enabled: !!accessToken,
+    ...liveQueryOptions,
   })
 }
 
@@ -105,6 +121,7 @@ export function useContractDetail(contractNumber: string) {
     queryKey: planningKeys.contractDetail(contractNumber),
     queryFn: () => fetchContractDetail(accessToken!, contractNumber),
     enabled: !!accessToken,
+    ...liveQueryOptions,
   })
 }
 
@@ -117,5 +134,6 @@ export function useGlobalRiskBoard() {
   return useQuery({
     queryKey: planningKeys.globalRiskBoard(),
     queryFn: fetchPublicRiskBoard,
+    ...liveQueryOptions,
   })
 }

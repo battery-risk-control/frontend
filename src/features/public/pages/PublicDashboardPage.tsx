@@ -50,6 +50,7 @@ import { buildDashboardAlerts, PUBLIC_ALERT_TARGETS } from '../../../lib/dashboa
 import { fromNewsFeedItem, fromRiskBoardItem } from '../../../lib/selectedArticle'
 import { PUBLIC_SIDE_NAV_ITEMS } from '../../../lib/publicNav'
 import { DEFAULT_PERIOD, PERIOD_DAYS } from '../../../lib/materialPricePeriods'
+import { useLiveRefresh } from '../../../lib/useLiveRefresh'
 import { PurchasingDashboardHeader } from '../components/PurchasingDashboardHeader'
 import { PurchasingKpiRow } from '../components/PurchasingKpiRow'
 import { LiveNewsMarquee } from '../components/LiveNewsMarquee'
@@ -156,6 +157,7 @@ const SECTION_DOTS_SECTIONS = [
 export function PublicDashboardPage() {
   const { accessToken, orgTier } = useAuthState()
   const navigate = useNavigate()
+  const liveRefreshKey = useLiveRefresh()
 
   // --- 공개 API 6종 ---
   const [riskBoardItems, setRiskBoardItems] = useState<GlobalRiskBoardItem[]>([])
@@ -306,7 +308,7 @@ export function PublicDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [liveRefreshKey])
 
   // 가격 차트·요약 카드만 기간 탭에 반응한다.
   useEffect(() => {
@@ -333,7 +335,7 @@ export function PublicDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [period])
+  }, [period, liveRefreshKey])
 
   // 뉴스 목록은 페이지가 바뀔 때마다 다시 부른다.
   useEffect(() => {
@@ -355,7 +357,7 @@ export function PublicDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [newsPage])
+  }, [newsPage, liveRefreshKey])
 
   // 인증 API 4종 — mock 폴백이 있어 accessToken 없이도 호출한다(tier1 원본의
   // `if (!accessToken) return` 가드를 빼서 비로그인 상태에서도 mock이 채워지게 한 부분,
@@ -436,7 +438,7 @@ export function PublicDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [accessToken, reloadKey])
+  }, [accessToken, reloadKey, liveRefreshKey])
 
   /**
    * 평가 1건을 완료 처리하고 두 집계를 다시 부른다. 낙관적 갱신을 하지 않는다 — 완료 처리하면

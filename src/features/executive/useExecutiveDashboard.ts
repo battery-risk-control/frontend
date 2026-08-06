@@ -11,6 +11,7 @@ import type {
 import {
   useAuthState,
 } from '../../lib/useAuthState'
+import { useLiveRefresh } from '../../lib/useLiveRefresh'
 
 export interface ExecutiveDashboardState {
   dashboard: ExecutiveOverviewResponse | null
@@ -27,6 +28,7 @@ export function useExecutiveDashboard():
   const {
     accessToken,
   } = useAuthState()
+  const liveRefreshKey = useLiveRefresh()
 
   const [
     dashboard,
@@ -61,7 +63,6 @@ export function useExecutiveDashboard():
         return
       }
 
-      setLoading(true)
       setErrorMessage(null)
 
       try {
@@ -108,6 +109,7 @@ export function useExecutiveDashboard():
     }
   }, [
     accessToken,
+    liveRefreshKey,
   ])
 
   return {

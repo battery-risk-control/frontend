@@ -75,8 +75,9 @@
   overflow-wrap: anywhere;
 }
 
-/* 본문:근거 = 3:2. stretch로 좌측 '구매 위험 브리핑' 패널이 우측 컬럼 높이에 맞춰 함께 늘고 준다
-   — 생성 전 좌측이 안내문 한 줄만 담아 짧게 쪼그라들던 여백을 없앤다(구매팀과 동일). */
+/* 본문:근거 = 3:2. 우측은 sticky라 브리핑을 길게 스크롤해도 근거가 따라온다(다른 1계층 화면과 동일).
+   stretch로 좌측 '구매 위험 브리핑' 패널이 우측 컬럼(근거+최근 브리핑) 높이에 맞춰 함께 늘고 준다 —
+   생성 전 좌측이 안내문 한 줄만 담아 짧게 쪼그라들던 여백을 없앤다. */
 .split {
   display: grid;
   grid-template-columns: 3fr 2fr;
@@ -235,73 +236,261 @@
   color: var(--color-text);
 }
 
+/*
+ * 목록 카드 한 장 = 버튼 하나. 예전에는 카드 아래에 검정 막대 버튼("브리핑 상세 보기")이
+ * 하나씩 붙어, 목록을 훑으면 제목보다 막대가 먼저 보였다 — 카드에서 가장 강한 요소가 링크였다.
+ */
 .recentCard {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding-top: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-2);
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+/*
+ * 구분선은 카드와 카드 사이에만 둔다. `:first-of-type`으로 첫 칸의 선을 지우던 방식은 목록에
+ * 다른 버튼이 섞이는 순간 엉뚱한 칸이 첫 번째로 잡힌다 — 인접 선택자는 그 위험이 없다.
+ */
+.recentCard + .recentCard {
   border-top: 1px solid var(--color-border);
 }
 
-.recentCard:first-of-type {
-  padding-top: 0;
-  border-top: none;
+.recentCard:hover {
+  background: var(--color-bg);
 }
 
 .recentTitle {
-  margin: 0;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
+  line-height: 1.45;
   color: var(--color-text);
   overflow-wrap: anywhere;
 }
 
 .recentMeta {
-  margin: 0;
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+}
+
+/* 시각(왼쪽) + 열기 신호(오른쪽). 막대 버튼이 쓰던 세로 자리를 이 한 줄이 대신한다. */
+.recentFoot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
 }
 
 .recentDate {
-  margin: 0 0 var(--space-2);
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
-.primaryAction,
-.secondaryAction {
+/* 카드가 눌린다는 신호. 마우스를 올리기 전에도 보이도록 늘 두되 옅게 남긴다. */
+.recentOpen {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+}
+
+.recentCard:hover .recentOpen {
+  text-decoration: underline;
+}
+
+/*
+ * 페이지를 넘기는 중. 목록을 지우고 골격으로 갈아치우는 대신 이전 페이지를 흐리게만 둔다 —
+ * 응답이 빠를 때 깜빡임만 남고 자리가 튀는 것을 피하고, 그동안 카드가 눌리지도 않게 한다.
+ */
+.recentListRefreshing {
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity var(--transition-fast);
+}
+
+.primaryAction {
   display: block;
   padding: var(--space-3) var(--space-5);
   font: inherit;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   text-align: center;
-  border: none;
+  /* 활성 상태에도 같은 두께의 투명 테두리를 둔다 — 비활성에서 테두리가 생길 때 버튼 크기가
+     1px씩 흔들리지 않게. */
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: opacity var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 
+/*
+ * 이 화면에서 유일하게 무언가를 실행하는 버튼이라 다른 버튼보다 크게 둔다 — 상단 바에서
+ * 분석 대상·ERP 연결 두 칸과 나란히 서는데, 같은 크기면 어느 것이 눌러야 할 것인지 읽히지
+ * 않는다.
+ *
+ * `min-width`는 라벨이 "LLM 브리핑 생성"에서 "생성 중…"으로 짧아질 때 버튼이 줄어들며 옆
+ * 칸까지 밀리는 것을 막는다. 누른 직후에 레이아웃이 움직이면 잘못 눌렀나 싶어진다.
+ */
 .primaryAction {
+  min-width: 200px;
+  padding: var(--space-4) var(--space-8);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
   color: var(--color-surface);
-  background: var(--color-risk-normal);
+  background: var(--color-primary);
 }
 
-.secondaryAction {
-  width: 100%;
-  color: var(--color-surface);
-  background: var(--color-text);
+/* 좁은 화면에서는 상단 바가 1열로 접혀 버튼이 가로 전체를 쓴다 — 최소 너비가 방해되지 않게. */
+@media (max-width: 900px) {
+  .primaryAction {
+    min-width: 0;
+  }
 }
 
+/*
+ * 비활성을 `opacity`로 만들지 않는다. opacity는 배경과 글자를 함께 흐리게 해 대비를 깎는데,
+ * 흰 글씨 + 옅어진 배경 조합에서는 글자가 배경에 묻혀 라벨이 읽히지 않았다. 배경과 글자색을
+ * 각각 지정해 "누를 수 없다"는 것만 알리고 글자는 또렷하게 남긴다.
+ */
 .primaryAction:disabled,
-.secondaryAction:disabled {
+.downloadAction:disabled {
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border-color: var(--color-border);
   cursor: not-allowed;
-  opacity: 0.45;
 }
 
-.primaryAction:not(:disabled):hover,
-.secondaryAction:not(:disabled):hover {
-  opacity: 0.88;
+.primaryAction:not(:disabled):hover {
+  background: var(--color-primary-alt);
+}
+
+/* --------------------------------------------------- 브리핑 패널 헤더 · PDF 다운로드 */
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+/* 헤더 안에서는 제목이 아래 여백을 갖지 않는다 — 그 여백은 .panelHeader가 낸다. */
+.panelHeader .panelHeading {
+  margin-bottom: 0;
+}
+
+/*
+ * 본문을 내려받는 보조 액션이라 채운 버튼이 아니라 테두리 버튼이다. 이 패널의 주인공은
+ * 브리핑 본문이고, 다운로드가 본문보다 눈에 먼저 들어오면 안 된다.
+ */
+.downloadAction {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-4);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.downloadAction:not(:disabled):hover {
+  color: var(--color-surface);
+  background: var(--color-primary);
+}
+
+/* --------------------------------------------------- 최근 브리핑 · 필터와 페이저 */
+
+/* 최신 뉴스(LatestNewsPanel)와 같은 모양이다 — 두 목록을 같은 조작으로 넘기게 하려는 것이다. */
+.pager {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pageLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.pageButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: var(--font-size-base);
+  line-height: 1;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.pageButton:hover:not(:disabled) {
+  background: var(--color-bg);
+}
+
+.pageButton:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* 네 축이 좁은 사이드 패널에 들어가야 해 2열로 접는다. */
+.recentFilters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.filterLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.filterSelect {
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+/*
+ * 지금 열려 있는 브리핑. 카드가 통째로 버튼이 되면서 배경만으로는 hover와 구분되지 않아,
+ * 왼쪽에 색 막대를 둔다 — 마우스가 지나가는 칸과 실제로 열려 있는 칸이 헷갈리지 않게.
+ */
+.recentCardSelected,
+.recentCardSelected:hover {
+  background: var(--color-bg);
+  box-shadow: inset 3px 0 0 var(--color-primary);
 }
 
 .notice {
@@ -326,6 +515,31 @@
   color: var(--color-text-muted);
 }
 
+/*
+ * 조기 종료된 실행에서 등급 배지가 서던 자리. 오류가 아니라 결론이므로 경고색을 쓰지 않고,
+ * 그렇다고 등급처럼 보이지도 않게 중립 배경 + 회색 테두리로 둔다.
+ */
+.skippedNotice {
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border-left: 3px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.skippedTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.skippedDetail {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.55;
+  color: var(--color-text-muted);
+}
+
 .footnote {
   margin: 0;
   font-size: var(--font-size-xs);
@@ -337,4 +551,41 @@
   margin: 0;
   font-size: var(--font-size-sm);
   color: var(--color-risk-critical);
+}
+
+/* 앞 화면(리스크 모니터링) 복귀 링크. 생성 전에는 조용히, 생성 후에는 강조한다 —
+   등급이 갱신됐는지 확인하러 돌아갈 시점이 바로 그때다. */
+.returnLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.returnLink:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.returnLinkReady {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.returnHint {
+  padding: 1px var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-surface);
+  background: var(--color-primary);
+  border-radius: var(--radius-sm);
 }

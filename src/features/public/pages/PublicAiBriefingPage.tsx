@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
+  downloadAiBriefingReport,
   fetchAiBriefing,
   fetchAiBriefingContext,
   fetchRecentAiBriefings,
@@ -10,28 +11,77 @@ import type {
   AiBriefingContext,
   AiBriefingDetail,
   AiBriefingListItem,
+  AiBriefingReviewStatus,
+  AiBriefingRiskLevel,
   AiBriefingSource,
 } from '../../../api/types'
+import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
+import { SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { useAuthState } from '../../../lib/useAuthState'
+import { saveBlob } from '../../../lib/saveBlob'
 import { PUBLIC_SIDE_NAV_ITEMS } from '../../../lib/publicNav'
 import styles from './PublicAiBriefingPage.module.css'
 
 const SOURCES: AiBriefingSource[] = ['NEWS', 'MATERIAL', 'CONTRACT']
 
-/** 이 화면의 "최근 브리핑" 노출 건수. 백엔드 상한이 50이라 그 이상은 의미가 없다. */
-const RECENT_BRIEFING_LIMIT = 50
+/**
+ * "최근 브리핑" 한 페이지 건수. 구매팀 화면과 같은 좌우 화살표 방식을 쓴다 — 브리핑이 쌓일수록
+ * 패널이 끝없이 길어져 우측 "분석 근거"가 화면 밖으로 밀리는 것을 막는다.
+ */
+const RECENT_PAGE_SIZE = 4
+
+/** 목록 필터 4축. `null`은 "전체"이고 그 축은 요청에서 빠진다. */
+interface RecentFilters {
+  source: AiBriefingSource | null
+  level: AiBriefingRiskLevel | null
+  reviewStatus: AiBriefingReviewStatus | null
+  days: number | null
+}
+
+const NO_FILTERS: RecentFilters = { source: null, level: null, reviewStatus: null, days: null }
+
+const SOURCE_FILTERS: { label: string; value: AiBriefingSource | null }[] = [
+  { label: '전체', value: null },
+  { label: '뉴스', value: 'NEWS' },
+  { label: '원자재', value: 'MATERIAL' },
+  { label: '계약', value: 'CONTRACT' },
+]
+
+const LEVEL_FILTERS: { label: string; value: AiBriefingRiskLevel | null }[] = [
+  { label: '전체', value: null },
+  { label: '심각', value: 'CRITICAL' },
+  { label: '주의', value: 'WARNING' },
+  { label: '정상', value: 'NORMAL' },
+]
+
+const REVIEW_FILTERS: { label: string; value: AiBriefingReviewStatus | null }[] = [
+  { label: '전체', value: null },
+  { label: '검증 통과', value: 'PASSED' },
+  { label: '검토 필요', value: 'FAILED' },
+  { label: '미검증', value: 'PENDING' },
+]
 
 /**
- * 복귀 경로 화이트리스트. 앞 화면이 넘긴 {@code returnTo}를 <b>그대로 믿고 이동하면 안 된다</b> —
+ * 기본값이 "전체"인 이유: 기간을 먼저 좁혀 두면 어제 만든 브리핑을 찾으러 온 사람이 빈 목록을
+ * 보고 "저장이 안 됐다"고 읽는다. 좁히는 것은 사용자가 고를 일이다.
+ */
+const PERIOD_FILTERS: { label: string; value: number | null }[] = [
+  { label: '7일', value: 7 },
+  { label: '30일', value: 30 },
+  { label: '90일', value: 90 },
+  { label: '전체', value: null },
+]
+
+/**
+ * 복귀 경로 화이트리스트. 앞 화면이 넘긴 {@code returnTo}를 그대로 믿고 이동하면 안 된다 —
  * 쿼리스트링은 누구나 조작할 수 있어서, `//evil.example.com` 같은 값이 오면 오픈 리다이렉트가 된다.
  *
- * <p>`/public/*` 화면 내부 경로만 허용한다(원본은 `/purchasing/`). 판정은 문자열 기준이며
- * `//`(프로토콜 상대 URL)과 백슬래시를 함께 막는다 — 브라우저가 `/\evil.com`을 외부 주소로
- * 해석하는 경우가 있다.
+ * `/public/*` 화면 내부 경로만 허용한다(원본은 `/purchasing/`). 판정은 문자열 기준이며
+ * `//`(프로토콜 상대 URL)과 백슬래시를 함께 막는다.
  */
 function safeReturnTo(value: string | null): string | null {
   if (!value) {
@@ -45,19 +95,14 @@ function safeReturnTo(value: string | null): string | null {
 }
 
 /**
- * 비로그인 `/public/ai-briefing` — 구매팀 1계층 "AI 브리핑"을
- * `origin/minji-tier1-dashboard`의 `AiBriefingPage.tsx` 기준으로 이식했다(2026-08-03,
- * 지난 `5bfd7db`가 구버전 `origin/minji` 기준이었던 것을 정정 — `?briefing=` URL-as-source-
- * of-truth, `safeReturnTo`+복귀 링크, `handleOpen`의 URL 파라미터 동기화, 브리핑 생성 시
- * `analysis_id` 고정 전달이 이번에 새로 반영됐다). 원본과의 차이(완전 공개 + mock 폴백)는
- * `PublicRiskMonitoringPage.tsx` 최상단 주석 참고 — 이 화면도 같은 원칙을 따른다.
- *
- * 이 화면에는 **두 가지 진입 경로**가 있고 화면이 그리는 것도 그만큼 갈린다.
- * - `?source=NEWS&ref=252`처럼 앞 화면(리스크 모니터링·원자재 위험·계약·RAG)에서 넘어온 경우.
- *   상단 프리필을 받아 채우고 "LLM 브리핑 생성"을 누를 수 있다.
+ * 비로그인 `/public/ai-briefing` — 구매팀 1계층 "AI 브리핑"을 `AiBriefingPage.tsx` 최신본
+ * 기준으로 동기화했다(2026-08-06). 이 화면에는 두 가지 진입 경로가 있다.
+ * - `?source=NEWS&ref=252`처럼 앞 화면에서 넘어온 경우. 상단 프리필을 받아 채우고
+ *   "LLM 브리핑 생성"을 누를 수 있다.
  * - 쿼리스트링 없이 메뉴로 직접 들어온 경우. "최근 브리핑"에서 저장된 브리핑을 열어 본다.
  *
- * 생성 결과와 저장된 브리핑은 **같은 타입**이라 `BriefingResult` 하나로 그린다.
+ * PDF 다운로드는 로그인 상태에서만 노출한다 — 백엔드 다운로드 엔드포인트가 인증을 요구한다
+ * (`publicAiBriefing.api.ts`의 `downloadAiBriefingReport` 주석 참고).
  */
 
 /**
@@ -82,8 +127,14 @@ export function PublicAiBriefingPage() {
   const [contextState, setContextState] = useState<ContextState | null>(null)
   const [detailState, setDetailState] = useState<DetailState | null>(null)
   const [recent, setRecent] = useState<AiBriefingListItem[]>([])
+  /** 필터를 통과한 전체 건수. 마지막 페이지에서 "다음"을 잠그는 데 쓴다. */
+  const [recentTotal, setRecentTotal] = useState(0)
+  const [recentPage, setRecentPage] = useState(0)
+  const [filters, setFilters] = useState<RecentFilters>(NO_FILTERS)
+  const [recentLoading, setRecentLoading] = useState(true)
   const [actionError, setActionError] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
   const [recentToken, setRecentToken] = useState(0)
 
   const rawSource = (searchParams.get('source') ?? '').toUpperCase()
@@ -99,9 +150,8 @@ export function PublicAiBriefingPage() {
   const contextError = applied?.error ?? null
 
   /*
-   * 열람 중인 브리핑은 **URL이 원본**이다(`?briefing={id}`). 상세를 열 때 source·ref까지
-   * 함께 URL에 넣으므로 상단·본문·생성 버튼이 항상 같은 대상을 가리킨다. 새로고침하거나
-   * 링크를 공유해도 같은 브리핑이 열리는 건 덤이다.
+   * 열람 중인 브리핑은 URL이 원본이다(`?briefing={id}`). 상세를 열 때 source·ref까지 함께
+   * URL에 넣으므로 상단·본문·생성 버튼이 항상 같은 대상을 가리킨다.
    */
   const briefingId = searchParams.get('briefing')
   const detail = detailState && detailState.key === briefingId ? detailState.value : null
@@ -112,7 +162,6 @@ export function PublicAiBriefingPage() {
     if (!source || !ref || !targetKey) {
       return
     }
-    // 쿼리스트링을 빠르게 바꾸면 이전 요청이 늦게 도착해 최신 프리필을 덮어쓸 수 있다.
     let cancelled = false
     async function load(
       token: string | null,
@@ -141,23 +190,31 @@ export function PublicAiBriefingPage() {
   // 최근 브리핑은 진입 경로와 무관하게 항상 채운다 — 직접 들어온 사용자에게는 이것이 화면의 전부다.
   useEffect(() => {
     let cancelled = false
-    async function load(token: string | null) {
+    async function load(token: string | null, page: number, applied: RecentFilters) {
       try {
-        // 이 화면은 "최근 브리핑"이 전부인 화면이라 대시보드 사이드패널(5건)과 달리 넉넉히
-        // 받는다. 기본값 5로 두면 그날 몇 건만 만들어도 이전 브리핑이 곧바로 묻혔다.
-        // TODO(H-2): 필터·페이징 UI로 전면 재작성 예정 — 지금은 breaking change만 흡수한 임시 형태.
-        const result = await fetchRecentAiBriefings(token, { size: RECENT_BRIEFING_LIMIT })
-        if (!cancelled) setRecent(result.content)
+        // 필터·페이징을 함께 서버로 보낸다. 받아온 배열을 여기서 거르면 서버가 이미 자른 한
+        // 페이지 안에서만 걸러져, 조건에 맞는데 뒷 페이지에 있는 브리핑이 통째로 사라진다.
+        const result = await fetchRecentAiBriefings(token, {
+          ...applied,
+          page,
+          size: RECENT_PAGE_SIZE,
+        })
+        if (cancelled) return
+        setRecent(result.content)
+        setRecentTotal(result.total_elements)
       } catch {
-        // 최근 목록이 비어도 생성은 할 수 있어야 하므로 화면을 막지 않는다.
-        if (!cancelled) setRecent([])
+        if (cancelled) return
+        setRecent([])
+        setRecentTotal(0)
+      } finally {
+        if (!cancelled) setRecentLoading(false)
       }
     }
-    void load(accessToken)
+    void load(accessToken, recentPage, filters)
     return () => {
       cancelled = true
     }
-  }, [accessToken, recentToken])
+  }, [accessToken, recentToken, recentPage, filters])
 
   // URL의 briefing으로 상세를 채운다. 방금 생성해 이미 손에 든 것은 다시 부르지 않는다.
   useEffect(() => {
@@ -181,8 +238,8 @@ export function PublicAiBriefingPage() {
   }, [accessToken, briefingId, loadedBriefingId])
 
   /*
-   * 앞 화면(리스크 모니터링 등)에서 대상만 들고 넘어왔는데 이미 저장된 브리핑이 있으면
-   * 그 본문을 띄운다. 이미 만들어 둔 브리핑을 두고 "생성"을 다시 눌러야 하는 낭비를 막는다.
+   * 앞 화면에서 대상만 들고 넘어왔는데 이미 저장된 브리핑이 있으면 그 본문을 띄운다 —
+   * 이미 만들어 둔 브리핑을 두고 "생성"을 다시 눌러야 하는 낭비를 막는다.
    */
   useEffect(() => {
     if (briefingId || !context?.latest_briefing_id) {
@@ -223,7 +280,7 @@ export function PublicAiBriefingPage() {
   }
 
   /**
-   * "브리핑 상세 보기". 본문만 바꾸지 않고 **대상까지 함께 옮긴다** — 그러지 않으면 상단
+   * "브리핑 상세 보기". 본문만 바꾸지 않고 대상까지 함께 옮긴다 — 그러지 않으면 상단
    * "분석 대상 · ERP 연결"이 이전 대상으로 남아 본문과 다른 것을 가리킨다.
    */
   function handleOpen(item: AiBriefingListItem) {
@@ -233,6 +290,41 @@ export function PublicAiBriefingPage() {
     next.set('ref', item.source_ref)
     next.set('briefing', item.briefing_id)
     setSearchParams(next)
+  }
+
+  /**
+   * "PDF 다운로드". 로그인 상태에서만 버튼이 노출되므로(아래 렌더 부분), 여기서는 호출만
+   * 담당한다. mock 모드·비로그인 상태는 API 함수가 안내 메시지로 대신 응답한다.
+   */
+  async function handleDownload() {
+    if (!detail) return
+    setActionError(null)
+    setIsDownloading(true)
+    try {
+      const file = await downloadAiBriefingReport(accessToken, detail.briefing_id)
+      if ('error' in file) {
+        setActionError(file.message)
+      } else {
+        saveBlob(file.blob, file.fileName)
+      }
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  /**
+   * 필터를 바꾸면 페이지를 처음으로 되돌린다. 뒷 페이지를 보다가 조건을 좁히면 결과가 그만큼
+   * 없어서 빈 화면이 나오는데, 사용자는 "필터에 걸리는 게 없다"로 읽는다.
+   */
+  function applyFilter(patch: Partial<RecentFilters>) {
+    setRecentLoading(true)
+    setFilters((previous) => ({ ...previous, ...patch }))
+    setRecentPage(0)
+  }
+
+  function changeRecentPage(next: number) {
+    setRecentLoading(true)
+    setRecentPage(next)
   }
 
   return (
@@ -255,10 +347,6 @@ export function PublicAiBriefingPage() {
             isGenerating={isGenerating}
             onGenerate={() => void handleGenerate()}
           />
-          {/*
-           * 앞 화면으로 돌아가는 링크. 생성이 끝난 뒤 강조하는 이유는, 그때가 등급 변화를
-           * 확인하러 돌아갈 시점이기 때문이다. returnTo에 eventId가 실려 있어 같은 기사가 다시 열린다.
-           */}
           {returnTo && (
             <Link
               to={returnTo}
@@ -276,12 +364,27 @@ export function PublicAiBriefingPage() {
 
           <div className={styles.split}>
             <section className={styles.briefingPanel} aria-labelledby="briefing-heading">
-              <h2 id="briefing-heading" className={styles.panelHeading}>
-                구매 위험 브리핑
-              </h2>
+              <div className={styles.panelHeader}>
+                <h2 id="briefing-heading" className={styles.panelHeading}>
+                  구매 위험 브리핑
+                </h2>
+                {/* 로그인 상태에서만 노출한다 — 다운로드 엔드포인트가 인증을 요구한다. */}
+                {detail && accessToken && (
+                  <button
+                    type="button"
+                    className={styles.downloadAction}
+                    onClick={() => void handleDownload()}
+                    disabled={isDownloading}
+                  >
+                    {isDownloading ? '내려받는 중…' : 'PDF 다운로드'}
+                  </button>
+                )}
+              </div>
               {isGenerating && <p className={styles.notice}>멀티에이전트 실행 중…</p>}
               {!isGenerating && !detail && briefingId && (
-                <p className={styles.notice}>브리핑을 불러오는 중…</p>
+                <div aria-busy="true" aria-label="브리핑 불러오는 중">
+                  <SkeletonText lines={7} lastLineWidth="60%" />
+                </div>
               )}
               {!isGenerating && !detail && !briefingId && (
                 <p className={`${styles.notice} ${styles.noticeEmpty}`}>
@@ -295,7 +398,18 @@ export function PublicAiBriefingPage() {
 
             <div className={styles.sideColumn}>
               <EvidencePanel detail={detail} />
-              <RecentPanel items={recent} onOpen={handleOpen} />
+              <RecentPanel
+                items={recent}
+                isLoading={recentLoading}
+                onOpen={handleOpen}
+                filters={filters}
+                onFilterChange={applyFilter}
+                page={recentPage}
+                pageSize={RECENT_PAGE_SIZE}
+                total={recentTotal}
+                onPageChange={changeRecentPage}
+                selectedId={briefingId}
+              />
             </div>
           </div>
         </main>
@@ -306,10 +420,10 @@ export function PublicAiBriefingPage() {
 }
 
 /**
- * 상세만 들고 들어왔을 때 쓰는 머리말. `?briefing={id}` 링크(대시보드 우측 "브리핑" 목록)로
- * 오면 URL에 `source`/`ref`가 없어 프리필을 부를 수 없다. 상세에 이미 같은 값이 전부 들어
- * 있으므로 그걸로 머리말을 채운다. 생성 버튼만 잠근다 — 대상을 다시 특정할 수 없으니 여기서
- * 재생성을 허용하면 엉뚱한 것을 만들 수 있다.
+ * 상세만 들고 들어왔을 때 쓰는 머리말. `?briefing={id}` 링크로 오면 URL에 `source`/`ref`가
+ * 없어 프리필을 부를 수 없다. 상세에 이미 같은 값이 전부 들어 있으므로 그걸로 머리말을 채운다.
+ * 생성 버튼만 잠근다 — 대상을 다시 특정할 수 없으니 여기서 재생성을 허용하면 엉뚱한 것을
+ * 만들 수 있다.
  */
 function contextFromDetail(detail: AiBriefingDetail): AiBriefingContext {
   return {
@@ -365,7 +479,6 @@ function TargetBar({
       <div className={styles.targetField}>
         <span className={styles.targetLabel}>ERP 연결</span>
         <span className={styles.targetValue}>{erpLink || '—'}</span>
-        {/* 자재·계약에서 넘어오면 분석 대상과 외부신호 기사가 다르다 — 무엇을 근거로 삼았는지 밝힌다. */}
         {context?.source_headline && context.source_headline !== context.subject_title && (
           <span className={styles.targetMeta}>외부신호 출처: {context.source_headline}</span>
         )}
@@ -397,10 +510,18 @@ function BriefingResult({ detail }: { detail: AiBriefingDetail }) {
           {detail.procurement_risk_level} · {Math.round(detail.procurement_risk_score)}점
         </p>
       ) : (
-        // 조기 종료된 실행은 0점·NORMAL로 응답이 나가므로 등급으로 보여주면 안 된다 — 사유만 밝힌다.
-        <p className={styles.blockedReason}>
-          멀티에이전트가 ERP · 계약 노드까지 가지 못해 종합 점수가 나오지 않았습니다.
-        </p>
+        /*
+          조기 종료된 실행은 0점·NORMAL로 응답이 나가므로 등급으로 보여주면 안 된다. 그래프가
+          공급망 영향을 확인하고 더 볼 필요가 없다고 판단해 계약 조회와 LLM을 건너뛴 것이라,
+          실패가 아니라 결론이다.
+        */
+        <div className={styles.skippedNotice}>
+          <p className={styles.skippedTitle}>종합 위험 점수를 산출하지 않았습니다</p>
+          <p className={styles.skippedDetail}>
+            공급망 영향을 확인하는 단계에서 더 볼 필요가 없다고 판단해 계약 조회와 LLM 분석을
+            건너뛴 실행입니다. 점수가 없는 것이지 위험이 0이라는 뜻은 아닙니다.
+          </p>
+        </div>
       )}
 
       {detail.briefing && <p className={styles.briefingText}>{detail.briefing}</p>}
@@ -495,7 +616,17 @@ function EvidencePanel({ detail }: { detail: AiBriefingDetail | null }) {
           <EvidenceRow label="외부 이벤트" step={detail.evidence_chain.external_signal} />
           <EvidenceRow label="ERP 노출" step={detail.evidence_chain.erp_exposure} />
           <EvidenceRow label="계약 RAG" step={detail.evidence_chain.contract_rag} />
-          <EvidenceRow label="최종 위험" step={detail.evidence_chain.final_risk} highlight />
+          {/*
+            조기 종료된 실행의 최종 위험은 계산된 값이 아니라 상수 0·NORMAL이다. 위 세 칸 중
+            안 잰 것들은 이미 "—"로 정직하게 비어 있는데 최종만 숫자로 채워지면, 넷 중 유일하게
+            지어낸 값이 유일하게 측정값처럼 보인다.
+          */}
+          <EvidenceRow
+            label="최종 위험"
+            step={detail.evidence_chain.final_risk}
+            highlight
+            unmeasured={!detail.composite}
+          />
           <p className={styles.footnote}>외부 이벤트 → ERP → 계약 RAG → 브리핑</p>
         </>
       )}
@@ -507,61 +638,216 @@ function EvidenceRow({
   label,
   step,
   highlight = false,
+  unmeasured = false,
 }: {
   label: string
   step: { level: string | null; score: number | null; note: string | null }
   highlight?: boolean
+  /** 값이 실려 오더라도 재지 않은 칸. 응답의 자리채움을 측정값처럼 보이게 두지 않는다. */
+  unmeasured?: boolean
 }) {
-  // 계약 RAG처럼 등급이 없는 칸은 note("3개 조항")가 값을 대신한다.
-  const value = step.level
-    ? `${step.level}${step.score === null ? '' : ` · ${Math.round(step.score)}`}`
-    : (step.note ?? '—')
+  const value = unmeasured
+    ? '—'
+    : step.level
+      ? `${step.level}${step.score === null ? '' : ` · ${Math.round(step.score)}`}`
+      : (step.note ?? '—')
 
   return (
     <div className={styles.evidenceRow}>
       <span className={styles.evidenceLabel}>{label}</span>
-      <span className={highlight ? levelClass(step.level ?? '') : styles.evidenceValue}>{value}</span>
+      {/* 안 잰 칸에는 등급 색을 입히지 않는다 — 초록 NORMAL로 칠하면 "안전 판정"으로 읽힌다. */}
+      <span
+        className={
+          highlight && !unmeasured ? levelClass(step.level ?? '') : styles.evidenceValue
+        }
+      >
+        {value}
+      </span>
     </div>
   )
 }
 
-/** 우측 하단 "최근 브리핑". 팀 전체 공용이라 다른 사람이 만든 것도 보인다. */
+/**
+ * 우측 하단 "최근 브리핑". 팀 전체 공용이라 다른 사람이 만든 것도 보인다.
+ * **필터는 서버가 적용한다.** 여기서 `items`를 다시 거르면 안 된다.
+ */
 function RecentPanel({
   items,
+  isLoading,
   onOpen,
+  filters,
+  onFilterChange,
+  page,
+  pageSize,
+  total,
+  onPageChange,
+  selectedId,
 }: {
   items: AiBriefingListItem[]
+  isLoading: boolean
   /** 항목 전체를 넘긴다 — 상세를 열 때 `source_type`·`source_ref`로 상단 대상까지 맞춰야 한다. */
   onOpen: (item: AiBriefingListItem) => void
+  filters: RecentFilters
+  onFilterChange: (patch: Partial<RecentFilters>) => void
+  page: number
+  pageSize: number
+  total: number
+  onPageChange: (page: number) => void
+  /** 지금 본문에 떠 있는 브리핑. 목록에서 어느 것을 보고 있는지 표시한다. */
+  selectedId: string | null
+}) {
+  const lastPage = total === 0 ? 0 : Math.ceil(total / pageSize) - 1
+  const hasPaging = total > pageSize
+  const filtered =
+    filters.source !== null ||
+    filters.level !== null ||
+    filters.reviewStatus !== null ||
+    filters.days !== null
+
+  return (
+    <ScrollCard
+      headingId="recent-heading"
+      title="최근 브리핑"
+      actions={
+        hasPaging ? (
+          <div className={styles.pager}>
+            <span className={styles.pageLabel}>
+              {page * pageSize + 1}–{page * pageSize + items.length} / {total}
+            </span>
+            <button
+              type="button"
+              className={styles.pageButton}
+              onClick={() => onPageChange(page - 1)}
+              disabled={page === 0 || isLoading}
+              aria-label="이전 브리핑"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              className={styles.pageButton}
+              onClick={() => onPageChange(page + 1)}
+              disabled={page >= lastPage || isLoading}
+              aria-label="다음 브리핑"
+            >
+              ›
+            </button>
+          </div>
+        ) : undefined
+      }
+      pinnedTop={
+        <div className={styles.recentFilters}>
+          <FilterSelect
+            label="대상"
+            value={filters.source}
+            options={SOURCE_FILTERS}
+            onChange={(value) => onFilterChange({ source: value })}
+          />
+          <FilterSelect
+            label="등급"
+            value={filters.level}
+            options={LEVEL_FILTERS}
+            onChange={(value) => onFilterChange({ level: value })}
+          />
+          <FilterSelect
+            label="검증"
+            value={filters.reviewStatus}
+            options={REVIEW_FILTERS}
+            onChange={(value) => onFilterChange({ reviewStatus: value })}
+          />
+          <FilterSelect
+            label="기간"
+            value={filters.days}
+            options={PERIOD_FILTERS}
+            onChange={(value) => onFilterChange({ days: value })}
+          />
+        </div>
+      }
+    >
+      {isLoading && items.length === 0 && (
+        <div aria-busy="true" aria-label="최근 브리핑 불러오는 중">
+          <SkeletonText lines={6} lastLineWidth="45%" />
+        </div>
+      )}
+      {!isLoading && items.length === 0 && (
+        <p className={styles.notice}>
+          {filtered
+            ? '조건에 맞는 브리핑이 없습니다. 필터를 넓혀 보세요.'
+            : '저장된 브리핑이 아직 없습니다.'}
+        </p>
+      )}
+      {items.length > 0 && (
+        <div
+          className={isLoading ? styles.recentListRefreshing : undefined}
+          aria-busy={isLoading || undefined}
+        >
+          {items.map((item) => (
+            <button
+              type="button"
+              key={item.briefing_id}
+              className={
+                item.briefing_id === selectedId
+                  ? `${styles.recentCard} ${styles.recentCardSelected}`
+                  : styles.recentCard
+              }
+              onClick={() => onOpen(item)}
+              aria-pressed={item.briefing_id === selectedId}
+            >
+              <span className={styles.recentTitle}>{item.subject_title ?? item.news_id}</span>
+              <span className={styles.recentMeta}>
+                {/* 조기 종료는 미완이 아니라 결론이다 — "평가 미완료"는 아직 안 끝났다는
+                    뉘앙스라 틀렸다. */}
+                <span className={levelClass(item.composite ? item.procurement_risk_level : '')}>
+                  {item.composite
+                    ? `${item.procurement_risk_level} · ${Math.round(item.procurement_risk_score)}`
+                    : '점수 미산출'}
+                </span>
+                {item.review_passed !== null && ` · ${item.review_passed ? '검증 통과' : '검증 실패'}`}
+              </span>
+              <span className={styles.recentFoot}>
+                <span className={styles.recentDate}>{formatDateTime(item.created_at)}</span>
+                <span className={styles.recentOpen} aria-hidden="true">
+                  상세 보기 →
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </ScrollCard>
+  )
+}
+
+/**
+ * 필터 셀렉트 한 칸. 값이 `null`("전체")인 옵션을 빈 문자열로 실어 `<select>`가 다룰 수 있게 한다 —
+ * DOM 값은 문자열뿐이라 `null`을 그대로 쓸 수 없다.
+ */
+function FilterSelect<T extends string | number>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: T | null
+  options: { label: string; value: T | null }[]
+  onChange: (value: T | null) => void
 }) {
   return (
-    <section className={styles.sidePanel} aria-labelledby="recent-heading">
-      <h2 id="recent-heading" className={styles.panelHeading}>
-        최근 브리핑
-      </h2>
-      {items.length === 0 && <p className={styles.notice}>저장된 브리핑이 아직 없습니다.</p>}
-      {items.map((item) => (
-        <article key={item.briefing_id} className={styles.recentCard}>
-          <p className={styles.recentTitle}>{item.subject_title ?? item.news_id}</p>
-          <p className={styles.recentMeta}>
-            <span className={levelClass(item.composite ? item.procurement_risk_level : '')}>
-              {item.composite
-                ? `${item.procurement_risk_level} · ${Math.round(item.procurement_risk_score)}`
-                : '평가 미완료'}
-            </span>
-            {item.review_passed !== null && ` · ${item.review_passed ? '검증 통과' : '검증 실패'}`}
-          </p>
-          <p className={styles.recentDate}>{formatDateTime(item.created_at)}</p>
-          <button
-            type="button"
-            className={styles.secondaryAction}
-            onClick={() => onOpen(item)}
-          >
-            브리핑 상세 보기
-          </button>
-        </article>
-      ))}
-    </section>
+    <label className={styles.filterField}>
+      <span className={styles.filterLabel}>{label}</span>
+      <select
+        className={styles.filterSelect}
+        value={options.findIndex((option) => option.value === value)}
+        onChange={(event) => onChange(options[Number(event.target.value)].value)}
+      >
+        {options.map((option, index) => (
+          <option key={option.label} value={index}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 

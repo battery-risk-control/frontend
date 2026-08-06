@@ -318,7 +318,13 @@ export function GlobalRiskBoard({ items, onSelectItem, mapHeight, onSelect }: Gl
             minZoom={1}
             maxZoom={6}
             scrollWheelZoom={true}
-            worldCopyJump
+            // worldCopyJump 제거(2026-08-06): 낮은 zoom에서 가로로 끌면 다른 세계 '복사본'으로
+            // 넘어갔다가 원본으로 되감으며 지도가 손을 따라오지 않고 원위치로 튕겼다(실측: +400px를
+            // 끌어도 pane이 -112px로 감김). 대신 세계 경계를 maxBounds로 고정하고 viscosity를 줘
+            // 가장자리에서 부드럽게 멈추도록 한다 — 끌면 끈 자리에 그대로 있고, 회색 여백 밖으로는
+            // 나가지 않는다.
+            maxBounds={[[-90, -180], [90, 180]]}
+            maxBoundsViscosity={1.0}
             style={{ height: '100%', width: '100%' }}
           >
             <TileLayer

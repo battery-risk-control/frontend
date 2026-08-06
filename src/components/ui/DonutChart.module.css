@@ -27,3 +27,36 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
+
+/* hover 툴팁(커스텀). 색상 점 + 국가명 + 굵은 % 를 알약형 카드에 담아 커서 옆에 띄운다.
+   글자는 직전보다 약 20% 줄였다(라벨 lg→base 16px, 값 xl→lg 20px). */
+.tooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.tooltipDot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tooltipLabel {
+  font-size: var(--font-size-base);
+  color: var(--color-text-muted);
+}
+
+.tooltipValue {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}

@@ -15,8 +15,13 @@ interface MaterialRiskSummaryTableProps {
    * 완료 처리 중인 `latest_assessment_id`. 버튼을 비활성화해 같은 평가를 두 번 보내지 않는다.
    * 전역 로딩이 아니라 id 단위라, 한 줄을 처리하는 동안 다른 줄은 그대로 누를 수 있다.
    */
-  pendingAssessmentId: string | null
-  onAcknowledge: (item: MaterialRiskSummaryItem) => void
+  pendingAssessmentId?: string | null
+  onAcknowledge?: (item: MaterialRiskSummaryItem) => void
+  /**
+   * 읽기 전용(비로그인 대시보드, 2026-08-07). true면 "대응 완료" 열을 아예 그리지 않는다 —
+   * 완료 처리는 1계층(구매팀) 대시보드에서만 하고, 여기서는 그 결과만 동일하게 반영한다.
+   */
+  readOnly?: boolean
 }
 
 /** 백엔드 등급 코드 → 화면 3단계 배지. 표기는 다른 화면과 같은 `RiskGradeBadge`를 쓴다. */
@@ -63,6 +68,7 @@ export function MaterialRiskSummaryTable({
   isLoading = false,
   pendingAssessmentId,
   onAcknowledge,
+  readOnly = false,
 }: MaterialRiskSummaryTableProps) {
   return (
     <ScrollCard
@@ -87,9 +93,11 @@ export function MaterialRiskSummaryTable({
                 24시간 대비
               </th>
               <th scope="col">주요 이슈</th>
-              <th scope="col">
-                <span className={styles.srOnly}>대응</span>
-              </th>
+              {!readOnly && (
+                <th scope="col">
+                  <span className={styles.srOnly}>대응</span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody aria-busy={isLoading || undefined}>
@@ -110,9 +118,11 @@ export function MaterialRiskSummaryTable({
                   <td>
                     <Skeleton width="80%" />
                   </td>
-                  <td>
-                    <Skeleton width="5em" height="24px" />
-                  </td>
+                  {!readOnly && (
+                    <td>
+                      <Skeleton width="5em" height="24px" />
+                    </td>
+                  )}
                 </tr>
               ))}
             {items.map((item) => {
@@ -152,22 +162,25 @@ export function MaterialRiskSummaryTable({
                       </ul>
                     )}
                   </td>
-                  <td>
-                    {/* 완료 처리할 평가가 없으면 버튼 자체를 그리지 않는다 — 눌러도 아무 일도
-                        일어나지 않는 버튼은 "고장난 화면"으로 읽힌다. */}
-                    {item.latest_assessment_id && (
-                      <button
-                        type="button"
-                        className={styles.ackButton}
-                        disabled={pendingAssessmentId === item.latest_assessment_id}
-                        onClick={() => onAcknowledge(item)}
-                      >
-                        {pendingAssessmentId === item.latest_assessment_id
-                          ? '처리 중…'
-                          : '대응 완료'}
-                      </button>
-                    )}
-                  </td>
+                  {/* 완료 처리 열은 관리(1계층)에서만 — readOnly면 열 자체를 그리지 않는다. */}
+                  {!readOnly && (
+                    <td>
+                      {/* 완료 처리할 평가가 없으면 버튼 자체를 그리지 않는다 — 눌러도 아무 일도
+                          일어나지 않는 버튼은 "고장난 화면"으로 읽힌다. */}
+                      {item.latest_assessment_id && (
+                        <button
+                          type="button"
+                          className={styles.ackButton}
+                          disabled={pendingAssessmentId === item.latest_assessment_id}
+                          onClick={() => onAcknowledge?.(item)}
+                        >
+                          {pendingAssessmentId === item.latest_assessment_id
+                            ? '처리 중…'
+                            : '대응 완료'}
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               )
             })}

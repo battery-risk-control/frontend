@@ -10,12 +10,10 @@ import {
   fetchPublicRiskBoard,
 } from '../../../api/public.api'
 import {
-  acknowledgeAssessment,
   fetchAcknowledgedAssessments,
   fetchMaterialRiskSummary,
   fetchPurchasingKpiSummary,
   fetchSupplierOverview,
-  unacknowledgeAssessment,
 } from '../../../api/publicPurchasingDashboard.api'
 import { fetchMaterialRiskOverview } from '../../../api/publicMaterialRisk.api'
 import { fetchRiskMonitoringEvents } from '../../../api/publicRiskMonitoring.api'
@@ -203,10 +201,10 @@ export function PublicDashboardPage() {
   // --- 인증 API 4종(mock 폴백 있음) ---
   const [kpi, setKpi] = useState<PurchasingKpiSummary | null>(null)
   const [materialRiskSummary, setMaterialRiskSummary] = useState<MaterialRiskSummaryItem[]>([])
-  /** 완료 처리 중인 평가 id. 버튼 단위로 잠가 같은 평가를 두 번 보내지 않는다. */
-  const [pendingAssessmentId, setPendingAssessmentId] = useState<string | null>(null)
   /** 완료 처리 후 KPI·원자재 요약을 다시 부르기 위한 트리거. */
-  const [reloadKey, setReloadKey] = useState(0)
+  // 완료 처리/되돌리기를 제거해 수동 리로드 트리거가 필요 없어졌다(2026-08-07). 라이브 리프레시
+  // (liveRefreshKey)가 주기적으로 다시 부르므로 값은 0으로 고정해 둔다 — 이펙트 의존성만 유지.
+  const [reloadKey] = useState(0)
   const [supplierOverview, setSupplierOverview] = useState<SupplierOverview | null>(null)
   const [materials, setMaterials] = useState<MaterialRiskItem[]>([])
   const [monitoringEvents, setMonitoringEvents] = useState<RiskMonitoringEvent[]>([])
@@ -440,38 +438,8 @@ export function PublicDashboardPage() {
     }
   }, [accessToken, reloadKey, liveRefreshKey])
 
-  /**
-   * 평가 1건을 완료 처리하고 두 집계를 다시 부른다. 낙관적 갱신을 하지 않는다 — 완료 처리하면
-   * 그 자재의 다음 평가가 최신으로 올라와 점수·등급·주요 이슈가 통째로 바뀔 수 있어서, 화면에서
-   * 그 결과를 미리 계산할 수 없다.
-   */
-  async function handleAcknowledge(item: MaterialRiskSummaryItem) {
-    if (!item.latest_assessment_id) return
-    setPendingAssessmentId(item.latest_assessment_id)
-    try {
-      await acknowledgeAssessment(accessToken, item.latest_assessment_id)
-      setReloadKey((key) => key + 1)
-    } catch (err) {
-      console.error('완료 처리 실패', err)
-    } finally {
-      setPendingAssessmentId(null)
-    }
-  }
-
-  /** 되돌리기. 완료 처리와 같은 reloadKey를 올려 KPI·표·이 목록을 한꺼번에 맞춘다 —
-      한쪽만 갱신하면 표에는 돌아왔는데 KPI는 그대로인 어긋난 화면이 된다. */
-  async function handleUndoAcknowledge(item: AcknowledgedItem) {
-    if (!accessToken) return
-    setPendingAssessmentId(item.assessment_id)
-    try {
-      await unacknowledgeAssessment(accessToken, item.assessment_id)
-      setReloadKey((key) => key + 1)
-    } catch (err) {
-      console.error('되돌리기 실패', err)
-    } finally {
-      setPendingAssessmentId(null)
-    }
-  }
+  // 완료 처리/되돌리기(관리)는 1계층 구매팀 대시보드에서만 한다(2026-08-07). 비로그인 대시보드는
+  // 읽기 전용이라 여기서 acknowledge 핸들러를 두지 않는다 — 완료 처리 결과는 조회로 그대로 반영된다.
 
   function handleTierTabClick(path: string) {
     navigate(orgTier ? path : '/auth')
@@ -605,23 +573,19 @@ export function PublicDashboardPage() {
 
           {/* 원자재 7종 · 최종 합성 점수(외부신호+ERP노출+계약공백). 아래 게이지 행과 자리가
               붙어 있지만 **점수의 뜻이 다르다** — 게이지는 ERP 노출도 단독 점수다. */}
+          {/* 비로그인 대시보드는 읽기 전용 — "대응 완료" 열을 숨긴다. 완료 처리(관리)는 1계층
+              구매팀 대시보드에서만 하고, 그 결과(완료 처리로 빠진 행 등)는 여기서도 동일하게 반영된다. */}
           <MaterialRiskSummaryTable
             items={materialRiskSummary}
             isLoading={materialRiskLoading}
-            pendingAssessmentId={pendingAssessmentId}
-            onAcknowledge={handleAcknowledge}
+            readOnly
           />
 
           {/* ── 목업에 없는 기존 구성 (아래) ───────────────────────
               목업이 화면 전체를 반영한 것이 아니라, 지우지 않고 아래로 내렸다. */}
           <MaterialRiskGaugeGrid items={materialRiskSummary} />
-          {/* 위 표에서 "대응 완료"로 내려간 항목이 여기로 옮겨진다. 되돌릴 자리가 여기뿐이다. */}
-          <AcknowledgedPanel
-            items={acknowledged}
-            isLoading={acknowledgedLoading}
-            pendingAssessmentId={pendingAssessmentId}
-            onUndo={handleUndoAcknowledge}
-          />
+          {/* 1계층에서 완료 처리된 항목이 여기에 동일하게 반영된다(읽기 전용 — 되돌리기 버튼 없음). */}
+          <AcknowledgedPanel items={acknowledged} isLoading={acknowledgedLoading} readOnly />
           <PublicMaterialRiskStatusPanel materials={materials} />
           <PublicErpImpactPanel materials={materials} />
           <PublicPurchasePriorityPanel materials={materials} isLoading={materialsLoading} />

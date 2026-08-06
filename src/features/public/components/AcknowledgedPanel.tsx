@@ -7,8 +7,13 @@ interface AcknowledgedPanelProps {
   items: AcknowledgedItem[]
   isLoading?: boolean
   /** 되돌리는 중인 assessment_id. 버튼 단위로 잠가 같은 평가를 두 번 보내지 않는다. */
-  pendingAssessmentId: string | null
-  onUndo: (item: AcknowledgedItem) => void
+  pendingAssessmentId?: string | null
+  onUndo?: (item: AcknowledgedItem) => void
+  /**
+   * 읽기 전용(비로그인 대시보드, 2026-08-07). true면 "되돌리기" 버튼을 그리지 않고, 완료 처리
+   * 결과만 보여준다 — 완료/되돌리기 관리는 1계층(구매팀) 대시보드에서만 한다.
+   */
+  readOnly?: boolean
 }
 
 /** `2026. 08. 03. 오후 01:18` 형태. 되돌릴 대상을 고를 때 "언제 눌렀는지"가 단서가 된다. */
@@ -42,6 +47,7 @@ export function AcknowledgedPanel({
   isLoading = false,
   pendingAssessmentId,
   onUndo,
+  readOnly = false,
 }: AcknowledgedPanelProps) {
   return (
     <ScrollCard headingId="acknowledged-heading" title="완료 처리 항목" maxBodyHeight={280}>
@@ -51,8 +57,9 @@ export function AcknowledgedPanel({
         </div>
       ) : items.length === 0 ? (
         <p className={styles.empty}>
-          완료 처리한 항목이 없습니다. 위 표에서 "대응 완료"를 누르면 여기로 옮겨지고, 여기서
-          다시 되돌릴 수 있습니다.
+          {readOnly
+            ? '완료 처리한 항목이 없습니다. 완료 처리는 구매팀 대시보드에서 가능합니다.'
+            : '완료 처리한 항목이 없습니다. 위 표에서 "대응 완료"를 누르면 여기로 옮겨지고, 여기서 다시 되돌릴 수 있습니다.'}
         </p>
       ) : (
         <ul className={styles.list}>
@@ -72,14 +79,17 @@ export function AcknowledgedPanel({
                     .filter(Boolean)
                     .join(' · ')}
                 </span>
-                <button
-                  type="button"
-                  className={styles.undoButton}
-                  disabled={pendingAssessmentId === item.assessment_id}
-                  onClick={() => onUndo(item)}
-                >
-                  {pendingAssessmentId === item.assessment_id ? '되돌리는 중…' : '되돌리기'}
-                </button>
+                {/* 되돌리기(관리)는 1계층에서만 — readOnly면 버튼을 그리지 않는다. */}
+                {!readOnly && (
+                  <button
+                    type="button"
+                    className={styles.undoButton}
+                    disabled={pendingAssessmentId === item.assessment_id}
+                    onClick={() => onUndo?.(item)}
+                  >
+                    {pendingAssessmentId === item.assessment_id ? '되돌리는 중…' : '되돌리기'}
+                  </button>
+                )}
               </div>
             </li>
           ))}

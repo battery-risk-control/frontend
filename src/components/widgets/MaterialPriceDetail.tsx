@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Skeleton } from '../ui/Skeleton/Skeleton'
 import { ScrollCard } from '../ui/ScrollCard/ScrollCard'
@@ -18,6 +18,15 @@ interface MaterialPriceDetailProps {
   /** 선택된 기간 라벨. 조회는 페이지가 소유하므로 이 컴포넌트는 표시·통지만 한다. */
   period: string
   onPeriodChange: (period: string) => void
+  /**
+   * 레이아웃(2026-08-06 item 6).
+   *  - 'inline'(기본): 필터+요약카드+차트를 한 카드에 담는 기존 구조(롤백 경로).
+   *  - 'split': 상단 [leadingPanel | 원자재 가격 추이(필터+요약카드)] + 하단 전체폭 [가격 추이 그래프].
+   *             수입 의존도 도넛 아래 여백을 그래프가 채우도록 그래프를 별도 섹션으로 분리한다.
+   */
+  layout?: 'inline' | 'split'
+  /** split 레이아웃에서 상단 좌측(도넛 등)에 놓을 슬롯. inline에서는 무시된다. */
+  leadingPanel?: ReactNode
 }
 
 interface ChartRow {
@@ -67,43 +76,62 @@ function ChevronIcon() {
   )
 }
 
+/**
+ * 모든 계열의 포인트를 x축(date) 기준으로 합쳐 정렬한다. 예전에는 series[0]의 인덱스에 맞춰
+ * 다른 계열을 끼웠는데(자재마다 거래일이 같다는 가정), "1일" 시간별에서는 거래소(미국·호주)마다
+ * 시각이 달라 인덱스가 어긋난다. date를 키로 합집합을 만들고, 없는 지점은 undefined로 둬
+ * (0으로 채우면 선이 바닥까지 떨어진다) 차트가 connectNulls로 건너뛰게 한다. KST 시각 문자열과
+ * 날짜 문자열 모두 사전식 정렬이 곧 시간순이다.
+ */
 function toChartRows(series: MaterialPriceSeries[]): ChartRow[] {
   if (series.length === 0) return []
-  return series[0].points.map((point, index) => {
-    const row: ChartRow = { date: point.date }
-    for (const materialSeries of series) {
-      row[materialSeries.material] = materialSeries.points[index]?.price_index ?? 0
+  const byDate = new Map<string, ChartRow>()
+  for (const materialSeries of series) {
+    for (const point of materialSeries.points) {
+      let row = byDate.get(point.date)
+      if (!row) {
+        row = { date: point.date }
+        byDate.set(point.date, row)
+      }
+      row[materialSeries.material] = point.price_index
     }
-    return row
-  })
+  }
+  return [...byDate.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)))
+}
+
+/** x축 라벨: "1일" 시간별(...T22:30)이면 HH:mm, 일·주·월 등 날짜(YYYY-MM-DD)면 MM-DD. */
+function formatAxisLabel(value: string): string {
+  return value.includes('T') ? (value.split('T')[1]?.slice(0, 5) ?? value) : value.slice(5)
 }
 
 /**
  * 원자재 가격 추이(Phase 9.3) — surin RiskMonitoring.tsx의 가격 섹션(필터 드롭다운/
  * 요약 카드/기간 버튼/멀티라인 차트)을 시각적으로 이식한 컴포넌트. "원자재" 드롭다운은
- * 실제로 차트 계열을 필터링한다(특정 자재 선택 시 그 계열만 표시, "전체"면 전부 표시) —
- * 단 요약 카드 3장은 필터와 무관하게 항상 전체 자재를 보여준다(사용자 확인 완료).
- * "국가·지역" 드롭다운도 **실제로 동작한다**(2026-08-01). 원래는 표시 전용이었고 목록도
- * GlobalRiskBoard mock의 5개국이 하드코딩돼 있었으나, 백엔드가 자재별 조달국(`countries`)을
- * 내려주면서 연결했다(사용자 승인). 국가를 고르면 **그 나라에서 조달하는 자재의 선만 남는다** —
- * 국가별 가격을 보여주는 게 아니다(자재당 시계열은 하나뿐이고 그 값도 기업 주가 프록시라
- * 채굴국과 연결되지 않는다). 자재 필터와는 AND로 걸린다.
+ * 실제로 차트 계열을 필터링한다(특정 자재 선택 시 그 계열만 표시, "전체"면 전부 표시).
  *
- * 기간 버튼은 **실제로 동작한다**(2026-08-01). 원래는 표시 전용이었으나 백엔드
- * `/public/price-trends?days=`가 구간 조회를 지원하면서 연결했다(사용자 승인). 조회는 페이지가
- * 소유하므로 이 컴포넌트는 선택된 라벨을 받아 표시하고 클릭을 통지만 한다 — 기간이 바뀌면
- * 페이지가 차트·요약을 **같은 days로 함께** 다시 불러야 둘이 어긋나지 않는다.
- * "사용자 설정"만 날짜 범위 UI가 없어 비활성이다.
+ * 요약 카드(2026-08-06 개편):
+ *  - **국가·지역 드롭다운을 카드에도 반영한다**(item 3). 국가를 고르면 그 나라에서 조달하는
+ *    자재의 카드만 남아 가독성을 높인다(예: 알루미늄만 조달하는 나라 → 알루미늄 카드만).
+ *  - **카드를 클릭하면 그 자재만 그래프에 남긴다**(item 4, 드롭다운에서 그 자재를 고른 것과 동일).
+ *    이미 선택된 카드를 다시 누르면 "전체"로 되돌린다.
+ * 예전에는 카드가 필터와 무관하게 항상 전체 자재를 보여줬으나(당시 사용자 확인), 위 요청으로 바꿨다.
+ *
+ * "국가·지역" 드롭다운도 **실제로 동작한다**(2026-08-01). 국가를 고르면 그 나라에서 조달하는
+ * 자재의 선만 남는다 — 국가별 가격을 보여주는 게 아니다(자재당 시계열은 하나뿐이고 그 값도 기업
+ * 주가 프록시라 채굴국과 연결되지 않는다). 자재 필터와는 AND로 걸린다.
+ *
+ * 기간 버튼은 **실제로 동작한다**(2026-08-01). 백엔드 `/public/price-trends?days=`가 구간 조회를
+ * 지원한다. 조회는 페이지가 소유하므로 이 컴포넌트는 선택된 라벨을 받아 표시하고 클릭을 통지만
+ * 한다 — 기간이 바뀌면 페이지가 차트·요약을 **같은 days로 함께** 다시 불러야 둘이 어긋나지 않는다.
  * 요약 카드의 가격만 MaterialPriceSeries 마지막 포인트에서 직접 유도해 항상 일치시키고,
  * 등락률/리스크 지수/등급은 mock 임시값(fetchMaterialPriceSummaries)이다.
- * 필터行/요약카드는 ScrollCard의 pinnedTop(스크롤 밖 고정)에 배치한다. 차트는
- * `scrollable={false}`로 ScrollCard 본문 스크롤을 배제한다 — Recharts
- * ResponsiveContainer가 스크롤 컨테이너(overflow:auto) 안에 있으면 폭을 재측정하며
- * 카드가 계속 확장되는 문제가 트러블슈팅 중 확인돼, 이 컴포넌트는 스크롤 없이
- * 자유 높이로 렌더링한다.
+ *
+ * 레이아웃은 `layout` prop이 정한다. 'split'(item 6)은 그래프를 전체폭 별도 섹션으로 내려
+ * 수입 의존도 도넛 아래 여백을 채운다. 'inline'은 기존 단일 카드 구조로 롤백 경로다.
  *
  * 사용 예:
- *   <MaterialPriceDetail series={series} summaries={summaries} />
+ *   <MaterialPriceDetail series={series} summaries={summaries} period={p} onPeriodChange={setP}
+ *     layout="split" leadingPanel={<ImportDependencyPanel data={data} />} />
  */
 export function MaterialPriceDetail({
   series,
@@ -111,6 +139,8 @@ export function MaterialPriceDetail({
   period,
   onPeriodChange,
   isLoading = false,
+  layout = 'inline',
+  leadingPanel,
 }: MaterialPriceDetailProps) {
   const [materialFilterOpen, setMaterialFilterOpen] = useState(false)
   const [materialFilterLabel, setMaterialFilterLabel] = useState('전체')
@@ -119,6 +149,9 @@ export function MaterialPriceDetail({
 
   const materialFilterOptions = [ALL_OPTION, ...series.map((materialSeries) => materialSeries.material)]
   const countryFilterOptions = toCountryOptions(series)
+  // 요약 카드는 국가 필터만 반영한다(item 3) — 자재 필터/카드 클릭은 그래프만 좁히고,
+  // 카드는 그 나라의 자재를 계속 보여줘야 다른 카드로 갈아탈 수 있다.
+  const countryFilteredSeries = filterByCountry(series, countryFilterLabel)
   // 두 필터는 AND로 걸린다 — "칠레 + 니켈"처럼 교집합이 없으면 빈 차트가 되는 것이 맞다.
   // (칠레에서 니켈을 조달하지 않는다는 사실 자체가 정보다.)
   const filteredSeries = filterByCountry(
@@ -144,131 +177,151 @@ export function MaterialPriceDetail({
     setCountryFilterOpen(false)
   }
 
-  return (
-    <ScrollCard
-      headingId="material-price-detail-heading"
-      title="원자재 가격 추이"
-      scrollable={false}
-      pinnedTop={
-        <>
-          <div className={styles.filterRow}>
-            <div className={styles.dropdownWrap}>
-              <button
-                type="button"
-                className={styles.filterButton}
-                onClick={() => setMaterialFilterOpen((open) => !open)}
-              >
-                <span className={styles.filterLabel}>원자재</span>
-                {materialFilterLabel}
-                <ChevronIcon />
-              </button>
-              {materialFilterOpen && (
-                <ul className={styles.dropdownMenu}>
-                  {materialFilterOptions.map((option) => (
-                    <li key={option}>
-                      <button
-                        type="button"
-                        className={styles.dropdownItem}
-                        onClick={() => handleSelectMaterialFilter(option)}
-                      >
-                        {option}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+  // 카드 클릭(item 4): 그 자재로 그래프를 좁힌다. 같은 카드를 다시 누르면 전체로 되돌린다.
+  function handleToggleMaterial(material: string) {
+    setMaterialFilterLabel((prev) => (prev === material ? ALL_OPTION : material))
+  }
 
-            <div className={styles.dropdownWrap}>
-              <button
-                type="button"
-                className={styles.filterButton}
-                onClick={() => setCountryFilterOpen((open) => !open)}
-              >
-                <span className={styles.filterLabel}>국가·지역</span>
-                {countryFilterLabel}
-                <ChevronIcon />
-              </button>
-              {countryFilterOpen && (
-                <ul className={styles.dropdownMenu}>
-                  {countryFilterOptions.map((option) => (
-                    <li key={option}>
-                      <button
-                        type="button"
-                        className={styles.dropdownItem}
-                        onClick={() => handleSelectCountryFilter(option)}
-                      >
-                        {option}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className={styles.periodGroup}>
-              {PERIOD_OPTIONS.map((label) => (
+  const filterRow = (
+    <div className={styles.filterRow}>
+      <div className={styles.dropdownWrap}>
+        <button
+          type="button"
+          className={styles.filterButton}
+          onClick={() => setMaterialFilterOpen((open) => !open)}
+        >
+          <span className={styles.filterLabel}>원자재</span>
+          {materialFilterLabel}
+          <ChevronIcon />
+        </button>
+        {materialFilterOpen && (
+          <ul className={styles.dropdownMenu}>
+            {materialFilterOptions.map((option) => (
+              <li key={option}>
                 <button
-                  key={label}
                   type="button"
-                  className={label === period ? styles.periodButtonActive : styles.periodButton}
-                  onClick={() => onPeriodChange(label)}
+                  className={styles.dropdownItem}
+                  onClick={() => handleSelectMaterialFilter(option)}
                 >
-                  {label}
+                  {option}
                 </button>
-              ))}
-            </div>
-          </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
-          <div className={styles.summaryGrid}>
-            {series.map((materialSeries) => {
-              const summary = summaries.find((item) => item.material === materialSeries.material)
-              const lastPoint = materialSeries.points.at(-1)
-              return (
-                <div key={materialSeries.material} className={styles.summaryCard}>
-                  <div className={styles.summaryMaterial}>{materialSeries.material}</div>
-                  <div className={styles.summaryPrice}>{lastPoint?.price_index ?? '—'}</div>
-                  <div className={styles.summaryUnit}>
-                    {materialSeries.unit}
-                    {summary && (
-                      <span
-                        className={
-                          summary.change_label.startsWith('▲') ? styles.summaryChangeUp : styles.summaryChangeDown
-                        }
-                      >
-                        {summary.change_label}
-                      </span>
-                    )}
-                  </div>
-                  {summary && (
-                    <>
-                      <div className={styles.summaryScoreRow}>
-                        <span className={styles.summaryScoreLabel}>리스크 지수</span>
-                        <RiskGradeBadge grade={summary.grade} />
-                      </div>
-                      <div className={styles.summaryScore}>
-                        {summary.risk_score}
-                        <span className={styles.summaryScoreMax}>/100</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )
-            })}
+      <div className={styles.dropdownWrap}>
+        <button
+          type="button"
+          className={styles.filterButton}
+          onClick={() => setCountryFilterOpen((open) => !open)}
+        >
+          <span className={styles.filterLabel}>국가·지역</span>
+          {countryFilterLabel}
+          <ChevronIcon />
+        </button>
+        {countryFilterOpen && (
+          <ul className={styles.dropdownMenu}>
+            {countryFilterOptions.map((option) => (
+              <li key={option}>
+                <button
+                  type="button"
+                  className={styles.dropdownItem}
+                  onClick={() => handleSelectCountryFilter(option)}
+                >
+                  {option}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* 기간 버튼은 우측 끝으로 밀어 필터 드롭다운과 시각적으로 분리한다(item 2). */}
+      <div className={styles.periodGroup}>
+        {PERIOD_OPTIONS.map((label) => (
+          <button
+            key={label}
+            type="button"
+            className={label === period ? styles.periodButtonActive : styles.periodButton}
+            onClick={() => onPeriodChange(label)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+
+  const summaryGrid = (
+    <div className={styles.summaryGrid}>
+      {countryFilteredSeries.map((materialSeries) => {
+        const summary = summaries.find((item) => item.material === materialSeries.material)
+        const lastPoint = materialSeries.points.at(-1)
+        const isSelected = materialFilterLabel === materialSeries.material
+        return (
+          <div
+            key={materialSeries.material}
+            className={isSelected ? `${styles.summaryCard} ${styles.summaryCardActive}` : styles.summaryCard}
+            role="button"
+            tabIndex={0}
+            aria-pressed={isSelected}
+            onClick={() => handleToggleMaterial(materialSeries.material)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                handleToggleMaterial(materialSeries.material)
+              }
+            }}
+          >
+            {/* 등급 배지(정상/주의/심각)를 자재명과 같은 행 우측 상단에 둔다(2026-08-07). 예전에는
+                "리스크 지수" 줄에 있어 한 줄을 더 차지했는데, 위로 올려 칸을 더 컴팩트하게 만든다. */}
+            <div className={styles.summaryHeader}>
+              <span className={styles.summaryMaterial}>{materialSeries.material}</span>
+              {summary && <RiskGradeBadge grade={summary.grade} size="md" />}
+            </div>
+            {/* 지수와 등락%를 한 행에 큰 글씨로 나란히(item 5). */}
+            <div className={styles.summaryPriceRow}>
+              <span className={styles.summaryPrice}>{lastPoint?.price_index ?? '—'}</span>
+              {summary && (
+                <span
+                  className={
+                    summary.change_label.startsWith('▲') ? styles.summaryChangeUp : styles.summaryChangeDown
+                  }
+                >
+                  {summary.change_label}
+                </span>
+              )}
+            </div>
+            <div className={styles.summaryUnit}>{materialSeries.unit}</div>
+            {summary && (
+              // "리스크 지수"와 점수(0/100)를 한 줄에 좌우로 둔다(2026-08-07).
+              <div className={styles.summaryScoreRow}>
+                <span className={styles.summaryScoreLabel}>리스크 지수</span>
+                <span className={styles.summaryScore}>
+                  {summary.risk_score}
+                  <span className={styles.summaryScoreMax}>/100</span>
+                </span>
+              </div>
+            )}
           </div>
-        </>
-      }
-    >
-      <div className={styles.chartArea} aria-busy={isLoading || undefined}>
-        {isLoading ? (
-          <Skeleton variant="block" width="100%" height="100%" />
-        ) : (
+        )
+      })}
+    </div>
+  )
+
+  const chart = (
+    <div className={styles.chartArea} aria-busy={isLoading || undefined}>
+      {isLoading ? (
+        <Skeleton variant="block" width="100%" height="100%" />
+      ) : (
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
             <CartesianGrid vertical={false} stroke="var(--color-border)" />
             <XAxis
               dataKey="date"
-              tickFormatter={(value: string) => value.slice(5)}
+              tickFormatter={formatAxisLabel}
               tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
               tickLine={false}
               axisLine={{ stroke: 'var(--color-border)' }}
@@ -276,6 +329,9 @@ export function MaterialPriceDetail({
             <YAxis width={36} tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} tickLine={false} axisLine={false} />
             <Tooltip
               isAnimationActive={false}
+              labelFormatter={(label) =>
+                typeof label === 'string' && label.includes('T') ? label.replace('T', ' ') : label
+              }
               contentStyle={{
                 background: 'var(--color-surface)',
                 border: '1px solid var(--color-border)',
@@ -293,12 +349,55 @@ export function MaterialPriceDetail({
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4 }}
+                connectNulls
               />
             ))}
           </LineChart>
         </ResponsiveContainer>
-        )}
+      )}
+    </div>
+  )
+
+  // split(item 6): 상단 [leadingPanel | 필터+요약카드], 하단 전체폭 그래프.
+  // splitContainer는 컨테이너 쿼리 기준점 — 뷰포트가 아니라 이 영역의 실제 폭으로 쌓임 여부를
+  // 정한다(사이드바·알림패널로 뷰포트는 넓어도 이 영역이 좁아질 수 있어서다).
+  if (layout === 'split') {
+    return (
+      <div className={styles.splitContainer}>
+        <div className={styles.splitLayout}>
+          {leadingPanel && <div className={styles.leadingCell}>{leadingPanel}</div>}
+          <div className={styles.summaryCell}>
+            {/* fillHeight: 수입 의존도 도넛 카드와 높이를 동적으로 맞춘다 — 그리드가 두 셀을 같은
+                높이로 늘리므로, 카드가 셀을 채우면 낮은 쪽이 높은 쪽에 맞춰 늘어난다(2026-08-07). */}
+            <ScrollCard headingId="material-price-detail-heading" title="원자재 가격 추이" scrollable={false} fillHeight>
+              {filterRow}
+              {summaryGrid}
+            </ScrollCard>
+          </div>
+          <div className={styles.chartCell}>
+            <ScrollCard headingId="material-price-chart-heading" title="원자재 가격 추이 그래프" scrollable={false}>
+              {chart}
+            </ScrollCard>
+          </div>
+        </div>
       </div>
+    )
+  }
+
+  // inline(기본, 롤백 경로): 필터+요약카드를 pinnedTop에, 차트를 본문에 담은 단일 카드.
+  return (
+    <ScrollCard
+      headingId="material-price-detail-heading"
+      title="원자재 가격 추이"
+      scrollable={false}
+      pinnedTop={
+        <>
+          {filterRow}
+          {summaryGrid}
+        </>
+      }
+    >
+      {chart}
     </ScrollCard>
   )
 }

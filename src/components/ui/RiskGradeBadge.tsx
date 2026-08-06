@@ -10,6 +10,8 @@ const VARIANT_CLASS: Record<RiskGrade, string> = {
 
 interface RiskGradeBadgeProps {
   grade: RiskGrade
+  /** 'sm'(기본) 유지, 'md'는 글씨·패딩을 키운다(원자재 요약 카드 가독성, 2026-08-06 item 5). */
+  size?: 'sm' | 'md'
 }
 
 /**
@@ -18,8 +20,9 @@ interface RiskGradeBadgeProps {
  *
  * 사용 예:
  *   <RiskGradeBadge grade="심각" />
- *   <RiskGradeBadge grade={riskEvent.grade} />
+ *   <RiskGradeBadge grade={riskEvent.grade} size="md" />
  */
-export function RiskGradeBadge({ grade }: RiskGradeBadgeProps) {
-  return <span className={`${styles.badge} ${VARIANT_CLASS[grade]}`}>{grade}</span>
+export function RiskGradeBadge({ grade, size = 'sm' }: RiskGradeBadgeProps) {
+  const sizeClass = size === 'md' ? styles.md : ''
+  return <span className={`${styles.badge} ${sizeClass} ${VARIANT_CLASS[grade]}`}>{grade}</span>
 }

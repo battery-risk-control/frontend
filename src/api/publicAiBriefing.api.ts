@@ -1,4 +1,5 @@
-import { fetchWithAuth } from './http'
+import { downloadGetWithAuth, fetchWithAuth } from './http'
+import type { DownloadedFile, FetchJsonError } from './http'
 import type {
   AiBriefingContext,
   AiBriefingDetail,
@@ -18,6 +19,7 @@ import type {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
 
 export const LOGIN_REQUIRED_MESSAGE = '로그인 후 이용 가능합니다.'
+const DOWNLOAD_NOT_READY_MESSAGE = 'mock 모드에서는 PDF 다운로드를 제공하지 않습니다.'
 
 function unwrap<T>(result: T | { error: string; message: string }): T {
   if (result && typeof result === 'object' && 'error' in result) {
@@ -236,5 +238,34 @@ export async function fetchAiBriefing(
       `/api/v1/ai-briefing/briefings/${encodeURIComponent(briefingId)}`,
       accessToken ?? '',
     ),
+  )
+}
+
+/**
+ * "PDF 다운로드" — 저장된 브리핑을 PDF로 받는다.
+ *
+ * 백엔드 `SecurityConfig`는 `GET .../briefings/*`(단일 세그먼트)만 permitAll로 열어뒀고
+ * `.../briefings/{id}/report.pdf`(하위 세그먼트)는 매치되지 않아 인증이 필요하다 — 로그인
+ * 없이는 호출하지 않고 안내만 돌려준다.
+ *
+ * 사용 예:
+ *   const file = await downloadAiBriefingReport(accessToken, briefingId)
+ *   if ('error' in file) setError(file.message)
+ *   else saveBlob(file.blob, file.fileName)
+ */
+export async function downloadAiBriefingReport(
+  accessToken: string | null,
+  briefingId: string,
+): Promise<DownloadedFile | FetchJsonError> {
+  if (!API_BASE_URL) {
+    return { error: 'NOT_AVAILABLE', message: DOWNLOAD_NOT_READY_MESSAGE }
+  }
+  if (!accessToken) {
+    return { error: 'LOGIN_REQUIRED', message: LOGIN_REQUIRED_MESSAGE }
+  }
+  return downloadGetWithAuth(
+    `/api/v1/ai-briefing/briefings/${encodeURIComponent(briefingId)}/report.pdf`,
+    accessToken,
+    'ai-briefing.pdf',
   )
 }

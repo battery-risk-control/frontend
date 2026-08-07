@@ -60,6 +60,10 @@ export function ImportDependencyPanel({ data, blurred = false }: ImportDependenc
     <ScrollCard
       headingId="import-dependency-heading"
       title={data.year ? `수입 의존도 (${data.year})` : '수입 의존도'}
+      fillHeight
+      /* 본문 overflow를 visible로 둔다(2026-08-07) — 기본 auto면 도넛 hover 툴팁이 카드 밖으로
+         나갈 때 잘려 사라진다. 도넛+범례는 항상 카드 안에 들어와 스크롤이 필요 없다. */
+      scrollable={false}
     >
       <div className={blurred ? `${styles.body} ${styles.blurred}` : styles.body}>
         <DonutChart

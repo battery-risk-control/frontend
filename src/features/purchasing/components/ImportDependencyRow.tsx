@@ -1,7 +1,8 @@
 import { MaterialPriceDetail } from '../../../components/widgets/MaterialPriceDetail'
 import { ImportDependencyPanel } from './ImportDependencyPanel'
 import type { ImportDependencyData, MaterialPriceSeries, MaterialPriceSummary } from '../../../api/types'
-import styles from './ImportDependencyRow.module.css'
+// split 레이아웃(item 6)에서는 그리드를 MaterialPriceDetail이 소유하므로 여기서 styles가 필요 없다.
+// 아래 롤백 주석을 되살릴 때 `import styles from './ImportDependencyRow.module.css'`도 함께 복구한다.
 
 interface ImportDependencyRowProps {
   importDependency: ImportDependencyData
@@ -36,16 +37,33 @@ export function ImportDependencyRow({
   period,
   onPeriodChange,
 }: ImportDependencyRowProps) {
+  // item 6(2026-08-06): 그래프를 전체폭 별도 섹션으로 내리는 split 레이아웃. 수입 의존도 도넛은
+  // leadingPanel 슬롯으로 넘기고, MaterialPriceDetail이 상단 [도넛 | 필터+요약카드] + 하단
+  // 전체폭 [그래프] 그리드를 구성한다. 도넛 아래 여백을 그래프가 채운다.
   return (
-    <div className={styles.row}>
-      <ImportDependencyPanel data={importDependency} />
-      <MaterialPriceDetail
-        series={priceSeries}
-        summaries={priceSummaries}
-        isLoading={isPriceLoading}
-        period={period}
-        onPeriodChange={onPeriodChange}
-      />
-    </div>
+    <MaterialPriceDetail
+      layout="split"
+      leadingPanel={<ImportDependencyPanel data={importDependency} />}
+      series={priceSeries}
+      summaries={priceSummaries}
+      isLoading={isPriceLoading}
+      period={period}
+      onPeriodChange={onPeriodChange}
+    />
   )
+
+  // ── 이전 2컬럼 레이아웃(롤백용 보존) ─────────────────────────────
+  // split이 마음에 들지 않으면 위 return을 지우고 아래를 되살린다.
+  // return (
+  //   <div className={styles.row}>
+  //     <ImportDependencyPanel data={importDependency} />
+  //     <MaterialPriceDetail
+  //       series={priceSeries}
+  //       summaries={priceSummaries}
+  //       isLoading={isPriceLoading}
+  //       period={period}
+  //       onPeriodChange={onPeriodChange}
+  //     />
+  //   </div>
+  // )
 }

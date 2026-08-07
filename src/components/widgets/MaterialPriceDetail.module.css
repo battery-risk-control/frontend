@@ -65,9 +65,15 @@
 }
 
 .periodGroup {
+  /* 우측 끝으로 밀어 필터 드롭다운과 분리(item 2). .filterRow가 flex-wrap이라 좁은 폭에서는
+     자연스럽게 다음 줄로 내려간다. */
+  margin-left: auto;
   display: flex;
+  align-items: center;
   gap: var(--space-1);
-  padding: var(--space-1);
+  /* 세로 padding을 줄여 그룹 높이를 필터 드롭다운(원자재·국가지역 선택칸)과 같게 맞춘다
+     (2026-08-07 실측: 예전 padding 4px → 30px로 드롭다운 24px보다 컸다). */
+  padding: 1px var(--space-1);
   background: var(--color-bg);
   border-radius: var(--radius-sm);
 }
@@ -109,34 +115,81 @@
 
 .summaryGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* 반응형: 셀 폭에 맞춰 열 수가 자동으로 는다. 고정 3열은 split 상단 우측(도넛 옆 좁은 셀)에서
+     카드가 넘쳤다(2026-08-06 실측: 197px 셀에 3×113px 그리드가 오버플로). auto-fit로 좁으면
+     2열, 넓으면 여러 열이 되어 어떤 폭에서도 넘치지 않는다. */
+  /* 한 줄에 정확히 3칸(2026-08-07 사용자 요청, 원래 디자인). minmax(0,1fr)로 폭이 좁아도
+     칸이 넘치지 않고 함께 줄어든다. 아래 @container가 좁은 폭에선 요약을 전체폭으로 내려
+     3칸이 충분한 폭을 갖게 한다. */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
+  /* 필터 행(원자재·국가지역 드롭다운 + 기간 버튼)과 요약 카드가 붙어 보이지 않게 위 여백을 준다(2026-08-07). */
+  margin-top: var(--space-4);
 }
 
 .summaryCard {
   padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  /* 카드 클릭으로 그래프를 좁힐 수 있다(item 4). */
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+/* 자재명(좌) + 등급 배지(우 상단)를 한 행에(2026-08-07). 배지만 위로 올리고 나머지 칸 크기는
+   그대로 둔다. 자재명은 nowrap으로 묶어 "알루미늄"이 글자당 세로로 쪼개지지 않게 한다. */
+.summaryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.summaryCard:hover {
+  border-color: var(--color-primary);
+}
+
+.summaryCard:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* 선택된 자재(그래프에 이 자재만 남은 상태). */
+.summaryCardActive {
+  border-color: var(--color-primary);
+  background: var(--color-bg);
 }
 
 .summaryMaterial {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
+  white-space: nowrap;
+}
+
+/* 지수 + 등락%를 한 행에 큰 글씨로 나란히(item 5). */
+.summaryPriceRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
 }
 
 .summaryPrice {
-  margin-top: var(--space-1);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
 }
 
+.summaryChangeUp,
+.summaryChangeDown {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+}
+
 .summaryUnit {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 10px;
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
@@ -148,28 +201,30 @@
   color: var(--color-confidence-reference);
 }
 
+/* "리스크 지수" 라벨(좌)과 점수(우)를 한 줄에 둔다(2026-08-07). 카드가 3열·가로형이라 폭이 넉넉해
+   한 줄에 들어간다. */
 .summaryScoreRow {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
+  gap: var(--space-2);
   margin-top: var(--space-2);
 }
 
 .summaryScoreLabel {
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
 
 .summaryScore {
-  margin-top: var(--space-1);
-  text-align: right;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
+  white-space: nowrap;
 }
 
 .summaryScoreMax {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-regular);
   color: var(--color-text-muted);
 }
@@ -185,4 +240,61 @@
 
   flex: 1;
   min-height: 180px;
+}
+
+/* ── split 레이아웃(item 6, 2026-08-06) ─────────────────────────────
+   상단 [leadingPanel(수입 의존도 도넛) | 원자재 가격 추이(필터+요약카드)],
+   하단 전체폭 [가격 추이 그래프]. 그래프를 별도 섹션으로 내려 도넛 아래 여백을 채운다. */
+
+/* 컨테이너 쿼리 기준점. 뷰포트가 아니라 이 영역의 실제 폭으로 아래 @container가 발동한다 —
+   사이드바·알림패널 때문에 뷰포트는 넓어도 이 영역이 좁을 수 있어, 뷰포트 미디어쿼리로는
+   좁은 컨테이너에서 요약 셀이 눌리는 걸 못 막았다(2026-08-07). */
+.splitContainer {
+  container-type: inline-size;
+}
+
+.splitLayout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  grid-template-areas:
+    'lead summary'
+    'chart chart';
+  gap: var(--space-6);
+}
+
+.leadingCell {
+  grid-area: lead;
+  min-width: 0;
+}
+
+.summaryCell {
+  grid-area: summary;
+  min-width: 0;
+}
+
+.chartCell {
+  grid-area: chart;
+  min-width: 0;
+}
+
+/* 그래프 섹션은 고정 높이로 준다. inline과 달리 split 그래프 카드는 바깥 그리드가 높이를
+   제약하지 않아, chartArea가 flex:1이면 부모 높이가 콘텐츠 기반(불확정)이 되어 Recharts
+   ResponsiveContainer가 height:100%를 0으로 접는다(실측: responsive-container h=0). flex를 끄고
+   확정 높이를 줘야 100%가 해석된다. */
+.chartCell .chartArea {
+  flex: none;
+  height: 340px;
+}
+
+/* 도넛(340px) + 요약 3칸(각 ~200px=600px)을 나란히 넣을 폭이 안 되면(≈960px 이하) 1컬럼
+   직렬로 전환한다. 그러면 도넛·요약·그래프가 각각 전체폭이 되어 요약 3칸이 충분히 넓어진다.
+   컨테이너 쿼리라 좁은 main에서도(뷰포트가 넓어도) 정확히 발동한다. */
+@container (max-width: 960px) {
+  .splitLayout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'lead'
+      'summary'
+      'chart';
+  }
 }

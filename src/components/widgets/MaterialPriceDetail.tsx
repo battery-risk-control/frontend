@@ -1,5 +1,14 @@
 import { useState, type ReactNode } from 'react'
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { Skeleton } from '../ui/Skeleton/Skeleton'
 import { ScrollCard } from '../ui/ScrollCard/ScrollCard'
 import { RiskGradeBadge } from '../ui/RiskGradeBadge'
@@ -99,6 +108,18 @@ function toChartRows(series: MaterialPriceSeries[]): ChartRow[] {
   return [...byDate.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)))
 }
 
+/**
+ * y축 도메인: 기준선 100을 세로 중앙에 두기 위해 100을 축으로 대칭 범위를 만든다.
+ * dataMin/dataMax 중 100에서 더 먼 쪽을 반폭으로 삼고 15% 여백을 더한다 — 그러면 값이 전부
+ * 100 위/아래 어디에 몰려 있어도 100 선이 정확히 가운데에 온다. 데이터가 없거나 평평하면
+ * 반폭이 0이 되므로 최소 1을 보장해 축이 한 점으로 접히지 않게 한다.
+ */
+function centeredDomain([dataMin, dataMax]: [number, number]): [number, number] {
+  const half = Math.max(100 - dataMin, dataMax - 100, 1)
+  const pad = half * 0.15
+  return [Math.floor(100 - half - pad), Math.ceil(100 + half + pad)]
+}
+
 /** x축 라벨: "1일" 시간별(...T22:30)이면 HH:mm, 일·주·월 등 날짜(YYYY-MM-DD)면 MM-DD. */
 function formatAxisLabel(value: string): string {
   return value.includes('T') ? (value.split('T')[1]?.slice(0, 5) ?? value) : value.slice(5)
@@ -161,6 +182,9 @@ export function MaterialPriceDetail({
     countryFilterLabel,
   )
   const rows = toChartRows(filteredSeries)
+  // "1일" 탭만 지수 기준이 다르다(당일 시가=100). 다른 기간은 6개월 전=100으로 고정돼 있어
+  // 값을 직접 비교하면 안 되므로, 이 탭에서만 안내문구를 띄운다.
+  const isIntraday = period === '1일'
   // 자재별 색상은 필터와 무관하게 전체 series 기준 순서로 고정 — 니켈만 필터링해도
   // "전체" 상태에서 보이던 것과 같은 색으로 표시되도록 한다.
   const materialColorVar = new Map(
@@ -311,8 +335,17 @@ export function MaterialPriceDetail({
     </div>
   )
 
+  const basisNotice = isIntraday ? (
+    <p className={styles.basisNotice}>
+      ※ ‘1일’ 탭의 지수는 <strong>당일 시가를 100</strong>으로 둔 별도 기준입니다. 다른 기간(6개월 전=100)과
+      기준이 달라 수치를 직접 비교할 수 없습니다.
+    </p>
+  ) : null
+
   const chart = (
-    <div className={styles.chartArea} aria-busy={isLoading || undefined}>
+    <>
+      {basisNotice}
+      <div className={styles.chartArea} aria-busy={isLoading || undefined}>
       {isLoading ? (
         <Skeleton variant="block" width="100%" height="100%" />
       ) : (
@@ -326,7 +359,21 @@ export function MaterialPriceDetail({
               tickLine={false}
               axisLine={{ stroke: 'var(--color-border)' }}
             />
-            <YAxis width={36} tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }} tickLine={false} axisLine={false} />
+            <YAxis
+              width={36}
+              domain={centeredDomain}
+              tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+            />
+            {/* 기준선 100. 대칭 도메인과 함께 두면 화면 세로 중앙에 놓여, 각 선이 기준 위/아래
+                어디에 있는지 한눈에 읽힌다. */}
+            <ReferenceLine
+              y={100}
+              stroke="var(--color-text-muted)"
+              strokeDasharray="4 4"
+              label={{ value: '100', position: 'left', fill: 'var(--color-text-muted)', fontSize: 11 }}
+            />
             <Tooltip
               isAnimationActive={false}
               labelFormatter={(label) =>
@@ -355,7 +402,8 @@ export function MaterialPriceDetail({
           </LineChart>
         </ResponsiveContainer>
       )}
-    </div>
+      </div>
+    </>
   )
 
   // split(item 6): 상단 [leadingPanel | 필터+요약카드], 하단 전체폭 그래프.

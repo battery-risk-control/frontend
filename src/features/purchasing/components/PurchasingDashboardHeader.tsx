@@ -2,23 +2,37 @@ import styles from './PurchasingDashboardHeader.module.css'
 
 interface PurchasingDashboardHeaderProps {
   /**
-   * 화면 데이터의 기준일(`yyyy-MM-dd`). 없으면 날짜 칩을 숨긴다.
+   * 화면 데이터의 **최종 갱신 시각**(ISO-8601 타임스탬프, 예: `2026-07-31T14:00:00Z`). 없으면
+   * 칩을 숨긴다.
    *
-   * 목업의 "2026.07.31 ▾" 자리다. **드롭다운(날짜 선택)이 아니라 표시 전용이다** — 이 화면이
-   * 쓰는 공개 API 6종 중 조회 기준일을 받는 것이 하나도 없어서, 고를 수 있게 만들면 날짜만
-   * 바뀌고 숫자는 그대로인 화면이 된다(`materialPricePeriods`의 "사용자 설정" 탭을 비활성으로
-   * 둔 것과 같은 판단). 날짜 필터가 실제로 필요해지면 백엔드 파라미터부터 늘려야 한다.
+   * 예전에는 환율 고시일(`exchangeRates.rate_date`, `yyyy-MM-dd`)을 물렸는데, 고시환율은 영업일당
+   * 한 번만 공표되는 "일환율"이라 60초마다 새로고침해도 날짜가 종일 그대로였다(출근 즉시 최신
+   * 여부를 알 수 없었다). 그래서 원자재 위험 개요의 `summary.as_of`(계산 시점 실제 시각, 서버
+   * 60초 캐시)로 바꿔 시각(HH:mm)까지 보여준다. 이 개요 조회는 라이브 리프레시(60초·탭 포커스)에
+   * 물려 있어 칩도 함께 움직인다. 조회 API는 DB만 읽어 외부 API를 두드리지 않으므로 새로고침이
+   * 잦아도 레이트리밋과 무관하다.
    */
-  asOfDate?: string | null
-}
-
-/** `2026-07-31` → `2026.07.31`. 목업 표기를 따른다. */
-function formatAsOf(date: string): string {
-  return date.replaceAll('-', '.')
+  asOf?: string | null
 }
 
 /**
- * 구매팀 대시보드 페이지 헤더 — 목업의 제목줄("구매 위험 관제 대시보드" + 부제 + 기준일).
+ * ISO 타임스탬프(`2026-07-31T14:00:00Z`) → `2026.07.31 14:00`. 브라우저 현지 시간대(KST) 기준·24시간.
+ *
+ * `toLocale*`을 쓰지 않는다 — ko-KR은 점·공백을 붙이고 `hour12` 기본값이 12시간제를 타서
+ * `PM 02:00`처럼 나온다(`formatCollectedAt`와 같은 판단). 파싱이 안 되면 원문 앞부분을 그대로 보여준다.
+ */
+function formatAsOf(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso.slice(0, 16).replace('T', ' ')
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return (
+    `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ` +
+    `${pad(date.getHours())}:${pad(date.getMinutes())}`
+  )
+}
+
+/**
+ * 구매팀 대시보드 페이지 헤더 — 목업의 제목줄("구매 위험 관제 대시보드" + 부제 + 기준 시각).
  *
  * 공용 `Header`(브랜드·계정·로그아웃·알림 벨)는 그대로 두고 그 아래에 놓이는 **페이지 단위**
  * 제목줄이다. 목업에는 상단 바가 없고 브랜드가 사이드바에 올라가 있지만, `Header`·`SideNav`는
@@ -26,18 +40,18 @@ function formatAsOf(date: string): string {
  * 함께 바뀐다 — 그래서 목업의 제목줄만 페이지 쪽에 따로 만든다.
  *
  * 사용 예:
- *   <PurchasingDashboardHeader asOfDate={exchangeRates.rate_date} />
+ *   <PurchasingDashboardHeader asOf={materialAsOf} />
  */
-export function PurchasingDashboardHeader({ asOfDate }: PurchasingDashboardHeaderProps) {
+export function PurchasingDashboardHeader({ asOf }: PurchasingDashboardHeaderProps) {
   return (
     <div className={styles.header}>
       <div className={styles.titleGroup}>
         <h1 className={styles.title}>구매 위험 관제 대시보드</h1>
         <p className={styles.subtitle}>외부 위험 · ERP · 계약 근거 통합</p>
       </div>
-      {asOfDate && (
+      {asOf && (
         <span className={styles.asOf}>
-          {formatAsOf(asOfDate)} <span className={styles.asOfSuffix}>기준</span>
+          {formatAsOf(asOf)} <span className={styles.asOfSuffix}>기준</span>
         </span>
       )}
     </div>

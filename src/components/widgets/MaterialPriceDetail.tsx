@@ -114,7 +114,7 @@ function toChartRows(series: MaterialPriceSeries[]): ChartRow[] {
  * 100 위/아래 어디에 몰려 있어도 100 선이 정확히 가운데에 온다. 데이터가 없거나 평평하면
  * 반폭이 0이 되므로 최소 1을 보장해 축이 한 점으로 접히지 않게 한다.
  */
-function centeredDomain([dataMin, dataMax]: [number, number]): [number, number] {
+function centeredDomain([dataMin, dataMax]: readonly [number, number]): [number, number] {
   const half = Math.max(100 - dataMin, dataMax - 100, 1)
   const pad = half * 0.15
   return [Math.floor(100 - half - pad), Math.ceil(100 + half + pad)]

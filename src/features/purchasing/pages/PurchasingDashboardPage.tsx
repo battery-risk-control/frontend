@@ -190,6 +190,9 @@ export function PurchasingDashboardPage() {
   const [reloadKey, setReloadKey] = useState(0)
   const [supplierOverview, setSupplierOverview] = useState<SupplierOverview | null>(null)
   const [materials, setMaterials] = useState<MaterialRiskItem[]>([])
+  // 헤더 "기준" 칩의 최종 갱신 시각. 원자재 위험 개요의 summary.as_of(계산 시점 실제 시각)를 쓴다.
+  // 이 개요 조회가 liveRefreshKey(60초·포커스)에 물려 있어 칩도 함께 갱신된다.
+  const [materialAsOf, setMaterialAsOf] = useState<string | null>(null)
   const [monitoringEvents, setMonitoringEvents] = useState<RiskMonitoringEvent[]>([])
   const [briefings, setBriefings] = useState<AiBriefingListItem[]>([])
 
@@ -443,7 +446,9 @@ export function PurchasingDashboardPage() {
       })
     fetchMaterialRiskOverview(accessToken)
       .then((overview) => {
-        if (!cancelled) setMaterials(overview.materials)
+        if (cancelled) return
+        setMaterials(overview.materials)
+        setMaterialAsOf(overview.summary.as_of)
       })
       .catch((err) => {
         console.error('자재별 위험 조회 실패', err)
@@ -602,7 +607,7 @@ export function PurchasingDashboardPage() {
         <SideNav items={PURCHASING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           {/* ── 목업에 있는 구성 (위) ─────────────────────────────── */}
-          <PurchasingDashboardHeader asOfDate={exchangeRates.rate_date} />
+          <PurchasingDashboardHeader asOf={materialAsOf} />
           <PurchasingKpiRow kpi={kpi} isLoading={kpiLoading} />
           {/* 환율은 한 종을 골라 넘기지 않는다 — 어느 통화를 보여줄지는 마퀴가 순환으로 정한다.
               USD만 넘기던 예전 방식에서는 수집해 둔 28종 중 27종이 화면에 안 나왔다. */}

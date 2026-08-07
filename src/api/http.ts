@@ -5,6 +5,8 @@
  * (`backend/docs/auth-integration-handoff.md` §2-1 실제 응답 전문 기준).
  */
 
+import { getAccessToken, hasSession, isAccessTokenExpiringSoon, refreshAccessToken } from '../lib/authSession'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
 
 interface ApiSuccessEnvelope<T> {
@@ -33,22 +35,41 @@ export interface FetchJsonError {
  *   const result = await fetchJson<LoginSuccessResponse>('/api/v1/auth/login', { method: 'POST', body: JSON.stringify(payload) })
  *   if ('error' in result) { ... }
  */
-export async function fetchJson<T>(path: string, options: RequestInit = {}): Promise<T | FetchJsonError> {
+/** 봉투를 벗기되 HTTP 상태 코드도 함께 돌려준다 — fetchWithAuth가 401을 판별해 refresh를 걸 수 있게. */
+async function requestEnvelope<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<{ status: number; result: T | FetchJsonError }> {
   const res = await fetch(`${API_BASE_URL ?? ''}${path}`, {
     ...options,
+    // refresh 토큰 HttpOnly 쿠키가 /auth/* 요청에 실려 가도록 자격증명을 포함한다. 다른 경로엔
+    // 쿠키 Path(/api/v1/auth) 때문에 전송되지 않으므로 전역으로 켜도 무해하다.
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...options.headers },
   })
   const body: ApiSuccessEnvelope<T> | ApiErrorEnvelope = await res.json()
   if (!res.ok || !body.success) {
     const errorBody = body as ApiErrorEnvelope
-    return { error: errorBody.error.code, message: errorBody.error.message }
+    return { status: res.status, result: { error: errorBody.error.code, message: errorBody.error.message } }
   }
-  return body.data
+  return { status: res.status, result: body.data }
+}
+
+export async function fetchJson<T>(path: string, options: RequestInit = {}): Promise<T | FetchJsonError> {
+  return (await requestEnvelope<T>(path, options)).result
 }
 
 /**
- * `fetchJson`에 `Authorization: Bearer {token}` 헤더를 자동으로 붙인다. 인증이 필요한
- * 후속 API(브리핑·ERP 등) 연동 대비 — 현재 auth 쪽(`login`/`signup`)에서는 쓰지 않는다.
+ * `Authorization: Bearer {token}` 헤더를 붙여 호출하고, **access token 만료를 자동으로 처리**한다.
+ *
+ * <p>동작: ① 만료가 임박했으면 요청 전에 선제 갱신(확실한 401 왕복 절약). ② 그래도 401이 오면
+ * refresh 토큰으로 새 access token을 발급받아 **원 요청을 1회 재시도**한다. ③ 동시에 여러 요청이
+ * 401을 받아도 refresh는 한 번만 나가고(진행 중 Promise 공유, {@link ../lib/authSession}), refresh가
+ * 실패하면 세션을 비워 라우트 가드가 /auth로 보낸다.
+ *
+ * <p>토큰은 authSession의 현재 값을 우선 쓴다({@code getAccessToken() ?? token}) — 한 번 갱신되면
+ * 호출부가 넘긴 낡은 토큰 대신 새 토큰으로 나가 불필요한 재-refresh를 줄인다. 미로그인(refresh 토큰
+ * 없음)일 때는 refresh를 시도하지 않고 기존처럼 오류를 그대로 돌려준다.
  *
  * 사용 예:
  *   const result = await fetchWithAuth<UserSummary>('/api/v1/auth/me', accessToken)
@@ -58,10 +79,29 @@ export async function fetchWithAuth<T>(
   token: string,
   options: RequestInit = {},
 ): Promise<T | FetchJsonError> {
-  return fetchJson<T>(path, {
-    ...options,
-    headers: { Authorization: `Bearer ${token}`, ...options.headers },
+  const authHeaders = (bearer: string): HeadersInit => ({
+    Authorization: `Bearer ${bearer}`,
+    ...options.headers,
   })
+
+  // (선택) 만료 임박이면 요청 전에 선제 갱신.
+  if (isAccessTokenExpiringSoon()) {
+    await refreshAccessToken()
+  }
+
+  const activeToken = getAccessToken() ?? token
+  const first = await requestEnvelope<T>(path, { ...options, headers: authHeaders(activeToken) })
+  if (first.status !== 401 || !hasSession()) {
+    return first.result
+  }
+
+  // 401 + 로그인 세션 → refresh(단일 진행) 후 원 요청 1회 재시도. refresh 실패면 이미 로그아웃 처리됨.
+  const refreshedToken = await refreshAccessToken()
+  if (!refreshedToken) {
+    return first.result
+  }
+  const retry = await requestEnvelope<T>(path, { ...options, headers: authHeaders(refreshedToken) })
+  return retry.result
 }
 
 /**

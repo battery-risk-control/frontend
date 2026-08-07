@@ -4,7 +4,7 @@
 // 클라이언트 쪽 라우트 접근 제어(app/routes.tsx RequireAuth)는 UX 안내일 뿐
 // 실제 보안 경계가 아니며, 진짜 접근 통제는 백엔드 토큰 검증이 맡는다. (CLAUDE.md 참고)
 
-import { fetchJson } from './http'
+import { fetchJson, type FetchJsonError } from './http'
 import type { LoginFormValues, LoginResponse, OrgTier, SignupFormValues, SignupRequest, SignupResponse } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
@@ -44,8 +44,11 @@ function signupMock(values: SignupFormValues): SignupResponse {
 
 interface LoginApiData {
   access_token: string
+  /** access token 만료까지 남은 초. */
+  expires_in: number
   org_tier: OrgTier
   status: 'APPROVED'
+  // refresh_token은 HttpOnly 쿠키로만 오므로 body에 없다(JS 노출 차단).
 }
 
 async function loginApi(values: LoginFormValues): Promise<LoginResponse> {
@@ -61,7 +64,53 @@ async function loginApi(values: LoginFormValues): Promise<LoginResponse> {
     // 호출부(AuthPage)가 try/catch로 받아 안내 문구를 보여준다.
     throw new Error(result.message)
   }
-  return { access_token: result.access_token, org_tier: result.org_tier, status: result.status }
+  return {
+    access_token: result.access_token,
+    expires_in: result.expires_in,
+    org_tier: result.org_tier,
+    status: result.status,
+  }
+}
+
+/** POST /api/v1/auth/refresh 응답 데이터. 백엔드는 refresh 토큰을 회전하지 않고 access token만 새로 준다. */
+export interface RefreshResult {
+  access_token: string
+  /** 새 access token 만료까지 남은 초. */
+  expires_in?: number
+}
+
+/**
+ * 새 access token을 발급받는다. **refresh 토큰은 HttpOnly 쿠키가 실어 보내므로 인자·body가 없다**
+ * (credentials:'include'로 쿠키가 자동 전송됨). 쿠키가 없거나 만료면 실패 봉투가 온다. 호출·단일 진행·
+ * 로그아웃 처리는 {@link ../lib/authSession}가 맡고, 여기서는 순수 API 호출만 한다.
+ */
+export function requestTokenRefresh(): Promise<RefreshResult | FetchJsonError> {
+  return fetchJson<RefreshResult>('/api/v1/auth/refresh', { method: 'POST' })
+}
+
+/**
+ * 로그아웃. 서버가 세션을 블랙리스트하고 **refresh 쿠키를 만료**시킨다 — 이걸 호출하지 않으면
+ * 로그아웃 후 새로고침 때 부트스트랩이 남은 쿠키로 세션을 되살린다. best-effort로 부른다.
+ */
+export function logoutApi(accessToken: string): Promise<unknown | FetchJsonError> {
+  return fetchJson<unknown>('/api/v1/auth/logout', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+}
+
+/** GET /api/v1/auth/me 응답 중 세션 복원에 필요한 필드. */
+export interface AuthMe {
+  org_tier: OrgTier
+  email: string
+  status: string
+}
+
+/** 새로 발급받은 access token으로 내 정보를 조회한다. 부트스트랩(F5 후 세션 복원)에서 org_tier·email 복원용. */
+export function fetchMe(accessToken: string): Promise<AuthMe | FetchJsonError> {
+  return fetchJson<AuthMe>('/api/v1/auth/me', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
 }
 
 interface SignupApiData {

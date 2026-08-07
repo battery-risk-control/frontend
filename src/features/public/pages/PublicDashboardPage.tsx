@@ -207,6 +207,9 @@ export function PublicDashboardPage() {
   const [reloadKey] = useState(0)
   const [supplierOverview, setSupplierOverview] = useState<SupplierOverview | null>(null)
   const [materials, setMaterials] = useState<MaterialRiskItem[]>([])
+  // 헤더 "기준" 칩의 최종 갱신 시각. 원자재 위험 개요의 summary.as_of(계산 시점 실제 시각)를 쓴다.
+  // 이 개요 조회가 liveRefreshKey(60초·포커스)에 물려 있어 칩도 함께 갱신된다.
+  const [materialAsOf, setMaterialAsOf] = useState<string | null>(null)
   const [monitoringEvents, setMonitoringEvents] = useState<RiskMonitoringEvent[]>([])
   const [briefings, setBriefings] = useState<AiBriefingListItem[]>([])
   /** 완료 처리 항목 — 되돌리기 목록. 완료/되돌리기 어느 쪽이든 reloadKey로 함께 다시 부른다. */
@@ -395,7 +398,9 @@ export function PublicDashboardPage() {
       })
     fetchMaterialRiskOverview(accessToken)
       .then((overview) => {
-        if (!cancelled) setMaterials(overview.materials)
+        if (cancelled) return
+        setMaterials(overview.materials)
+        setMaterialAsOf(overview.summary.as_of)
       })
       .catch((err) => {
         console.error('자재별 위험 조회 실패', err)
@@ -541,7 +546,7 @@ export function PublicDashboardPage() {
         <SideNav items={PUBLIC_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           {/* ── 목업에 있는 구성 (위) ─────────────────────────────── */}
-          <PurchasingDashboardHeader asOfDate={exchangeRates.rate_date} />
+          <PurchasingDashboardHeader asOf={materialAsOf} />
           <PurchasingKpiRow kpi={kpi} isLoading={kpiLoading} />
           <LiveNewsMarquee items={marqueeItems.slice(0, MARQUEE_COUNT)} rates={exchangeRates.rates} />
           {riskBoardLoading ? (

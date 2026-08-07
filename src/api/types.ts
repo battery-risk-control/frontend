@@ -78,6 +78,8 @@ export interface LoginFormValues extends LoginRequest {
 
 export interface LoginSuccessResponse {
   access_token: string
+  /** access token 만료까지 남은 초. mock에는 없어 optional. refresh_token은 HttpOnly 쿠키라 body에 없다. */
+  expires_in?: number
   org_tier: OrgTier
   status: 'APPROVED'
 }

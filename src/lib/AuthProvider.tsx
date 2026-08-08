@@ -57,7 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!('error' in me)) {
           startSession({ accessToken: refreshed.access_token, expiresInSeconds: refreshed.expires_in })
           setOrgTier(me.org_tier)
-          setEmail(me.email)
+          // 헤더 표시는 로그인 계정 아이디(username)를 쓴다 — 개인 email(gmail) 노출을 피한다.
+          // (로그인 직후 경로도 AuthPage에서 입력한 아이디를 넣으므로 F5 전후 표시가 일치한다.)
+          setEmail(me.username)
           setAccessToken(refreshed.access_token)
         }
       }

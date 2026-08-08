@@ -102,6 +102,8 @@ export function logoutApi(accessToken: string): Promise<unknown | FetchJsonError
 /** GET /api/v1/auth/me 응답 중 세션 복원에 필요한 필드. */
 export interface AuthMe {
   org_tier: OrgTier
+  /** 로그인 계정 아이디. 헤더 표시는 개인 email 노출을 피해 이 값을 쓴다. */
+  username: string
   email: string
   status: string
 }

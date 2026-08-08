@@ -1,6 +1,7 @@
 import type {
   ExecutiveOverviewResponse,
 } from '../../../api/executive.types'
+import { Skeleton } from '../../../components/ui/Skeleton/Skeleton'
 import styles from './ExecutiveSummaryPanel.module.css'
 
 interface ExecutiveSummaryPanelProps {
@@ -24,9 +25,22 @@ export function ExecutiveSummaryPanel({
       </div>
 
       {loading && (
-        <p className={styles.empty}>
-          데이터를 조회하고 있습니다.
-        </p>
+        <div
+          className={styles.content}
+          aria-busy="true"
+          aria-label="경영 요약 불러오는 중"
+        >
+          {Array.from({ length: 5 }, (_, index) => (
+            <div key={index} className={styles.item}>
+              <span>
+                <Skeleton width="72px" />
+              </span>
+              <strong>
+                <Skeleton variant="title" width="40px" />
+              </strong>
+            </div>
+          ))}
+        </div>
       )}
 
       {!loading &&

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { AiBriefingDetail } from '../../../api/types'
 import { ExecutivePageLayout } from '../components/ExecutivePageLayout'
 import { ExecutiveEvidencePanel, type EvidenceTab } from '../components/ExecutiveEvidencePanel'
+import { ExecutiveSectionSkeleton } from '../components/ExecutiveSectionSkeleton'
 import { useExecutiveDashboard } from '../useExecutiveDashboard'
 import { useExecutiveEvidence } from '../useExecutiveEvidence'
 import styles from '../components/ExecutiveDashboardSections.module.css'
@@ -39,7 +40,12 @@ export function ExecutiveVerificationPage() {
       detailKey={selected ? `${selected.briefing_id}:${tab}` : null}
       aside={<ExecutiveEvidencePanel item={selected ?? filtered[0] ?? null} tab={tab} onTabChange={setTab} />}
     >
-      {(loading || evidence.loading) && <Message>검증 결과와 상세 근거를 조회하고 있습니다.</Message>}
+      {(loading || evidence.loading) && (
+        <>
+          <ExecutiveSectionSkeleton variant="verificationGrid" rows={6} />
+          <ExecutiveSectionSkeleton variant="list" rows={4} />
+        </>
+      )}
       {!loading && errorMessage && <Message>{errorMessage}</Message>}
       {!evidence.loading && evidence.errorMessage && <Message>{evidence.errorMessage}</Message>}
 

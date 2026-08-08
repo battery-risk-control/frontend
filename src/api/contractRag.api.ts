@@ -56,17 +56,29 @@ export async function fetchContracts(
   ))
 }
 
+/** 검색 범위. ALL=매입·납품 전체, INBOUND=원자재 매입만, OUTBOUND=제품 납품만. */
+export type ContractSearchKind = 'ALL' | 'INBOUND' | 'OUTBOUND'
+
 /**
- * 조항 검색. `contractId`를 비우면 **전체 계약**을 훑고, 주면 그 계약으로 좁힌다.
- * 응답의 `scope`로 어느 쪽이 실행됐는지 알 수 있다.
+ * 조항 검색. 필터를 아무것도 안 주면 **전체 계약(매입·납품)**을 훑는다.
+ * - `kind`로 매입/납품만으로 범위를 좁힐 수 있다.
+ * - 특정 매입계약은 `contractId`로, 특정 납품계약은 `productId`+`customerId`로 콕 집는다
+ *   (납품계약 contract_id는 매입계약과 번호가 겹쳐 단독으로는 특정할 수 없다).
+ * 응답의 `scope`로 전체였는지 좁힌 검색이었는지 알 수 있다.
  *
  * 사용 예:
- *   const result = await searchClauses(accessToken, '납기 지연과 공급 중단 시 적용되는 계약 조항')
+ *   const result = await searchClauses(accessToken, '납기 지연 배상', { kind: 'OUTBOUND' })
  */
 export async function searchClauses(
   accessToken: string,
   query: string,
-  options: { contractId?: number | null; topK?: number } = {},
+  options: {
+    kind?: ContractSearchKind
+    contractId?: number | null
+    productId?: number | null
+    customerId?: number | null
+    topK?: number
+  } = {},
 ): Promise<ContractClauseSearchResult> {
   return unwrap(await fetchWithAuth<ContractClauseSearchResult>(
     '/api/v1/contract-rag/search',
@@ -75,7 +87,10 @@ export async function searchClauses(
       method: 'POST',
       body: JSON.stringify({
         query,
+        kind: options.kind ?? 'ALL',
         contract_id: options.contractId ?? null,
+        product_id: options.productId ?? null,
+        customer_id: options.customerId ?? null,
         top_k: options.topK ?? 5,
       }),
     },
@@ -94,6 +109,23 @@ export async function fetchContractDetail(
 ): Promise<ContractDetail> {
   return unwrap(await fetchWithAuth<ContractDetail>(
     `/api/v1/contract-rag/contracts/${contractId}`,
+    accessToken,
+  ))
+}
+
+/**
+ * 아웃바운드(제품 납품) 계약 문서 상세. 인바운드와 계약 PK가 겹쳐 경로를 분리한다.
+ * 납품계약은 AI 브리핑 대상이 아니라 briefing_available은 항상 false로 온다.
+ *
+ * 사용 예:
+ *   const detail = await fetchOutboundContractDetail(accessToken, 2)
+ */
+export async function fetchOutboundContractDetail(
+  accessToken: string,
+  outboundContractId: number,
+): Promise<ContractDetail> {
+  return unwrap(await fetchWithAuth<ContractDetail>(
+    `/api/v1/contract-rag/outbound-contracts/${outboundContractId}`,
     accessToken,
   ))
 }

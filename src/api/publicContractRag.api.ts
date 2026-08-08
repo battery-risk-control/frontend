@@ -49,6 +49,13 @@ const MOCK_CONTRACT: ContractSummary = {
   material_category: 'COBALT',
   document_count: 1,
   indexed_chunk_count: 7,
+  kind: 'INBOUND',
+  product_id: null,
+  erp_product_id: null,
+  product_name: null,
+  customer_id: null,
+  erp_customer_id: null,
+  customer_name: null,
 }
 
 const MOCK_CONTRACT_DETAIL: ContractDetail = {
@@ -142,24 +149,38 @@ export async function fetchContracts(
   )
 }
 
+/** 검색 범위. ALL=매입·납품 전체, INBOUND=원자재 매입만, OUTBOUND=제품 납품만. */
+export type ContractSearchKind = 'ALL' | 'INBOUND' | 'OUTBOUND'
+
 /**
- * 조항 검색. `contractId`를 비우면 전체 계약을 훑고, 주면 그 계약으로 좁힌다.
+ * 조항 검색. 필터를 안 주면 전체 계약(매입·납품)을 훑는다.
+ * - `kind`로 매입/납품만으로 좁히고,
+ * - 특정 매입계약은 `contractId`, 특정 납품계약은 `productId`+`customerId`로 콕 집는다.
  *
  * 사용 예:
- *   const result = await searchClauses(accessToken, '납기 지연과 공급 중단 시 적용되는 계약 조항')
+ *   const result = await searchClauses(accessToken, '납기 지연 배상', { kind: 'OUTBOUND' })
  */
 export async function searchClauses(
   accessToken: string | null,
   query: string,
-  options: { contractId?: number | null; topK?: number } = {},
+  options: {
+    kind?: ContractSearchKind
+    contractId?: number | null
+    productId?: number | null
+    customerId?: number | null
+    topK?: number
+  } = {},
 ): Promise<ContractClauseSearchResult> {
   if (!API_BASE_URL) {
-    const results = options.contractId
-      ? MOCK_CLAUSE_HITS.filter((hit) => hit.contract?.contract_id === options.contractId)
-      : MOCK_CLAUSE_HITS
+    // mock 원천은 매입계약(CTR-010) 하나뿐이라, 납품(OUTBOUND)만 고르면 빈 결과가 정확하다.
+    const results = options.kind === 'OUTBOUND'
+      ? []
+      : options.contractId
+        ? MOCK_CLAUSE_HITS.filter((hit) => hit.contract?.contract_id === options.contractId)
+        : MOCK_CLAUSE_HITS
     return {
       query,
-      scope: options.contractId ? 'filtered' : 'all',
+      scope: options.contractId || (options.kind && options.kind !== 'ALL') ? 'filtered' : 'all',
       contract_id: options.contractId ?? null,
       result_count: results.length,
       mock: true,
@@ -173,7 +194,10 @@ export async function searchClauses(
       method: 'POST',
       body: JSON.stringify({
         query,
+        kind: options.kind ?? 'ALL',
         contract_id: options.contractId ?? null,
+        product_id: options.productId ?? null,
+        customer_id: options.customerId ?? null,
         top_k: options.topK ?? 5,
       }),
     }),
@@ -198,6 +222,25 @@ export async function fetchContractDetail(
   }
   return unwrap(
     await fetchWithAuth<ContractDetail>(`/api/v1/contract-rag/contracts/${contractId}`, accessToken ?? ''),
+  )
+}
+
+/**
+ * 아웃바운드(제품 납품) 계약 문서 상세. 인바운드와 계약 PK가 겹쳐 경로를 분리한다.
+ * mock 모드에는 납품계약 원천이 없어 지원하지 않는다(목록에도 안 나오므로 실제로 불릴 일 없다).
+ */
+export async function fetchOutboundContractDetail(
+  accessToken: string | null,
+  outboundContractId: number,
+): Promise<ContractDetail> {
+  if (!API_BASE_URL) {
+    throw new Error('납품계약 상세는 준비 중입니다.')
+  }
+  return unwrap(
+    await fetchWithAuth<ContractDetail>(
+      `/api/v1/contract-rag/outbound-contracts/${outboundContractId}`,
+      accessToken ?? '',
+    ),
   )
 }
 

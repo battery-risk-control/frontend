@@ -1,6 +1,7 @@
 import type {
   ExecutiveKpi,
 } from '../../../api/executive.types'
+import { Skeleton } from '../../../components/ui/Skeleton/Skeleton'
 import styles from './ExecutiveKpiPanel.module.css'
 
 interface ExecutiveKpiPanelProps {
@@ -68,6 +69,33 @@ export function ExecutiveKpiPanel({
               }
             >
               {item.value}
+            </strong>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/**
+ * 로딩 자리표시자. 실제 패널과 같은 `.panel/.grid/.card`(auto-fit)를 재사용해 타일 5개(실제 KPI와
+ * 동수)를 그린다 — 폭·간격·개수가 일치해 도착 시 레이아웃이 튀지 않는다.
+ */
+export function ExecutiveKpiPanelSkeleton() {
+  return (
+    <section
+      className={styles.panel}
+      aria-busy="true"
+      aria-label="핵심 위험 요약 불러오는 중"
+    >
+      <div className={styles.grid}>
+        {Array.from({ length: 5 }, (_, index) => (
+          <article key={index} className={styles.card}>
+            <span className={styles.label}>
+              <Skeleton width="60%" />
+            </span>
+            <strong>
+              <Skeleton variant="title" width="45%" />
             </strong>
           </article>
         ))}

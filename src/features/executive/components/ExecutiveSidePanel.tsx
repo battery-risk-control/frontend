@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useExecutiveEvidence } from '../useExecutiveEvidence'
+import { Skeleton } from '../../../components/ui/Skeleton/Skeleton'
 import styles from './ExecutiveSidePanel.module.css'
 
 type Tab = 'detail' | 'alerts' | 'briefings'
@@ -45,7 +46,16 @@ export function ExecutiveSidePanel({ detail, alertCount, requestedTab = 'detail'
         {activeTab === 'briefings' && (
           <div className={styles.listSection}>
             <div className={styles.panelHead}><h2>최근 브리핑</h2><Link to="/executive/briefings">전체 보기</Link></div>
-            {evidence.loading ? <p className={styles.empty}>브리핑을 불러오는 중입니다.</p> : evidence.items.length === 0 ? (
+            {evidence.loading ? (
+              <div className={styles.listSection} aria-busy="true" aria-label="브리핑 불러오는 중">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <div key={index} className={styles.briefing}>
+                    <Skeleton width="80%" />
+                    <Skeleton width="45%" />
+                  </div>
+                ))}
+              </div>
+            ) : evidence.items.length === 0 ? (
               <p className={styles.empty}>저장된 브리핑이 없습니다.</p>
             ) : evidence.items.slice(0, 5).map((item) => (
               <Link key={item.briefing_id} className={styles.briefing} to="/executive/briefings">

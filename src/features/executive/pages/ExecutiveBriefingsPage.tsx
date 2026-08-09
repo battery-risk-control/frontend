@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { AiBriefingDetail } from '../../../api/types'
 import { ExecutivePageLayout } from '../components/ExecutivePageLayout'
 import { ExecutiveEvidencePanel, type EvidenceTab } from '../components/ExecutiveEvidencePanel'
+import { ExecutiveSectionSkeleton } from '../components/ExecutiveSectionSkeleton'
 import { useExecutiveDashboard } from '../useExecutiveDashboard'
 import { useExecutiveEvidence } from '../useExecutiveEvidence'
 import styles from '../components/ExecutiveDashboardSections.module.css'
@@ -20,7 +21,7 @@ export function ExecutiveBriefingsPage() {
       detailKey={selected?.briefing_id ?? null}
       aside={<ExecutiveEvidencePanel item={selected ?? evidence.items[0] ?? null} tab={tab} onTabChange={setTab} />}
     >
-      {(loading || evidence.loading) && <Message>AI 브리핑을 조회하고 있습니다.</Message>}
+      {(loading || evidence.loading) && <ExecutiveSectionSkeleton variant="list" rows={5} />}
       {!loading && errorMessage && <Message>{errorMessage}</Message>}
       {!evidence.loading && evidence.errorMessage && <Message>{evidence.errorMessage}</Message>}
       {!evidence.loading && !evidence.errorMessage && (

@@ -26,7 +26,7 @@ export function useExecutiveEvidence() {
           page.content.map((item) => fetchAiBriefing(accessToken, item.briefing_id)),
         )
         if (active) {
-          setItems(details)
+          setItems([...details].sort(compareBriefings))
           setErrorMessage(null)
         }
       } catch (error) {
@@ -45,4 +45,12 @@ export function useExecutiveEvidence() {
   }, [accessToken])
 
   return { items, loading, errorMessage }
+}
+
+/** 경영진 화면은 최근 생성 순서보다 종합 위험 점수가 높은 검증 결과를 먼저 보여준다. */
+function compareBriefings(left: AiBriefingDetail, right: AiBriefingDetail) {
+  const scoreDifference = right.procurement_risk_score - left.procurement_risk_score
+  if (scoreDifference !== 0) return scoreDifference
+
+  return Date.parse(right.created_at) - Date.parse(left.created_at)
 }

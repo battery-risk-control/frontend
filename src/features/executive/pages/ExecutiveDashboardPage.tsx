@@ -1,6 +1,7 @@
 import {
   useState,
 } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { AiBriefingDetail, NewsFeedItem, SelectedArticle } from '../../../api/types'
 import { useEffect } from 'react'
 import { fetchPublicNewsFeed } from '../../../api/public.api'
@@ -35,6 +36,7 @@ import styles from './ExecutiveDashboardPage.module.css'
 const MAP_HEIGHT = 220
 
 export function ExecutiveDashboardPage() {
+  const navigate = useNavigate()
   const liveRefreshKey = useLiveRefresh()
   const {
     dashboard,
@@ -54,10 +56,20 @@ export function ExecutiveDashboardPage() {
   const [news, setNews] = useState<NewsFeedItem[]>([])
   const [newsLoading, setNewsLoading] = useState(true)
   const [selectedNews, setSelectedNews] = useState<SelectedArticle | null>(null)
+  const priorityBriefing = evidence.items.find(
+    (item) => item.composite && item.verification.review_passed === true,
+  ) ?? evidence.items.find((item) => item.composite)
+  const selectedEvidenceNews = selectedEvidence
+    ? news.find((item) => (
+        item.risk_event_id === selectedEvidence.news_id
+        || String(item.event_id ?? '') === selectedEvidence.news_id
+        || item.headline_original === selectedEvidence.source_headline
+      ))
+    : undefined
 
   useEffect(() => {
     let active = true
-    fetchPublicNewsFeed(5, 0)
+    fetchPublicNewsFeed(50, 0)
       .then((items) => { if (active) setNews(items) })
       .finally(() => { if (active) setNewsLoading(false) })
     return () => { active = false }
@@ -83,7 +95,7 @@ export function ExecutiveDashboardPage() {
       }
       detailKey={selectedNews?.id ?? selectedEvidence?.briefing_id ?? selectedDetail?.label ?? null}
       aside={
-        selectedNews ? <ExecutiveNewsDetail article={selectedNews} /> : selectedEvidence ? <ExecutiveEvidencePanel item={selectedEvidence} tab={evidenceTab} onTabChange={setEvidenceTab} /> : <ExecutiveRiskDetailPanel
+        selectedNews ? <ExecutiveNewsDetail article={selectedNews} /> : selectedEvidence ? <ExecutiveEvidencePanel item={selectedEvidence} tab={evidenceTab} onTabChange={setEvidenceTab} sourceUrl={selectedEvidenceNews?.url} /> : <ExecutiveRiskDetailPanel
           selectedDetail={
             selectedDetail
           }
@@ -119,15 +131,22 @@ export function ExecutiveDashboardPage() {
           <>
             <ExecutiveKpiPanel
               kpi={dashboard.kpi}
+              topRiskScore={priorityBriefing?.procurement_risk_score ?? dashboard.top_risks[0]?.score}
             />
 
             <ExecutivePriorityAlert
               risk={dashboard.top_risks[0]}
+              briefing={priorityBriefing}
+              topCountry={dashboard.country_dependency[0]}
+              alternativeSupplierCount={dashboard.alternative_suppliers.length}
               reviewRequiredCount={
                 dashboard.verification_summary
                   .review_required_count
               }
-              onClick={() => openEvidence(evidence.items[0])}
+              onOpenBriefing={() => openEvidence(priorityBriefing)}
+              onOpenAlternatives={() => navigate('/executive/supply-chain')}
+              onOpenReview={() => navigate('/executive/verification')}
+              onOpenDecision={() => openEvidence(priorityBriefing)}
             />
 
             <section
@@ -154,7 +173,7 @@ export function ExecutiveDashboardPage() {
             </section>
 
             <LatestNewsPanel
-              items={news}
+              items={news.slice(0, 5)}
               isLoading={newsLoading}
               selectedId={selectedNews?.id}
               onSelect={(item) => {
@@ -164,7 +183,7 @@ export function ExecutiveDashboardPage() {
               }}
               page={0}
               pageSize={5}
-              total={news.length}
+              total={Math.min(news.length, 5)}
               onPageChange={() => undefined}
             />
           </>

@@ -16,7 +16,16 @@ export function ExecutiveNewsDetail({ article }: { article: SelectedArticle }) {
           <div><dt>판정 신뢰도</dt><dd>{article.confidence_label}</dd></div>
         </dl>
         {article.headline_original && article.headline_original !== article.headline && <><h3>원문 제목</h3><p>{article.headline_original}</p></>}
-        {article.url && <p><a href={article.url} target="_blank" rel="noopener noreferrer">기사 원문 열기 ↗</a></p>}
+        {article.url && (
+          <a
+            className={styles.primaryAction}
+            href={article.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            기사 원문 열기 ↗
+          </a>
+        )}
       </div>
     </aside>
   )

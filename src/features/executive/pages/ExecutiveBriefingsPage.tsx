@@ -11,6 +11,7 @@ export function ExecutiveBriefingsPage() {
   const evidence = useExecutiveEvidence()
   const [selected, setSelected] = useState<AiBriefingDetail | null>(null)
   const [tab, setTab] = useState<EvidenceTab>('summary')
+  const selectedItem = selected ?? evidence.items[0] ?? null
 
   return (
     <ExecutivePageLayout
@@ -18,7 +19,7 @@ export function ExecutiveBriefingsPage() {
       description="구매 위험의 영향, 근거와 권고 조치를 경영진 관점에서 확인합니다."
       alertCount={dashboard?.verification_summary.review_required_count ?? 0}
       detailKey={selected?.briefing_id ?? null}
-      aside={<ExecutiveEvidencePanel item={selected ?? evidence.items[0] ?? null} tab={tab} onTabChange={setTab} />}
+      aside={<ExecutiveEvidencePanel item={selectedItem} tab={tab} onTabChange={setTab} />}
     >
       {(loading || evidence.loading) && <Message>AI 브리핑을 조회하고 있습니다.</Message>}
       {!loading && errorMessage && <Message>{errorMessage}</Message>}
@@ -32,12 +33,26 @@ export function ExecutiveBriefingsPage() {
           {evidence.items.length === 0 ? <Message>아직 생성된 AI 브리핑이 없습니다.</Message> : (
             <div className={styles.briefingList}>
               {evidence.items.map((item) => (
-                <button key={item.briefing_id} type="button" className={styles.briefingItem} onClick={() => { setSelected(item); setTab('summary') }}>
-                  <div>
-                    <span className={styles[levelTone(item.procurement_risk_level)]}>{levelLabel(item.procurement_risk_level)}</span>
+                <button
+                  key={item.briefing_id}
+                  type="button"
+                  className={item.briefing_id === selectedItem?.briefing_id
+                    ? `${styles.briefingItem} ${styles.briefingItemSelected}`
+                    : styles.briefingItem}
+                  aria-pressed={item.briefing_id === selectedItem?.briefing_id}
+                  onClick={() => { setSelected(item); setTab('summary') }}
+                >
+                  <div className={styles.briefingBody}>
+                    <div className={styles.briefingTopline}>
+                      <span className={styles[levelTone(item.procurement_risk_level)]}>{levelLabel(item.procurement_risk_level)}</span>
+                      <span className={item.verification.review_passed ? styles.verified : styles.reviewRequired}>
+                        {item.verification.review_passed ? '검증 통과' : '검토 필요'}
+                      </span>
+                    </div>
                     <strong>{item.subject_title ?? item.source_headline ?? item.material_name ?? '공급망 위험 브리핑'}</strong>
+                    <p>{item.material_name ?? item.material_category ?? '원자재'} 관련 공급망 영향 브리핑</p>
                   </div>
-                  <p>{item.material_name ?? item.material_category ?? '원자재'} · {item.procurement_risk_score.toFixed(0)}점 · {item.verification.review_passed ? '검증 통과' : '검토 필요'}</p>
+                  <span className={styles.briefingScore}>{item.procurement_risk_score.toFixed(0)}점</span>
                 </button>
               ))}
             </div>

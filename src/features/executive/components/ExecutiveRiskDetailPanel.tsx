@@ -110,6 +110,17 @@ export function ExecutiveRiskDetailPanel({
                       </dd>
                     </div>
                   </dl>
+
+                  {event.source_url && (
+                    <a
+                      className={styles.primaryAction}
+                      href={event.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      기사 원문 열기 ↗
+                    </a>
+                  )}
                 </article>
               ),
             )}

@@ -795,12 +795,10 @@ function RecentPanel({
             >
               <span className={styles.recentTitle}>{item.subject_title ?? item.news_id}</span>
               <span className={styles.recentMeta}>
-                {/* 조기 종료는 미완이 아니라 결론이다 — "평가 미완료"는 아직 안 끝났다는
-                    뉘앙스라 틀렸다. */}
-                <span className={levelClass(item.composite ? item.procurement_risk_level : '')}>
-                  {item.composite
-                    ? `${item.procurement_risk_level} · ${Math.round(item.procurement_risk_score)}`
-                    : '점수 미산출'}
+                {/* 조기 종료(composite=false)도 응답 원값 그대로 표시 — level·score가 NORMAL·0으로
+                    실려오므로 "NORMAL · 0"으로 뜬다(색은 level 기준). */}
+                <span className={levelClass(item.procurement_risk_level)}>
+                  {`${item.procurement_risk_level} · ${Math.round(item.procurement_risk_score)}`}
                 </span>
                 {item.review_passed !== null && ` · ${item.review_passed ? '검증 통과' : '검증 실패'}`}
               </span>

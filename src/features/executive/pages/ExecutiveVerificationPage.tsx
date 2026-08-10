@@ -24,6 +24,9 @@ export function ExecutiveVerificationPage() {
     if (filter === 'llm') return Boolean(item.verification.llm_error) || item.verification.warnings.length > 0
     return true
   }), [evidence.items, filter])
+  const selectedItem = selected && filtered.some((item) => item.briefing_id === selected.briefing_id)
+    ? selected
+    : filtered[0] ?? null
 
   function choose(item: AiBriefingDetail, nextTab: EvidenceTab = 'verification') {
     setSelected(item)
@@ -38,7 +41,7 @@ export function ExecutiveVerificationPage() {
       description="ERP와 계약 RAG 근거가 최종 위험 판단에 올바르게 반영됐는지 확인합니다."
       alertCount={summary?.review_required_count ?? 0}
       detailKey={selected ? `${selected.briefing_id}:${tab}` : null}
-      aside={<ExecutiveEvidencePanel item={selected ?? filtered[0] ?? null} tab={tab} onTabChange={setTab} />}
+      aside={<ExecutiveEvidencePanel item={selectedItem} tab={tab} onTabChange={setTab} />}
     >
       {(loading || evidence.loading) && (
         <>
@@ -71,7 +74,15 @@ export function ExecutiveVerificationPage() {
             {filtered.length === 0 ? <Message>선택한 조건에 해당하는 검증 대상이 없습니다.</Message> : (
               <div className={styles.list}>
                 {filtered.map((item) => (
-                  <button key={item.briefing_id} type="button" className={styles.listItem} onClick={() => choose(item)}>
+                  <button
+                    key={item.briefing_id}
+                    type="button"
+                    className={item.briefing_id === selectedItem?.briefing_id
+                      ? `${styles.listItem} ${styles.briefingItemSelected}`
+                      : styles.listItem}
+                    aria-pressed={item.briefing_id === selectedItem?.briefing_id}
+                    onClick={() => choose(item)}
+                  >
                     <div>
                       <strong>{item.subject_title ?? item.source_headline ?? item.material_name ?? '공급망 위험 분석'}</strong>
                       <span>{item.material_name ?? item.material_category ?? '원자재'} · 위험 {item.procurement_risk_score.toFixed(0)}점</span>

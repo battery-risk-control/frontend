@@ -6,6 +6,7 @@ import styles from './ExecutiveKpiPanel.module.css'
 
 interface ExecutiveKpiPanelProps {
   kpi: ExecutiveKpi
+  topRiskScore?: number
 }
 
 interface KpiItem {
@@ -16,6 +17,7 @@ interface KpiItem {
 
 export function ExecutiveKpiPanel({
   kpi,
+  topRiskScore,
 }: ExecutiveKpiPanelProps) {
   const items: KpiItem[] = [
     {
@@ -29,9 +31,9 @@ export function ExecutiveKpiPanel({
       tone: 'warning',
     },
     {
-      label: '평균 위험 점수',
+      label: topRiskScore == null ? '평균 위험 점수' : '최고 위험 점수',
       value:
-        `${kpi.average_risk_score.toFixed(1)}점`,
+        `${(topRiskScore ?? kpi.average_risk_score).toFixed(1)}점`,
       tone: 'primary',
     },
     {

@@ -188,6 +188,24 @@
   word-break: break-all;
 }
 
+.primaryAction {
+  display: block;
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+  text-decoration: none;
+}
+
+.primaryAction:hover,
+.primaryAction:focus-visible {
+  opacity: 0.9;
+}
+
 @media (max-width: 1180px) {
   .panel {
     position: static;

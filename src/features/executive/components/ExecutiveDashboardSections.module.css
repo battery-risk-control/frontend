@@ -239,6 +239,48 @@
   font-size: 12px;
 }
 
+.briefingItemSelected {
+  border-color: #173b67;
+  background: #f4f8fc;
+  box-shadow: inset 3px 0 0 #173b67;
+}
+
+.briefingBody {
+  display: flex !important;
+  align-items: stretch !important;
+  flex-direction: column !important;
+  gap: var(--space-2) !important;
+}
+
+.briefingTopline {
+  display: flex !important;
+  align-items: center !important;
+  flex-direction: row !important;
+  gap: var(--space-2) !important;
+}
+
+.verified,
+.reviewRequired {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.verified { background: #ccfbf1; color: #0f766e; }
+.reviewRequired { background: #fff3cd; color: #9a6700; }
+
+.briefingScore {
+  flex: 0 0 auto;
+  color: #1557b0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
 .briefingItem div {
   flex-direction: row;
   align-items: center;

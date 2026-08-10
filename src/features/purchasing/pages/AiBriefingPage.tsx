@@ -30,6 +30,46 @@ import styles from './AiBriefingPage.module.css'
 const SOURCES: AiBriefingSource[] = ['NEWS', 'MATERIAL', 'CONTRACT']
 
 /**
+ * LLM 브리핑 생성 요청은 CloudFront 제한 시간보다 오래 걸릴 수 있다.
+ * 브라우저 요청이 504로 종료되더라도 백엔드는 브리핑 생성과 저장을 계속하므로,
+ * 5초마다 context API를 조회하여 새로운 브리핑 ID가 만들어졌는지 확인한다.
+ */
+const BRIEFING_POLL_INTERVAL_MS = 5_000
+
+/**
+ * 실제 장애가 발생했을 때 화면이 영원히 "실행 중" 상태로 남지 않도록
+ * 최대 대기 시간을 10분으로 제한한다.
+ */
+const BRIEFING_POLL_TIMEOUT_MS = 10 * 60 * 1_000
+
+/** 지정한 시간만큼 비동기로 기다린다. 브리핑 상태 폴링 간격에 사용한다. */
+function sleep(milliseconds: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, milliseconds)
+  })
+}
+
+/**
+ * LLM 생성 자체의 실패가 아니라 CloudFront/ALB 응답 제한 때문에 발생한
+ * 타임아웃인지 판별한다. 이 오류는 화면에 표시하지 않고 상태 조회로 전환한다.
+ */
+function isUpstreamTimeout(error: unknown) {
+  const message = error instanceof Error
+    ? error.message
+    : String(error)
+
+  return (
+    message.includes('upstream request timeout') ||
+    message.includes('Gateway Timeout') ||
+    message.includes('HTTP 504') ||
+    (
+      message.includes("Unexpected token 'u'") &&
+      message.includes('not valid JSON')
+    )
+  )
+}
+
+/**
  * "최근 브리핑" 한 페이지 건수. 예전에는 50건을 한 번에 받아 세로로 쌓았는데, 브리핑이 쌓일수록
  * 패널이 끝없이 길어져 우측 "분석 근거"가 화면 밖으로 밀렸다. 최신 뉴스와 같은 좌우 화살표
  * 방식으로 바꾸면서 한 화면에 들어가는 만큼만 받는다.
@@ -269,7 +309,62 @@ export function AiBriefingPage() {
 
   const refreshRecent = useCallback(() => setRecentToken((previous) => previous + 1), [])
 
-  async function handleGenerate() {
+  /**
+   * 생성 요청이 CloudFront에서 시간 초과된 뒤에도 백엔드는 작업을 계속할 수 있다.
+   * 생성 버튼을 누르기 전에 존재했던 briefing ID와 context API가 반환하는 최신 ID를
+   * 비교하고, 새로운 ID가 확인되면 완성된 브리핑 상세를 조회한다.
+   */
+  async function waitForGeneratedBriefing(
+    previousBriefingId: string | null,
+  ): Promise<AiBriefingDetail> {
+    if (!accessToken || !source || !ref) {
+      throw new Error('브리핑 생성 정보를 확인할 수 없습니다.')
+    }
+
+    const deadline = Date.now() + BRIEFING_POLL_TIMEOUT_MS
+
+    while (Date.now() < deadline) {
+      // 백엔드에 과도한 요청을 보내지 않도록 5초마다 조회한다.
+      await sleep(BRIEFING_POLL_INTERVAL_MS)
+
+      try {
+        const nextContext = await fetchAiBriefingContext(
+          accessToken,
+          source,
+          ref,
+        )
+
+        const nextBriefingId = nextContext.latest_briefing_id
+
+        // 생성 전 ID와 다른 새 브리핑 ID가 생기면 생성이 완료된 것이다.
+        if (
+          nextBriefingId &&
+          nextBriefingId !== previousBriefingId
+        ) {
+          return fetchAiBriefing(
+            accessToken,
+            nextBriefingId,
+          )
+        }
+      } catch (error) {
+        /*
+         * 일시적인 네트워크 오류로 context 조회 한 번이 실패하더라도
+         * 전체 생성을 실패 처리하지 않고 다음 조회 주기까지 기다린다.
+         * 최종적으로 10분을 넘기면 아래의 안내 오류를 표시한다.
+         */
+        console.warn(
+          '브리핑 생성 상태를 다시 확인합니다.',
+          error,
+        )
+      }
+    }
+
+    throw new Error(
+      '브리핑 생성 시간이 길어지고 있습니다. 잠시 후 최근 브리핑에서 확인해 주세요.',
+    )
+  }
+
+  /* async function handleGenerate() {
     if (!accessToken || !source || !ref) return
     setIsGenerating(true)
     setActionError(null)
@@ -286,6 +381,94 @@ export function AiBriefingPage() {
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'AI 브리핑 생성에 실패했습니다.')
     } finally {
+      setIsGenerating(false)
+    }
+  } */
+
+  /**
+   * LLM 브리핑 생성을 시작한다.
+   *
+   * 정상 시간 안에 응답이 오면 응답으로 받은 브리핑을 바로 표시한다.
+   * CloudFront 타임아웃이 발생하면 오류를 표시하지 않고 context API를
+   * 반복 조회하여 백엔드가 저장한 새 브리핑을 자동으로 표시한다.
+   */
+  async function handleGenerate() {
+    if (!accessToken || !source || !ref) return
+
+    // 생성이 완료될 때까지 버튼과 본문에 "실행 중" 상태를 표시한다.
+    setIsGenerating(true)
+
+    // 이전 요청에서 표시된 오류가 있으면 생성 시작 시 지운다.
+    setActionError(null)
+
+    /*
+     * 기존에 저장된 브리핑 ID를 기억한다.
+     * 폴링 중 이 값과 다른 ID가 나타나면 새로운 생성이 완료된 것이다.
+     */
+    const previousBriefingId =
+      context?.latest_briefing_id ?? null
+
+    try {
+      let created: AiBriefingDetail
+
+      try {
+        /*
+         * 우선 기존 생성 API를 그대로 호출한다.
+         * 제한 시간 안에 끝나면 이 응답으로 즉시 화면을 갱신한다.
+         */
+        created = await generateAiBriefing(
+          accessToken,
+          source,
+          ref,
+          true,
+          context?.analysis_id ?? null,
+        )
+      } catch (error) {
+        /*
+         * 권한 오류나 실제 서버 오류는 기존처럼 실패 처리한다.
+         * 응답 시간 초과만 백엔드 작업이 계속 진행 중인 것으로 간주한다.
+         */
+        if (!isUpstreamTimeout(error)) {
+          throw error
+        }
+
+        /*
+         * CloudFront 요청은 끝났지만 isGenerating을 false로 바꾸지 않는다.
+         * 따라서 화면에는 계속 "멀티에이전트 실행 중…"이 표시된다.
+         */
+        created = await waitForGeneratedBriefing(
+          previousBriefingId,
+        )
+      }
+
+      // 새 브리핑이 확인되면 완성된 상세 내용을 화면에 넣는다.
+      setDetailState({
+        key: created.briefing_id,
+        value: created,
+      })
+
+      // 새로고침하거나 링크를 공유해도 같은 브리핑을 열도록 URL에 ID를 넣는다.
+      const next = new URLSearchParams(searchParams)
+      next.set('briefing', created.briefing_id)
+      setSearchParams(next, { replace: true })
+
+      // 우측 최근 브리핑 목록에도 새 항목을 반영한다.
+      refreshRecent()
+    } catch (error) {
+      /*
+       * 타임아웃은 위에서 폴링으로 처리했으므로 여기에는 권한 오류,
+       * 실제 생성 실패, 10분 초과 같은 최종 오류만 도달한다.
+       */
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : 'AI 브리핑 생성에 실패했습니다.',
+      )
+    } finally {
+      /*
+       * 직접 응답 또는 폴링으로 브리핑을 찾았거나,
+       * 최종 실패가 확정된 경우에만 실행 중 상태를 종료한다.
+       */
       setIsGenerating(false)
     }
   }
@@ -406,7 +589,16 @@ export function AiBriefingPage() {
                   </button>
                 )}
               </div>
-              {isGenerating && <p className={styles.notice}>멀티에이전트 실행 중…</p>}
+              {/* {isGenerating && <p className={styles.notice}>멀티에이전트 실행 중…</p>} */}
+              {isGenerating && (
+                <p
+                  className={styles.notice}
+                  role="status"
+                  aria-live="polite"
+                >
+                  멀티에이전트 실행 중… 완료되면 브리핑이 자동으로 표시됩니다.
+                </p>
+              )}
               {!isGenerating && !detail && briefingId && (
                 <div aria-busy="true" aria-label="브리핑 불러오는 중">
                   <SkeletonText lines={7} lastLineWidth="60%" />

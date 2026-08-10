@@ -221,6 +221,8 @@ export function PublicDashboardPage() {
   const [period, setPeriod] = useState(DEFAULT_PERIOD)
   // 우측 "뉴스 상세" 탭이 보여줄 항목. 두 곳에서 선택된다 — 최신 뉴스 목록과 위험 지도 마커.
   const [selectedNews, setSelectedNews] = useState<SelectedArticle | null>(null)
+  /** 국가뷰에서 같은 국가에 묶인 기사를 오른쪽 패널에 모두 표시한다. */
+  const [selectedNewsItems, setSelectedNewsItems] = useState<SelectedArticle[]>([])
 
   /*
    * 조회 조건이 바뀌면 자리표시자를 다시 켠다 — effect가 아니라 렌더 중에 직전 값과
@@ -475,6 +477,7 @@ export function PublicDashboardPage() {
   const handleSelectArticle = useCallback(
     (article: SelectedArticle) => {
       setSelectedNews(article)
+      setSelectedNewsItems([article])
       openAlertsPanel()
     },
     [openAlertsPanel],
@@ -554,7 +557,17 @@ export function PublicDashboardPage() {
           ) : (
             <GlobalRiskBoard
               items={riskBoardItems}
-              onSelectItem={(item) => handleSelectArticle(fromRiskBoardItem(item))}
+              onSelect={(detail) => {
+                if (!detail) {
+                  setSelectedNews(null)
+                  setSelectedNewsItems([])
+                  return
+                }
+                const articles = detail.events.map(fromRiskBoardItem)
+                setSelectedNews(articles[0] ?? null)
+                setSelectedNewsItems(articles)
+                openAlertsPanel()
+              }}
             />
           )}
           <LatestNewsPanel
@@ -602,6 +615,7 @@ export function PublicDashboardPage() {
         <SidePanelToggleButton />
         <DashboardSidePanel
           selectedNews={selectedNews}
+          selectedNewsItems={selectedNewsItems}
           isNewsLoading={newsLoading}
           isAlertsLoading={alertsLoading}
           isBriefingsLoading={briefingsLoading}

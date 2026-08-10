@@ -222,6 +222,7 @@ export function PurchasingDashboardPage() {
   // 마커. 두 원천은 필드도 식별자도 겹치지 않아(실측 교집합 0건) 한쪽을 다른 쪽으로 찾아
   // 맞추지 못하므로, 각각 `SelectedArticle`로 변환해 같은 자리에 넣는다.
   const [selectedNews, setSelectedNews] = useState<SelectedArticle | null>(null)
+  const [selectedNewsItems, setSelectedNewsItems] = useState<SelectedArticle[]>([])
 
   /*
    * 조회 조건이 바뀌면 자리표시자를 다시 켠다 — **effect 안이 아니라 렌더 중에** 직전 값과
@@ -302,6 +303,7 @@ export function PurchasingDashboardPage() {
   const handleSelectArticle = useCallback(
     (article: SelectedArticle) => {
       setSelectedNews(article)
+      setSelectedNewsItems([article])
       openAlertsPanel()
     },
     [openAlertsPanel],
@@ -619,7 +621,13 @@ export function PurchasingDashboardPage() {
                카드 안쪽 상세 패널은 자동으로 펼쳐지지 않는다(같은 내용이 두 군데 뜨는 것 방지). */
             <GlobalRiskBoard
               items={riskBoardItems}
-              onSelectItem={(item) => handleSelectArticle(fromRiskBoardItem(item))}
+              onSelect={(detail) => {
+                if (!detail || detail.events.length === 0) return
+                const articles = detail.events.map(fromRiskBoardItem)
+                setSelectedNews(articles[0])
+                setSelectedNewsItems(articles)
+                openAlertsPanel()
+              }}
             />
           )}
           <LatestNewsPanel
@@ -682,6 +690,7 @@ export function PurchasingDashboardPage() {
         <SidePanelToggleButton />
         <DashboardSidePanel
           selectedNews={selectedNews}
+          selectedNewsItems={selectedNewsItems}
           isNewsLoading={newsLoading}
           isAlertsLoading={alertsLoading}
           isBriefingsLoading={briefingsLoading}

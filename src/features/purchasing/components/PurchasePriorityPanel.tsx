@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import { Skeleton } from '../../../components/ui/Skeleton/Skeleton'
@@ -39,6 +40,11 @@ export function PurchasePriorityPanel({
     <ScrollCard
       headingId="purchase-priority-heading"
       title="구매 대응 우선순위"
+      actions={
+        <Link to="/purchasing/materials" className={styles.detailLink}>
+          전체 자재 보기 →
+        </Link>
+      }
       // 리스트 항목 4개 초과 시 스크롤 트리거용 높이(design-tokens.md "카드 레이아웃·스크롤 규칙" d).
       maxBodyHeight={368}
     >
@@ -78,6 +84,12 @@ export function PurchasePriorityPanel({
                       ? `재고 소진까지 ${Math.round(material.inventory_days)}일`
                       : '재고 데이터 없음'}
                   </span>
+                  <Link
+                    to={`/purchasing/materials?material=${encodeURIComponent(material.erp_material_id)}`}
+                    className={styles.detailLink}
+                  >
+                    상세 보기 →
+                  </Link>
                 </div>
               </li>
             ))}
@@ -103,6 +115,12 @@ export function PurchasePriorityPanel({
                       {material.unavailable_reason && (
                         <span className={styles.stockDays}>{material.unavailable_reason}</span>
                       )}
+                      <Link
+                        to={`/purchasing/materials?material=${encodeURIComponent(material.erp_material_id)}`}
+                        className={styles.detailLink}
+                      >
+                        누락 데이터 확인 →
+                      </Link>
                     </div>
                   </li>
                 ))}

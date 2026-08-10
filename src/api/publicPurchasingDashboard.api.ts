@@ -141,7 +141,7 @@ export async function acknowledgeAssessment(
     { method: 'POST' },
   )
   if (result !== null && typeof result === 'object' && 'error' in result) {
-    throw new Error(String((result as { message?: string }).message ?? '완료 처리에 실패했습니다.'))
+    throw new Error(String((result as { message?: string }).message ?? '확인 처리에 실패했습니다.'))
   }
 }
 

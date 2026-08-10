@@ -8,9 +8,17 @@ interface Props {
   tab?: EvidenceTab
   onTabChange?: (tab: EvidenceTab) => void
   sourceUrl?: string | null
+  /** 브리핑 화면은 의사결정 요약, 검증 화면은 근거 일관성 확인에 집중한다. */
+  mode?: 'briefing' | 'verification' | 'full'
 }
 
-export function ExecutiveEvidencePanel({ item, tab = 'summary', onTabChange, sourceUrl }: Props) {
+export function ExecutiveEvidencePanel({
+  item,
+  tab = 'summary',
+  onTabChange,
+  sourceUrl,
+  mode = 'full',
+}: Props) {
   if (!item) {
     return (
       <aside className={styles.panel}>
@@ -20,23 +28,33 @@ export function ExecutiveEvidencePanel({ item, tab = 'summary', onTabChange, sou
     )
   }
 
-  const tabs: Array<[EvidenceTab, string]> = [
+  const allTabs: Array<[EvidenceTab, string]> = [
     ['summary', '요약'],
     ['erp', 'ERP 근거'],
     ['contract', '계약 RAG'],
     ['verification', 'AI 검증'],
   ]
+  const tabs = allTabs.filter(([key]) => {
+    if (mode === 'briefing') return key !== 'verification'
+    if (mode === 'verification') return key !== 'summary'
+    return true
+  })
   const decisionActions = executiveDecisionActions(item)
+  const verificationMode = mode === 'verification'
 
   return (
     <aside className={styles.panel}>
       <div className={styles.heading}>
         <div>
-          <span className={styles.eyebrow}>의사결정 근거</span>
+          <span className={styles.eyebrow}>{verificationMode ? '검증 결과' : '의사결정 브리핑'}</span>
           <h2>{item.subject_title ?? item.source_headline ?? item.material_name ?? '공급망 위험'}</h2>
         </div>
-        <strong className={styles[item.procurement_risk_level.toLowerCase()] ?? styles.normal}>
-          {item.procurement_risk_level} {item.procurement_risk_score.toFixed(0)}점
+        <strong className={verificationMode
+          ? (item.verification.review_passed ? styles.normal : styles.warning)
+          : (styles[item.procurement_risk_level.toLowerCase()] ?? styles.normal)}>
+          {verificationMode
+            ? (item.verification.review_passed ? '검증 통과' : '검토 필요')
+            : `${item.procurement_risk_level} ${item.procurement_risk_score.toFixed(0)}점`}
         </strong>
       </div>
 

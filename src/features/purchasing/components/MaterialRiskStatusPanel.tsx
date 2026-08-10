@@ -71,7 +71,10 @@ export function MaterialRiskStatusPanel({ materials }: MaterialRiskStatusPanelPr
                   ? summarize(material)
                   : (material.unavailable_reason ?? '평가에 필요한 데이터가 없습니다.')}
               </p>
-              <Link to="/purchasing/materials" className={styles.briefingLink}>
+              <Link
+                to={`/purchasing/materials?material=${encodeURIComponent(material.erp_material_id)}`}
+                className={styles.briefingLink}
+              >
                 자재 상세 보기
               </Link>
             </li>

@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
@@ -27,6 +27,9 @@ export function AiBriefingDetailPage() {
         <SideNav items={PLANNING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <Breadcrumb items={[{ label: '경영기획팀 대시보드', href: '/planning' }, { label: 'AI 브리핑 상세' }]} />
+          <Link to="/planning/briefings" className={styles.backLink}>
+            ← 브리핑 목록으로
+          </Link>
           <QueryState query={query}>
             {(detail) => (
               <>

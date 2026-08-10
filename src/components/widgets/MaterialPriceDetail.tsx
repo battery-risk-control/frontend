@@ -372,7 +372,6 @@ export function MaterialPriceDetail({
               y={100}
               stroke="var(--color-text-muted)"
               strokeDasharray="4 4"
-              label={{ value: '100', position: 'left', fill: 'var(--color-text-muted)', fontSize: 11 }}
             />
             <Tooltip
               isAnimationActive={false}

@@ -34,6 +34,8 @@ interface DashboardSidePanelProps {
    * 안내 문구가 나온다. 두 원천이 필드가 달라 `SelectedArticle`로 모아서 받는다.
    */
   selectedNews: SelectedArticle | null
+  /** 국가뷰에서 선택한 국가에 연결된 기사 전체. 일반 기사 선택 시에는 1건이다. */
+  selectedNewsItems?: SelectedArticle[]
   /** 이미 `buildDashboardAlerts`로 걸러지고 정렬된 목록 — 이 컴포넌트는 순서를 바꾸지 않는다. */
   alerts: DashboardAlert[]
   briefings: AiBriefingListItem[]
@@ -241,6 +243,7 @@ function BriefingList({ briefings }: { briefings: AiBriefingListItem[] }) {
  */
 export function DashboardSidePanel({
   selectedNews,
+  selectedNewsItems,
   alerts,
   briefings,
   isNewsLoading = false,
@@ -296,6 +299,11 @@ export function DashboardSidePanel({
   const wrapperClassName = [styles.wrapper, !expanded && styles.collapsed, isPreviewing && styles.previewing]
     .filter(Boolean)
     .join(' ')
+  const visibleNewsItems = selectedNewsItems?.length
+    ? selectedNewsItems
+    : selectedNews
+      ? [selectedNews]
+      : []
 
   return (
     <aside className={wrapperClassName} aria-labelledby={expanded ? 'side-panel-heading' : undefined}>
@@ -339,7 +347,20 @@ export function DashboardSidePanel({
                     <Skeleton width="45%" />
                   </div>
                 ) : (
-                  <NewsDetail news={selectedNews} />
+                  <div className={styles.newsGroup}>
+                    {visibleNewsItems.length > 1 && (
+                      <p className={styles.newsGroupLabel}>선택 국가 관련 뉴스 {visibleNewsItems.length}건</p>
+                    )}
+                    {visibleNewsItems.length === 0 ? (
+                      <NewsDetail news={null} />
+                    ) : (
+                      visibleNewsItems.map((news) => (
+                        <div key={news.id} className={styles.newsGroupItem}>
+                          <NewsDetail news={news} />
+                        </div>
+                      ))
+                    )}
+                  </div>
                 ))}
               {activeTab === 'alerts' && (
                 <>

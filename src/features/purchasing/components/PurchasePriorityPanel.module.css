@@ -54,6 +54,17 @@
   color: var(--color-text-muted);
 }
 
+.detailLink {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.detailLink:hover {
+  text-decoration: underline;
+}
+
 /* MaterialRiskStatusPanel과 같은 표식 — "평가 불가"는 위험도가 아니라 상태라 등급 색을 안 쓴다. */
 .unavailable {
   padding: 2px var(--space-2);

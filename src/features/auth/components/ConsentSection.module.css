@@ -1,0 +1,84 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.allRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.rowLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.required {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.optional {
+  color: var(--color-text-muted);
+}
+
+.rowActions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.linkButton {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.detail {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+}
+
+.table th,
+.table td {
+  border: 1px solid var(--color-border);
+  padding: var(--space-2);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  background: var(--color-surface-muted, rgba(0, 0, 0, 0.03));
+  font-weight: var(--font-weight-bold);
+}

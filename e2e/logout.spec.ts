@@ -8,7 +8,8 @@ test.describe('Header 계정 정보 및 로그아웃', () => {
   test('로그인하면 Header에 이메일과 계층이 표시된다', async ({ page }) => {
     await loginAs(page, 'purchasing@test.local')
     await expect(page).toHaveURL(/\/purchasing$/)
-    await expect(page.getByText('purchasing@test.local · 구매팀')).toBeVisible()
+    // 규제 가이드 ③ 마스킹: 로컬파트 끝 2자를 **로 가린 채 표시된다.
+    await expect(page.getByText('purchasi**@test.local · 구매팀')).toBeVisible()
   })
 
   test('로그아웃하면 인증 상태가 초기화되고 "/"로 이동하며 보호 라우트가 다시 막힌다', async ({ page }) => {

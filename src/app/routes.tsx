@@ -26,6 +26,8 @@ import { ExecutiveRisksPage } from '../features/executive/pages/ExecutiveRisksPa
 import { ExecutiveSupplyChainPage } from '../features/executive/pages/ExecutiveSupplyChainPage'
 import { ExecutiveBriefingsPage } from '../features/executive/pages/ExecutiveBriefingsPage'
 import { ExecutiveVerificationPage } from '../features/executive/pages/ExecutiveVerificationPage'
+import { AdminApprovalsPage } from '../features/admin/pages/AdminApprovalsPage'
+import { DashboardBootstrapSkeleton } from '../components/layout/DashboardBootstrapSkeleton'
 import { useAuthState } from '../lib/useAuthState'
 import { DASHBOARD_PATH_BY_TIER } from '../lib/dashboardPaths'
 import { TIER_LABEL } from '../lib/tierLabels'
@@ -44,13 +46,10 @@ function RequireAuth({ tier, children }: { tier: OrgTier; children: ReactNode })
   const navigate = useNavigate()
 
   // 부트스트랩(HttpOnly 쿠키로 세션 복원) 중에는 판정을 미룬다 — 로그인 상태인데 /auth로 잠깐
-  // 튕기는(F5 시 로그인 화면 번쩍임) 것을 막는다.
+  // 튕기는(F5 시 로그인 화면 번쩍임) 것을 막는다. 이 구간은 대시보드 골격 스켈레톤으로 덮어
+  // 세션 복원 → 페이지 자체 데이터 스켈레톤으로 매끄럽게 이어지게 한다.
   if (initializing) {
-    return (
-      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-        불러오는 중…
-      </div>
-    )
+    return <DashboardBootstrapSkeleton />
   }
   if (!orgTier) {
     return <Navigate to="/auth" replace />
@@ -265,6 +264,15 @@ export function AppRoutes() {
         element={
           <RequireAuth tier="executive">
             <ExecutiveVerificationPage />
+          </RequireAuth>
+        }
+      />
+      {/* 관리자(ADMIN) 전용 가입 승인 화면(시큐어코딩 5). admin 계층만 통과한다. */}
+      <Route
+        path="/admin"
+        element={
+          <RequireAuth tier="admin">
+            <AdminApprovalsPage />
           </RequireAuth>
         }
       />

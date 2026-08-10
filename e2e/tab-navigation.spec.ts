@@ -39,7 +39,8 @@ test.describe('공개 대시보드 상단 탭 내비게이션', () => {
     await page.getByRole('link', { name: '배터리 원자재 공급망 리스크 관제' }).click()
     await expect(page).toHaveURL(/\/$/)
 
-    await expect(page.getByText('purchasing@test.local · 구매팀')).toBeVisible()
+    // 규제 가이드 ③ 마스킹: 로컬파트 끝 2자를 **로 가린 채 표시된다.
+    await expect(page.getByText('purchasi**@test.local · 구매팀')).toBeVisible()
     await expect(page.getByRole('button', { name: '로그아웃' })).toBeVisible()
     await expect(page.getByRole('link', { name: '로그인/회원가입' })).not.toBeVisible()
   })

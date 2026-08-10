@@ -63,17 +63,25 @@ export interface RiskEventBriefing {
   output_artifacts: OutputArtifacts
 }
 
-/** mock-schemas.md "인증" — 3계층(구매팀/경영기획팀/경영진) 값 집합. */
-export type OrgTier = 'purchasing' | 'planning' | 'executive'
+/**
+ * 인증 계층. 3계층(구매팀/경영기획팀/경영진)에 더해 가입 승인 전용 관리자(admin)를 포함한다.
+ * admin은 대시보드 계층이 아니라 /admin(가입 승인 화면)으로만 라우팅된다.
+ */
+export type OrgTier = 'purchasing' | 'planning' | 'executive' | 'admin'
 
 export interface LoginRequest {
   email: string
   password: string
 }
 
-/** LoginForm이 다루는 값. rememberMe는 UI 로컬 상태이며 로그인 요청 스키마에는 없다. */
+/**
+ * LoginForm이 다루는 값. rememberMe는 UI 로컬 상태이며 로그인 요청 스키마에는 없다.
+ * captcha 필드는 로그인 실패가 누적된 계정에서만 채워진다(평소 미전송).
+ */
 export interface LoginFormValues extends LoginRequest {
   rememberMe: boolean
+  captchaId?: string
+  captchaAnswer?: string
 }
 
 export interface LoginSuccessResponse {
@@ -91,12 +99,18 @@ export interface LoginPendingErrorResponse {
 
 export type LoginResponse = LoginSuccessResponse | LoginPendingErrorResponse
 
-/** SignupForm이 다루는 값. Figma 와이어프레임 회원가입 폼 필드(임직원 성명 포함) 기준. */
+/**
+ * SignupForm이 다루는 값. 임직원 성명·회사 이메일·비밀번호·계층에 더해
+ * 개인정보 수집·이용 동의(필수/선택)를 포함한다(규제 가이드 ①).
+ * org_tier는 가입 폼에서 admin을 선택할 수 없으므로 3계층으로 좁힌다.
+ */
 export interface SignupFormValues {
   name: string
   email: string
   password: string
-  org_tier: OrgTier
+  org_tier: Exclude<OrgTier, 'admin'>
+  privacy_required_consent: boolean
+  marketing_optional_consent: boolean
 }
 
 /**

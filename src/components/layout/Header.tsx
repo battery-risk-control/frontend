@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthState } from '../../lib/useAuthState'
 import { TIER_LABEL } from '../../lib/tierLabels'
+import { maskEmailLocal } from '../../lib/masking'
 import styles from './Header.module.css'
 
 interface HeaderProps {
@@ -72,7 +73,7 @@ export function Header({ children, accountExtra }: HeaderProps) {
         {orgTier ? (
           <div className={styles.account}>
             <span className={styles.accountInfo}>
-              {email ? `${email} · ${TIER_LABEL[orgTier]}` : TIER_LABEL[orgTier]}
+              {email ? `${maskEmailLocal(email)} · ${TIER_LABEL[orgTier]}` : TIER_LABEL[orgTier]}
             </span>
             {accountExtra}
             <button type="button" className={styles.logoutButton} onClick={handleLogout}>

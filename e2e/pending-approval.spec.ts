@@ -20,8 +20,12 @@ test.describe('승인 대기(PENDING) 플로우', () => {
     await page.getByRole('tab', { name: '권한 신청' }).click()
     await page.getByLabel('임직원 성명').fill('홍길동')
     await page.getByLabel('회사 이메일 계정 (ID)').fill(uniqueEmail)
+    // Passw0rd!! = 영문+숫자+특수문자 3종 10자 → 규제 가이드 ② 비밀번호 규칙 통과.
     await page.getByLabel('접속 비밀번호 설정').fill('Passw0rd!!')
+    await page.getByLabel('비밀번호 확인').fill('Passw0rd!!')
     await page.locator('input[type="radio"][value="purchasing"]').check()
+    // 규제 가이드 ① 필수 개인정보 수집·이용 동의(전체동의로 필수·선택을 함께 체크).
+    await page.getByText('약관에 모두 동의합니다.').click()
     await page.getByRole('button', { name: '가입 및 계정 승인 요청' }).click()
     await expect(page.getByRole('heading', { name: '관리자 승인 대기 중입니다' })).toBeVisible()
   })

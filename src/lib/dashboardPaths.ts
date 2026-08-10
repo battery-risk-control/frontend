@@ -8,4 +8,5 @@ export const DASHBOARD_PATH_BY_TIER: Record<OrgTier, string> = {
   purchasing: '/purchasing',
   planning: '/planning',
   executive: '/executive',
+  admin: '/admin',
 }

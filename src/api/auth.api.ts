@@ -4,10 +4,24 @@
 // 클라이언트 쪽 라우트 접근 제어(app/routes.tsx RequireAuth)는 UX 안내일 뿐
 // 실제 보안 경계가 아니며, 진짜 접근 통제는 백엔드 토큰 검증이 맡는다. (CLAUDE.md 참고)
 
-import { fetchJson, type FetchJsonError } from './http'
+import { fetchJson, fetchWithAuth, type FetchJsonError } from './http'
 import type { LoginFormValues, LoginResponse, OrgTier, SignupFormValues, SignupRequest, SignupResponse } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
+
+/**
+ * 로그인/비밀번호 재설정 실패를 코드까지 보존해 던진다. AuthPage가 code로 분기해
+ * 캡챠 요구(CAPTCHA_REQUIRED/CAPTCHA_INVALID)·계정 잠금(ACCOUNT_LOCKED)·
+ * 비밀번호 만료(PASSWORD_EXPIRED)를 각각 다른 화면으로 처리한다.
+ */
+export class AuthApiError extends Error {
+  code: string
+  constructor(code: string, message: string) {
+    super(message)
+    this.name = 'AuthApiError'
+    this.code = code
+  }
+}
 
 /** 데모에서 승인 대기(PENDING) 응답을 재현하기 위한 테스트 계정. 이 이메일로 로그인하면 락 화면으로 전환된다. */
 const PENDING_TEST_EMAIL = 'pending@company.com'
@@ -52,23 +66,124 @@ interface LoginApiData {
 }
 
 async function loginApi(values: LoginFormValues): Promise<LoginResponse> {
+  // 캡챠 값은 실패 누적으로 요구될 때만 채워 보낸다(평소 미전송).
+  const body: Record<string, string> = { email: values.email, password: values.password }
+  if (values.captchaId && values.captchaAnswer) {
+    body.captcha_id = values.captchaId
+    body.captcha_answer = values.captchaAnswer
+  }
   const result = await fetchJson<LoginApiData>('/api/v1/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email: values.email, password: values.password }),
+    body: JSON.stringify(body),
   })
   if ('error' in result) {
     if (result.error === 'PENDING_APPROVAL') {
       return { error: 'PENDING_APPROVAL', message: result.message }
     }
-    // INVALID_CREDENTIALS 등 — mock에는 없던 실패 케이스라 LoginResponse 타입에 슬롯이 없다.
-    // 호출부(AuthPage)가 try/catch로 받아 안내 문구를 보여준다.
-    throw new Error(result.message)
+    // INVALID_CREDENTIALS / CAPTCHA_REQUIRED / CAPTCHA_INVALID / ACCOUNT_LOCKED / PASSWORD_EXPIRED —
+    // 코드를 보존해 던진다(AuthPage가 code로 분기). mock에는 없던 실패 케이스다.
+    throw new AuthApiError(result.error, result.message)
   }
   return {
     access_token: result.access_token,
     expires_in: result.expires_in,
     org_tier: result.org_tier,
     status: result.status,
+  }
+}
+
+/** GET /api/v1/auth/captcha — 자동입력 방지 문자(이미지 Data URL) 발급. */
+export interface CaptchaData {
+  captcha_id: string
+  image: string
+  expires_in: number
+}
+
+export async function fetchCaptcha(): Promise<CaptchaData> {
+  const result = await fetchJson<CaptchaData>('/api/v1/auth/captcha')
+  if ('error' in result) {
+    throw new AuthApiError(result.error, result.message)
+  }
+  return result
+}
+
+/** POST /api/v1/auth/password/reset-expired — 만료된 비밀번호를 현재 비밀번호 확인 후 재설정. */
+export async function resetExpiredPassword(input: {
+  email: string
+  currentPassword: string
+  newPassword: string
+}): Promise<void> {
+  const result = await fetchJson<unknown>('/api/v1/auth/password/reset-expired', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: input.email,
+      current_password: input.currentPassword,
+      new_password: input.newPassword,
+    }),
+  })
+  if (result && typeof result === 'object' && 'error' in result) {
+    const err = result as FetchJsonError
+    throw new AuthApiError(err.error, err.message)
+  }
+}
+
+/**
+ * 관리자 콘솔용 사용자 요약. 관리자 전용 화면이라 원문으로 내려온다.
+ * username은 로그인 식별자(헤더·로그인과 동일). email은 알림 수신용 컬럼(시드는 실주소로 덮여 다를 수 있음).
+ */
+export interface AdminUser {
+  user_id: number
+  name: string
+  username: string
+  email: string | null
+  org_tier: OrgTier
+  org_name: string | null
+  status: string
+  created_at: string
+}
+
+/** 관리자 목록 조회 상태. 관리자(ADMIN) 계정은 백엔드가 항상 제외한다. */
+export type AdminUserStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+
+/** GET /api/v1/auth/users?status=... — 관리자 전용 사용자 목록(마스킹, 관리자 제외). */
+export async function fetchUsers(accessToken: string, status: AdminUserStatus): Promise<AdminUser[]> {
+  const result = await fetchWithAuth<AdminUser[]>(`/api/v1/auth/users?status=${status}`, accessToken)
+  if ('error' in result) {
+    throw new AuthApiError(result.error, result.message)
+  }
+  return result
+}
+
+/** POST /api/v1/auth/users/{id}/approve — 관리자 승인. */
+export async function approveUser(accessToken: string, userId: number): Promise<void> {
+  const result = await fetchWithAuth<unknown>(`/api/v1/auth/users/${userId}/approve`, accessToken, {
+    method: 'POST',
+  })
+  if (result && typeof result === 'object' && 'error' in result) {
+    const err = result as FetchJsonError
+    throw new AuthApiError(err.error, err.message)
+  }
+}
+
+/** POST /api/v1/auth/users/{id}/reject — 관리자 거부(대기·승인 모두 가능). */
+export async function rejectUser(accessToken: string, userId: number): Promise<void> {
+  const result = await fetchWithAuth<unknown>(`/api/v1/auth/users/${userId}/reject`, accessToken, {
+    method: 'POST',
+  })
+  if (result && typeof result === 'object' && 'error' in result) {
+    const err = result as FetchJsonError
+    throw new AuthApiError(err.error, err.message)
+  }
+}
+
+/** POST /api/v1/auth/users/{id}/reopen — 거부 해제(REJECTED → 승인 대기). */
+export async function reopenUser(accessToken: string, userId: number): Promise<void> {
+  const result = await fetchWithAuth<unknown>(`/api/v1/auth/users/${userId}/reopen`, accessToken, {
+    method: 'POST',
+  })
+  if (result && typeof result === 'object' && 'error' in result) {
+    const err = result as FetchJsonError
+    throw new AuthApiError(err.error, err.message)
   }
 }
 

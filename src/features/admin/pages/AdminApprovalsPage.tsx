@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   approveUser,
   fetchUsers,
@@ -42,22 +42,34 @@ export function AdminApprovalsPage() {
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
 
-  const load = useCallback(async () => {
-    if (!accessToken) return
+  // 탭(status)·토큰이 바뀌면 렌더 중에 로딩 자리표시자로 전환한다. effect에서 setState하면
+  // 연쇄 렌더(react-hooks/set-state-in-effect)가 되고, 그 사이 한 프레임 동안 옛 목록이 노출된다.
+  const queryKey = `${accessToken ?? ''}|${status}`
+  const [prevQueryKey, setPrevQueryKey] = useState(queryKey)
+  if (queryKey !== prevQueryKey) {
+    setPrevQueryKey(queryKey)
     setLoading(true)
     setError(null)
-    try {
-      setUsers(await fetchUsers(accessToken, status))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '목록을 불러오지 못했습니다.')
-    } finally {
-      setLoading(false)
+  }
+
+  // 조회 결과·로딩 해제·에러는 비동기 콜백에서만 setState한다(effect 본문의 동기 setState 회피).
+  useEffect(() => {
+    if (!accessToken) return
+    let cancelled = false
+    fetchUsers(accessToken, status)
+      .then((data) => {
+        if (!cancelled) setUsers(data)
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : '목록을 불러오지 못했습니다.')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
     }
   }, [accessToken, status])
-
-  useEffect(() => {
-    void load()
-  }, [load])
 
   async function handleAction(userId: number, action: DecisionAction) {
     if (!accessToken) return

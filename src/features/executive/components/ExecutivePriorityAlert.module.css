@@ -108,6 +108,27 @@
   background: rgb(255 255 255 / 8%) !important;
 }
 
+/* 로딩 자리표시자. 실제 알림 바는 남색 배경이라 그 위 광택이 안 어울려, 로딩 시엔 중립 표면
+   톤으로 같은 기하(높이 64px·gap·padding)만 유지한다. */
+.skeleton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 64px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.skeletonBody {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 @media (max-width: 720px) {
   .alert {
     align-items: flex-start;

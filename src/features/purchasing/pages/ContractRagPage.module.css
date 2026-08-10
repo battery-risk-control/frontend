@@ -86,6 +86,7 @@
 .scopeSelect {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2);
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
@@ -93,6 +94,19 @@
 
 .scopeSelect > span {
   flex-shrink: 0;
+}
+
+/* 매입/납품 뜻풀이. 검색 범위 줄 아래로 흘러 폭을 다 쓴다. */
+.scopeHint {
+  flex-basis: 100%;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.scopeHint strong {
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
 }
 
 /*
@@ -155,6 +169,15 @@
   margin-bottom: 0;
 }
 
+/* 2단 선택(종류 + 계약)을 담는다. 좁아지면 두 select가 위아래로 접힌다. */
+.panelSelects {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 10rem;
+}
+
 .panelSelect {
   flex: 1;
   min-width: 10rem;
@@ -213,10 +236,42 @@
   gap: var(--space-3);
 }
 
+/* 배지와 제목을 한 덩어리로 묶어, 오른쪽 순위 표기와 baseline을 맞춘다. */
+.clauseTitleWrap {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .clauseTitle {
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
+}
+
+/* 매입/납품 배지. 전체 검색에서 두 종류가 섞일 때 한눈에 가른다. */
+.kindBadge {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.6;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+/* 매입=차분한 파랑(사오는 쪽), 납품=따뜻한 앰버(파는 쪽)로 방향을 색으로도 구분한다. */
+.kindBadgeInbound {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.kindBadgeOutbound {
+  color: #9a6700;
+  background: color-mix(in srgb, #b8860b 16%, transparent);
 }
 
 .clauseScore {

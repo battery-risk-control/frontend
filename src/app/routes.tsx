@@ -40,9 +40,18 @@ import type { OrgTier } from '../api/types'
  * "내 화면으로 이동"을 선택해야만 실제 자기 대시보드로 이동한다.
  */
 function RequireAuth({ tier, children }: { tier: OrgTier; children: ReactNode }) {
-  const { orgTier } = useAuthState()
+  const { orgTier, initializing } = useAuthState()
   const navigate = useNavigate()
 
+  // 부트스트랩(HttpOnly 쿠키로 세션 복원) 중에는 판정을 미룬다 — 로그인 상태인데 /auth로 잠깐
+  // 튕기는(F5 시 로그인 화면 번쩍임) 것을 막는다.
+  if (initializing) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+        불러오는 중…
+      </div>
+    )
+  }
   if (!orgTier) {
     return <Navigate to="/auth" replace />
   }

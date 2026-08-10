@@ -2,12 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   fetchContractDetail,
+  fetchOutboundContractDetail,
   fetchContracts,
   isContractRagApiConfigured,
   reprocessContractDocuments,
   searchClauses,
   uploadContractDocument,
 } from '../../../api/contractRag.api'
+import type { ContractSearchKind } from '../../../api/contractRag.api'
 import type {
   ContractClauseHit,
   ContractClauseSearchResult,
@@ -43,6 +45,62 @@ const SEARCH_TOP_K = 20
 
 /** 합친 뒤 화면에 세울 조항 수. */
 const DISPLAY_LIMIT = 5
+
+/**
+ * 계약 종류의 사람 말 라벨. "인바운드/아웃바운드"는 어려우니 업무 용어로 바꾼다 —
+ * 매입(공급사→자사) / 납품(자사→고객사).
+ */
+const KIND_LABEL: Record<'INBOUND' | 'OUTBOUND', string> = {
+  INBOUND: '원자재 매입 계약',
+  OUTBOUND: '제품 납품 계약',
+}
+
+/** 검색 결과 카드·목록에 다는 짧은 배지 문구. */
+const KIND_BADGE: Record<'INBOUND' | 'OUTBOUND', string> = {
+  INBOUND: '매입',
+  OUTBOUND: '납품',
+}
+
+/** 종류별 부연 — 매입/납품이 무엇인지 한 줄로 안내한다. */
+const KIND_HINT: Record<'INBOUND' | 'OUTBOUND', string> = {
+  INBOUND: '공급사 → 자사',
+  OUTBOUND: '자사 → 고객사',
+}
+
+/**
+ * select의 범위 값(문자열)을 검색 API 옵션으로 바꾼다.
+ * - "ALL" → 매입·납품 전체
+ * - "KIND:INBOUND"/"KIND:OUTBOUND" → 그 종류 전체
+ * - "C:INBOUND:<id>" → 특정 매입계약(contract_id로 특정)
+ * - "C:OUTBOUND:<id>" → 특정 납품계약(product_id+customer_id로 특정 — contract_id는 매입과 겹침)
+ */
+function scopeToSearchOptions(
+  scopeValue: string,
+  contracts: ContractSummary[],
+): { kind: ContractSearchKind; contractId?: number | null; productId?: number | null; customerId?: number | null } {
+  if (scopeValue === 'ALL') return { kind: 'ALL' }
+  if (scopeValue === 'KIND:INBOUND') return { kind: 'INBOUND' }
+  if (scopeValue === 'KIND:OUTBOUND') return { kind: 'OUTBOUND' }
+
+  const contract = scopeSelectedContract(scopeValue, contracts)
+  if (!contract) return { kind: 'ALL' } // 목록이 아직 없거나 값이 어긋나면 전체로 폴백
+  if (contract.kind === 'OUTBOUND') {
+    return { kind: 'OUTBOUND', productId: contract.product_id, customerId: contract.customer_id }
+  }
+  return { kind: 'INBOUND', contractId: contract.contract_id }
+}
+
+/** 범위 값이 특정 계약을 가리키면 그 계약을, 아니면 null을 돌려준다. */
+function scopeSelectedContract(
+  scopeValue: string,
+  contracts: ContractSummary[],
+): ContractSummary | null {
+  const match = /^C:(INBOUND|OUTBOUND):(\d+)$/.exec(scopeValue)
+  if (!match) return null
+  const kind = match[1] as 'INBOUND' | 'OUTBOUND'
+  const contractId = Number(match[2])
+  return contracts.find((c) => c.kind === kind && c.contract_id === contractId) ?? null
+}
 
 /**
  * 우측 패널의 처리 결과 안내.
@@ -95,10 +153,24 @@ export function ContractRagPage() {
   /** 계약 목록 조회 중인지. select는 자리표시자를 넣을 데가 없어 안내 문구와 비활성으로 알린다. */
   const [contractsLoading, setContractsLoading] = useState(true)
   const [query, setQuery] = useState('')
-  const [scopeContractId, setScopeContractId] = useState<number | null>(null)
+  /**
+   * 검색 범위. 하나의 select 값으로 담는다:
+   *   "ALL"                      — 전체(매입·납품)
+   *   "KIND:INBOUND"             — 원자재 매입 계약 전체
+   *   "KIND:OUTBOUND"            — 제품 납품 계약 전체
+   *   "C:INBOUND:<id>"           — 특정 매입계약
+   *   "C:OUTBOUND:<id>"          — 특정 납품계약
+   * 매입/납품은 contract_id 번호가 겹치므로 종류를 값에 함께 담아야 계약을 유일하게 가리킨다.
+   */
+  const [scopeValue, setScopeValue] = useState<string>('ALL')
   const [search, setSearch] = useState<ContractClauseSearchResult | null>(null)
   const [selectedClause, setSelectedClause] = useState<ContractClauseHit | null>(null)
   const [detail, setDetail] = useState<ContractDetail | null>(null)
+  /**
+   * 우측 "계약 문서" 패널이 지금 보고 있는 계약 종류. 1단(종류) 선택값이다.
+   * 매입/납품은 계약 PK가 겹쳐 상세 조회 엔드포인트가 갈리므로, 어느 쪽을 볼지 여기서 정한다.
+   */
+  const [panelKind, setPanelKind] = useState<'INBOUND' | 'OUTBOUND'>('INBOUND')
   const [stagedFile, setStagedFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
@@ -146,7 +218,7 @@ export function ContractRagPage() {
     setPanelNotice(null)
     try {
       const result = await searchClauses(accessToken, query.trim(), {
-        contractId: scopeContractId,
+        ...scopeToSearchOptions(scopeValue, contracts),
         topK: SEARCH_TOP_K,
       })
       setSearch(result)
@@ -154,7 +226,7 @@ export function ContractRagPage() {
       const first = result.results[0]
       if (first) {
         setSelectedClause(first)
-        if (first.contract) void loadContract(first.contract.contract_id)
+        if (first.contract) void openContractDetail(first.contract)
       }
     } catch (err) {
       setSearch(null)
@@ -180,10 +252,36 @@ export function ContractRagPage() {
     }
   }
 
+  /** 아웃바운드(제품 납품) 계약 상세. 인바운드와 엔드포인트가 갈려 별도 함수로 둔다. */
+  async function loadOutboundContract(outboundContractId: number) {
+    if (!accessToken) return
+    setPanelError(null)
+    try {
+      setDetail(await fetchOutboundContractDetail(accessToken, outboundContractId))
+    } catch (err) {
+      setDetail(null)
+      setPanelError(err instanceof Error ? err.message : '계약 문서를 불러오지 못했습니다.')
+    }
+  }
+
+  /** 계약 종류를 보고 알맞은 상세 엔드포인트로 연다. 우측 패널의 1단(종류) 선택도 맞춘다. */
+  function openContractDetail(contract: ContractSummary) {
+    setPanelKind(contract.kind)
+    if (contract.kind === 'OUTBOUND') {
+      void loadOutboundContract(contract.contract_id)
+    } else {
+      void loadContract(contract.contract_id)
+    }
+  }
+
   function handleSelectClause(hit: ContractClauseHit) {
     setSelectedClause(hit)
     setPanelNotice(null)
-    if (hit.contract) void loadContract(hit.contract.contract_id)
+    if (hit.contract) {
+      openContractDetail(hit.contract)
+    } else {
+      setDetail(null)
+    }
   }
 
   /**
@@ -194,8 +292,8 @@ export function ContractRagPage() {
    * 문서 패널이 통째로 바뀌니 무슨 일이 일어난 건지 알 수 없었다. 그쪽은 이제 우측 패널이
    * 자기 선택기로 직접 한다({@link handleOpenContract}).
    */
-  function handleChangeScope(contractId: number | null) {
-    setScopeContractId(contractId)
+  function handleChangeScope(value: string) {
+    setScopeValue(value)
   }
 
   /**
@@ -211,7 +309,20 @@ export function ContractRagPage() {
       setDetail(null)
       return
     }
-    void loadContract(contractId)
+    // 1단 선택(panelKind)이 정한 종류에 맞는 상세 엔드포인트로 연다.
+    if (panelKind === 'OUTBOUND') {
+      void loadOutboundContract(contractId)
+    } else {
+      void loadContract(contractId)
+    }
+  }
+
+  /** 우측 패널 1단(계약 종류) 변경. 종류가 바뀌면 2단 선택과 상세를 비운다. */
+  function handleChangePanelKind(kind: 'INBOUND' | 'OUTBOUND') {
+    setPanelKind(kind)
+    setSelectedClause(null)
+    setPanelNotice(null)
+    setDetail(null)
   }
 
   /**
@@ -317,21 +428,41 @@ export function ContractRagPage() {
     stageFile(event.dataTransfer.files?.[0] ?? null)
   }
 
+  /** 현재 선택된 범위의 대상 계약(특정 계약을 골랐을 때만). 아니면 null. */
+  const scopeContract = useMemo(
+    () => scopeSelectedContract(scopeValue, contracts),
+    [scopeValue, contracts],
+  )
+
   /**
-   * 검색 결과 제목의 범위 표기. 예전에는 좁혀 검색하면 `contract_id 17`이 그대로 떴는데,
-   * 그건 DB PK라 화면에서 할 일이 없다. 목록에서 사람이 쓰는 식별자를 찾아 쓴다.
+   * 검색 결과 제목의 범위 표기. 무엇으로 좁혔는지 사람 말로 보여준다.
+   * 예전에는 `contract_id 17`이 그대로 떴는데 그건 DB PK라 화면에서 할 일이 없다.
    */
-  function scopeLabel(result: ContractClauseSearchResult): string {
-    if (result.scope === 'all') return '전체 계약'
-    const scoped = contracts.find((contract) => contract.contract_id === result.contract_id)
-    return scoped?.erp_contract_id ?? scoped?.contract_name ?? '선택한 계약'
+  function scopeLabel(): string {
+    if (scopeValue === 'ALL') return '전체 계약'
+    if (scopeValue === 'KIND:INBOUND') return KIND_LABEL.INBOUND
+    if (scopeValue === 'KIND:OUTBOUND') return KIND_LABEL.OUTBOUND
+    if (scopeContract) {
+      return scopeContract.erp_contract_id ?? scopeContract.contract_name ?? '선택한 계약'
+    }
+    return '선택한 계약'
   }
 
-  /** 이번 검색이 실제로 훑은 계약. 전체 검색이었으면 null이다. */
-  const searchedContract =
-    search && search.scope === 'filtered'
-      ? contracts.find((contract) => contract.contract_id === search.contract_id)
-      : null
+  /**
+   * 이번 검색이 특정 계약으로 좁힌 것이었으면 그 계약. 결과가 비었을 때 "이 계약엔 문서가
+   * 없다"인지 "표현을 바꿔 보라"인지 가르는 데 쓴다(전체·종류 범위였으면 null).
+   */
+  const searchedContract = search && search.scope === 'filtered' ? scopeContract : null
+
+  /** 드롭다운을 매입/납품 두 그룹으로 나눠 보여주기 위한 분리. */
+  const inboundContracts = useMemo(
+    () => contracts.filter((contract) => contract.kind === 'INBOUND'),
+    [contracts],
+  )
+  const outboundContracts = useMemo(
+    () => contracts.filter((contract) => contract.kind === 'OUTBOUND'),
+    [contracts],
+  )
 
   /** 같은 본문을 한 장으로 합친 뒤 화면에 세울 만큼만 남긴 목록. */
   const clauses = useMemo(
@@ -367,27 +498,50 @@ export function ContractRagPage() {
               {/* "계약 선택"은 무엇을 고르는 건지만 말하고 무슨 일이 일어나는지는 안 말한다. */}
               <span>검색 범위</span>
               <select
-                value={scopeContractId ?? ''}
+                value={scopeValue}
                 disabled={contractsLoading}
-                onChange={(event) =>
-                  handleChangeScope(event.target.value ? Number(event.target.value) : null)
-                }
+                onChange={(event) => handleChangeScope(event.target.value)}
               >
-                {/* 목록이 오기 전에 "전체 계약"만 띄우면 계약이 하나도 없는 것처럼 읽힌다.
-                    select에는 자리표시자를 넣을 수 없어 문구와 비활성으로 대신한다. */}
-                <option value="">{contractsLoading ? '계약 목록 불러오는 중…' : '전체 계약'}</option>
-                {/*
-                  "(미적재)"는 남긴다 — 그 계약을 고르면 검색이 반드시 빈다는 예고라, 없으면
-                  결과가 0건인 이유를 알 수 없다. 반대로 청크 수는 적재량이라 담당자가 고를 때
-                  쓰는 정보가 아니다(적재 상태는 우측 패널이 자세히 보여준다).
-                */}
-                {contracts.map((contract) => (
-                  <option key={contract.contract_id} value={contract.contract_id}>
-                    {contract.erp_contract_id ?? `#${contract.contract_id}`} · {contract.contract_name}
-                    {contract.document_count === 0 ? ' (미적재)' : ''}
-                  </option>
-                ))}
+                {/* 위 3개는 "묶음" 범위(전체/매입 전체/납품 전체), 아래 두 그룹은 특정 계약이다.
+                    "매입/납품"은 어려운 말이라 화살표(→)로 방향을 함께 보여 안내한다.
+                    "(미적재)"는 남긴다 — 그 계약을 고르면 검색이 반드시 빈다는 예고라, 없으면
+                    결과가 0건인 이유를 알 수 없다. */}
+                <option value="ALL">
+                  {contractsLoading ? '계약 목록 불러오는 중…' : '전체 계약 (매입·납품 모두)'}
+                </option>
+                <option value="KIND:INBOUND">
+                  {KIND_LABEL.INBOUND} — 전체 ({KIND_HINT.INBOUND})
+                </option>
+                <option value="KIND:OUTBOUND">
+                  {KIND_LABEL.OUTBOUND} — 전체 ({KIND_HINT.OUTBOUND})
+                </option>
+                {inboundContracts.length > 0 && (
+                  <optgroup label={`${KIND_LABEL.INBOUND} · 특정 계약 (${KIND_HINT.INBOUND})`}>
+                    {inboundContracts.map((contract) => (
+                      <option key={`C:INBOUND:${contract.contract_id}`} value={`C:INBOUND:${contract.contract_id}`}>
+                        {contract.erp_contract_id ?? `#${contract.contract_id}`} · {contract.contract_name}
+                        {contract.document_count === 0 ? ' (미적재)' : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {outboundContracts.length > 0 && (
+                  <optgroup label={`${KIND_LABEL.OUTBOUND} · 특정 계약 (${KIND_HINT.OUTBOUND})`}>
+                    {outboundContracts.map((contract) => (
+                      <option key={`C:OUTBOUND:${contract.contract_id}`} value={`C:OUTBOUND:${contract.contract_id}`}>
+                        {contract.erp_contract_id ?? `#${contract.contract_id}`} · {contract.contract_name}
+                        {contract.document_count === 0 ? ' (미적재)' : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
+              {/* 매입/납품이 무엇인지 한 줄로 못박아 둔다 — 드롭다운 라벨만으로는 처음 보는
+                  사람이 방향을 헷갈린다. */}
+              <span className={styles.scopeHint}>
+                <strong>매입</strong>=원자재를 사오는 계약(공급사→자사) ·{' '}
+                <strong>납품</strong>=제품을 파는 계약(자사→고객사)
+              </span>
             </label>
             <div className={styles.searchRow}>
               <input
@@ -431,7 +585,7 @@ export function ContractRagPage() {
             <section className={styles.panel} aria-labelledby="clause-list-heading">
               <h2 id="clause-list-heading" className={styles.panelHeading}>
                 {/* 건수는 합친 뒤의 조항 수다 — 화면에 선 카드 수와 어긋나면 안 된다. */}
-                {search ? `검색 결과 · ${scopeLabel(search)} ${clauses.length}건` : '검색 결과'}
+                {search ? `검색 결과 · ${scopeLabel()} ${clauses.length}건` : '검색 결과'}
               </h2>
 
               {searchError && <p className={styles.error}>{searchError}</p>}
@@ -492,7 +646,20 @@ export function ContractRagPage() {
                         aria-current={isSelected}
                       >
                         <span className={styles.clauseTop}>
-                          <span className={styles.clauseTitle}>{hit.clause_title}</span>
+                          <span className={styles.clauseTitleWrap}>
+                            {/* 전체 검색에서는 매입·납품이 섞여 나오므로, 어느 쪽 계약 조항인지
+                                배지로 바로 구분해준다. */}
+                            {hit.contract && (
+                              <span
+                                className={hit.contract.kind === 'OUTBOUND'
+                                  ? `${styles.kindBadge} ${styles.kindBadgeOutbound}`
+                                  : `${styles.kindBadge} ${styles.kindBadgeInbound}`}
+                              >
+                                {KIND_BADGE[hit.contract.kind]}
+                              </span>
+                            )}
+                            <span className={styles.clauseTitle}>{hit.clause_title}</span>
+                          </span>
                           {/*
                             유사도 원값(0.61) 대신 순위를 쓴다. 구매 담당자에게 그 숫자는 높은
                             건지 낮은 건지 알 수 없고, 임베딩 모델이 바뀌면 같은 관련도라도 값이
@@ -538,23 +705,36 @@ export function ContractRagPage() {
               */}
               <div className={styles.panelHead}>
                 <h2 id="contract-doc-heading" className={styles.panelHeading}>계약 문서</h2>
-                <select
-                  className={styles.panelSelect}
-                  value={detail?.contract.contract_id ?? ''}
-                  disabled={contractsLoading}
-                  aria-label="계약 문서를 볼 계약 선택"
-                  onChange={(event) =>
-                    handleOpenContract(event.target.value ? Number(event.target.value) : null)
-                  }
-                >
-                  <option value="">{contractsLoading ? '불러오는 중…' : '계약 선택…'}</option>
-                  {contracts.map((contract) => (
-                    <option key={contract.contract_id} value={contract.contract_id}>
-                      {contract.erp_contract_id ?? `#${contract.contract_id}`} · {contract.contract_name}
-                      {contract.document_count === 0 ? ' (미적재)' : ''}
-                    </option>
-                  ))}
-                </select>
+                {/* 2단 선택: ① 계약 종류(매입/납품) → ② 그 종류의 특정 계약. */}
+                <div className={styles.panelSelects}>
+                  <select
+                    className={styles.panelSelect}
+                    value={panelKind}
+                    disabled={contractsLoading}
+                    aria-label="계약 종류 선택"
+                    onChange={(event) => handleChangePanelKind(event.target.value as 'INBOUND' | 'OUTBOUND')}
+                  >
+                    <option value="INBOUND">{KIND_LABEL.INBOUND} ({KIND_HINT.INBOUND})</option>
+                    <option value="OUTBOUND">{KIND_LABEL.OUTBOUND} ({KIND_HINT.OUTBOUND})</option>
+                  </select>
+                  <select
+                    className={styles.panelSelect}
+                    value={detail && detail.contract.kind === panelKind ? detail.contract.contract_id : ''}
+                    disabled={contractsLoading}
+                    aria-label="계약 선택"
+                    onChange={(event) =>
+                      handleOpenContract(event.target.value ? Number(event.target.value) : null)
+                    }
+                  >
+                    <option value="">{contractsLoading ? '불러오는 중…' : '계약 선택…'}</option>
+                    {(panelKind === 'INBOUND' ? inboundContracts : outboundContracts).map((contract) => (
+                      <option key={contract.contract_id} value={contract.contract_id}>
+                        {contract.erp_contract_id ?? `#${contract.contract_id}`} · {contract.contract_name}
+                        {contract.document_count === 0 ? ' (미적재)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               {panelError && <p className={styles.error}>{panelError}</p>}
               {panelNotice && (
@@ -587,22 +767,36 @@ export function ContractRagPage() {
                     {detail.contract.erp_contract_id ?? `#${detail.contract.contract_id}`}
                   </p>
 
-                  <div className={styles.field}>
-                    <span className={styles.fieldLabel}>계약 기간</span>
-                    <p className={styles.fieldValue}>
-                      {formatDate(detail.contract.start_date)} — {formatDate(detail.contract.end_date)}
-                    </p>
-                  </div>
+                  {/* 계약 기간은 매입계약에만 있다(납품계약은 기간 대신 물량·단가·위약금 개념). */}
+                  {detail.contract.kind === 'INBOUND' && (
+                    <div className={styles.field}>
+                      <span className={styles.fieldLabel}>계약 기간</span>
+                      <p className={styles.fieldValue}>
+                        {formatDate(detail.contract.start_date)} — {formatDate(detail.contract.end_date)}
+                      </p>
+                    </div>
+                  )}
 
-                  {/* 코드(SUP-AUS-01)만 있으면 어느 회사인지 알 수 없다. 이름이 있으면 이름으로. */}
-                  <div className={styles.field}>
-                    <span className={styles.fieldLabel}>공급사 / 자재</span>
-                    <p className={styles.fieldValue}>
-                      {detail.contract.supplier_name ?? detail.contract.erp_supplier_id ?? '—'}
-                      {' / '}
-                      {detail.contract.material_name ?? detail.contract.erp_material_id ?? '—'}
-                    </p>
-                  </div>
+                  {/* 종류에 따라 붙는 주체가 다르다 — 매입은 공급사·자재, 납품은 제품·고객사. */}
+                  {detail.contract.kind === 'OUTBOUND' ? (
+                    <div className={styles.field}>
+                      <span className={styles.fieldLabel}>제품 / 고객사</span>
+                      <p className={styles.fieldValue}>
+                        {detail.contract.product_name ?? detail.contract.erp_product_id ?? '—'}
+                        {' / '}
+                        {detail.contract.customer_name ?? detail.contract.erp_customer_id ?? '—'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className={styles.field}>
+                      <span className={styles.fieldLabel}>공급사 / 자재</span>
+                      <p className={styles.fieldValue}>
+                        {detail.contract.supplier_name ?? detail.contract.erp_supplier_id ?? '—'}
+                        {' / '}
+                        {detail.contract.material_name ?? detail.contract.erp_material_id ?? '—'}
+                      </p>
+                    </div>
+                  )}
 
                   {/*
                     임베딩 모델명·버전은 뺐다(OPENAI_API / openai-text-embedding-3-large). 구매
@@ -628,39 +822,50 @@ export function ContractRagPage() {
                     </ul>
                   )}
 
-                  <div
-                    className={isDragging ? `${styles.dropZone} ${styles.dropZoneActive}` : styles.dropZone}
-                    onDragOver={(event) => {
-                      event.preventDefault()
-                      setIsDragging(true)
-                    }}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDrop={handleDrop}
-                  >
-                    <p className={styles.dropZoneTitle}>계약서 추가 업로드</p>
-                    <p className={styles.dropZoneHint}>
-                      {stagedFile
-                        ? `선택됨: ${stagedFile.name} — "문서 재처리"를 누르면 적재합니다`
-                        : 'PDF / TXT 파일 끌어놓기'}
+                  {/* 업로드·재처리는 매입계약 전용 엔드포인트다. 납품계약은 조회만 가능하고,
+                      문서 등록은 데이터 관리 화면(아웃바운드 업로드 흐름)의 몫이라 여기선 안내만 한다. */}
+                  {detail.contract.kind === 'OUTBOUND' ? (
+                    <p className={styles.notice}>
+                      납품계약 문서는 여기서 조회만 할 수 있습니다. 계약서 등록·재처리는
+                      "데이터 관리" 화면의 납품계약 업로드를 이용하세요.
                     </p>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".pdf,.txt"
-                      className={styles.fileInput}
-                      onChange={(event) => stageFile(event.target.files?.[0] ?? null)}
-                      aria-label="계약서 파일 선택"
-                    />
-                  </div>
+                  ) : (
+                    <>
+                      <div
+                        className={isDragging ? `${styles.dropZone} ${styles.dropZoneActive}` : styles.dropZone}
+                        onDragOver={(event) => {
+                          event.preventDefault()
+                          setIsDragging(true)
+                        }}
+                        onDragLeave={() => setIsDragging(false)}
+                        onDrop={handleDrop}
+                      >
+                        <p className={styles.dropZoneTitle}>계약서 추가 업로드</p>
+                        <p className={styles.dropZoneHint}>
+                          {stagedFile
+                            ? `선택됨: ${stagedFile.name} — "문서 재처리"를 누르면 적재합니다`
+                            : 'PDF / TXT 파일 끌어놓기'}
+                        </p>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".pdf,.txt"
+                          className={styles.fileInput}
+                          onChange={(event) => stageFile(event.target.files?.[0] ?? null)}
+                          aria-label="계약서 파일 선택"
+                        />
+                      </div>
 
-                  <button
-                    type="button"
-                    className={styles.secondaryButton}
-                    onClick={() => void handleProcess()}
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? '처리 중…' : '문서 재처리'}
-                  </button>
+                      <button
+                        type="button"
+                        className={styles.secondaryButton}
+                        onClick={() => void handleProcess()}
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? '처리 중…' : '문서 재처리'}
+                      </button>
+                    </>
+                  )}
 
                   <button
                     type="button"

@@ -3,6 +3,7 @@ import type {
   CountryDependencyItem,
   MaterialRiskRankItem,
 } from '../../../api/types'
+import { Skeleton } from '../../../components/ui/Skeleton/Skeleton'
 import styles from './ExecutivePriorityAlert.module.css'
 
 interface ExecutivePriorityAlertProps {
@@ -78,4 +79,21 @@ function decisionLabel(level: string | undefined, reviewRequiredCount: number) {
   if (level === 'CRITICAL') return '즉시 대응'
   if (level === 'WARNING') return '대응 확인'
   return '모니터링'
+}
+
+/** 로딩 자리표시자. 배지(둥근 pill) + 제목/부제 2줄로 실제 알림 바 모양을 흉내낸다. */
+export function ExecutivePriorityAlertSkeleton() {
+  return (
+    <section
+      className={styles.skeleton}
+      aria-busy="true"
+      aria-label="핵심 위험 알림 불러오는 중"
+    >
+      <Skeleton variant="circle" width="48px" height="22px" />
+      <div className={styles.skeletonBody}>
+        <Skeleton variant="title" width="42%" />
+        <Skeleton width="68%" />
+      </div>
+    </section>
+  )
 }

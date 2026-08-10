@@ -4,6 +4,9 @@ import {
 import {
   ExecutiveSummaryPanel,
 } from '../components/ExecutiveSummaryPanel'
+import {
+  ExecutiveSectionSkeleton,
+} from '../components/ExecutiveSectionSkeleton'
 import { ExecutiveEvidencePanel, type EvidenceTab } from '../components/ExecutiveEvidencePanel'
 import type { AiBriefingDetail } from '../../../api/types'
 import { useState } from 'react'
@@ -42,9 +45,10 @@ export function ExecutiveRisksPage() {
       }
     >
       {loading && (
-        <Message>
-          핵심 위험 데이터를 조회하고 있습니다.
-        </Message>
+        <>
+          <ExecutiveSectionSkeleton variant="riskGrid" rows={5} />
+          <ExecutiveSectionSkeleton variant="list" rows={4} />
+        </>
       )}
 
       {!loading &&

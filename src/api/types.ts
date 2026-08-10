@@ -78,6 +78,8 @@ export interface LoginFormValues extends LoginRequest {
 
 export interface LoginSuccessResponse {
   access_token: string
+  /** access token 만료까지 남은 초. mock에는 없어 optional. refresh_token은 HttpOnly 쿠키라 body에 없다. */
+  expires_in?: number
   org_tier: OrgTier
   status: 'APPROVED'
 }
@@ -1045,6 +1047,17 @@ export interface ContractSummary {
   /** ChromaDB에 적재 완료된 문서 수. 0이면 검색해도 이 계약은 안 걸린다. */
   document_count: number
   indexed_chunk_count: number
+  /**
+   * "INBOUND"(원자재 매입, 공급사→자사) 또는 "OUTBOUND"(제품 납품, 자사→고객사).
+   * 인바운드는 supplier/material만, 아웃바운드는 product/customer만 채워진다.
+   */
+  kind: 'INBOUND' | 'OUTBOUND'
+  product_id: number | null
+  erp_product_id: string | null
+  product_name: string | null
+  customer_id: number | null
+  erp_customer_id: string | null
+  customer_name: string | null
 }
 
 /** 조항 카드 한 장. */

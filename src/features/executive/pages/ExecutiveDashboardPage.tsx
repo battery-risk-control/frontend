@@ -21,6 +21,9 @@ import {
   ExecutivePriorityAlert,
 } from '../components/ExecutivePriorityAlert'
 import {
+  ExecutiveDashboardSkeleton,
+} from '../components/ExecutiveDashboardSkeleton'
+import {
   ExecutiveRiskDetailPanel,
 } from '../components/ExecutiveRiskDetailPanel'
 import { ExecutiveEvidencePanel, type EvidenceTab } from '../components/ExecutiveEvidencePanel'
@@ -105,14 +108,7 @@ export function ExecutiveDashboardPage() {
         />
       }
     >
-      {loading && (
-        <PageMessage
-          title="대시보드 불러오는 중"
-          message={
-            '최신 공급망 위험 정보를 조회하고 있습니다.'
-          }
-        />
-      )}
+      {loading && <ExecutiveDashboardSkeleton />}
 
       {!loading &&
         errorMessage && (

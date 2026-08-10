@@ -4,6 +4,9 @@ import {
 import {
   ExecutiveSummaryPanel,
 } from '../components/ExecutiveSummaryPanel'
+import {
+  ExecutiveSectionSkeleton,
+} from '../components/ExecutiveSectionSkeleton'
 import type { EntityBadgeItem, SupplierRiskRankItem } from '../../../api/types'
 import { useState } from 'react'
 import {
@@ -40,9 +43,10 @@ export function ExecutiveSupplyChainPage() {
       }
     >
       {loading && (
-        <Message>
-          공급망 데이터를 조회하고 있습니다.
-        </Message>
+        <>
+          <ExecutiveSectionSkeleton variant="list" rows={4} />
+          <ExecutiveSectionSkeleton variant="list" rows={4} />
+        </>
       )}
 
       {!loading &&

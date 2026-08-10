@@ -160,6 +160,7 @@ function PendingTable({ users, busyId, onAction }: ActionProps) {
           <tr>
             <th>성명</th>
             <th>아이디</th>
+            <th>이메일</th>
             <th>신청 계층</th>
             <th>소속</th>
             <th>신청일</th>
@@ -171,6 +172,7 @@ function PendingTable({ users, busyId, onAction }: ActionProps) {
             <tr key={user.user_id}>
               <td>{user.name}</td>
               <td>{user.username}</td>
+              <td>{user.email ?? '—'}</td>
               <td>{tierLabel(user.org_tier)}</td>
               <td>{user.org_name ?? '-'}</td>
               <td>{formatDate(user.created_at)}</td>
@@ -218,6 +220,7 @@ function ApprovedByTier({ users, busyId, onAction }: ActionProps) {
                   <tr>
                     <th>성명</th>
                     <th>아이디</th>
+                    <th>이메일</th>
                     <th>소속</th>
                     <th>가입일</th>
                     <th>처리</th>
@@ -228,6 +231,7 @@ function ApprovedByTier({ users, busyId, onAction }: ActionProps) {
                     <tr key={user.user_id}>
                       <td>{user.name}</td>
                       <td>{user.username}</td>
+                      <td>{user.email ?? '—'}</td>
                       <td>{user.org_name ?? '-'}</td>
                       <td>{formatDate(user.created_at)}</td>
                       <td className={styles.actions}>
@@ -261,6 +265,7 @@ function RejectedTable({ users, busyId, onAction }: ActionProps) {
           <tr>
             <th>성명</th>
             <th>아이디</th>
+            <th>이메일</th>
             <th>신청 계층</th>
             <th>소속</th>
             <th>신청일</th>
@@ -272,6 +277,7 @@ function RejectedTable({ users, busyId, onAction }: ActionProps) {
             <tr key={user.user_id}>
               <td>{user.name}</td>
               <td>{user.username}</td>
+              <td>{user.email ?? '—'}</td>
               <td>{tierLabel(user.org_tier)}</td>
               <td>{user.org_name ?? '-'}</td>
               <td>{formatDate(user.created_at)}</td>

@@ -34,6 +34,7 @@ interface ExecutivePageLayoutProps {
   aside?: ReactNode
   alertCount?: number
   detailKey?: string | null
+  asOf?: string | null
 }
 
 /**
@@ -48,11 +49,12 @@ export function ExecutivePageLayout({
   aside,
   alertCount = 0,
   detailKey = null,
+  asOf = null,
 }: ExecutivePageLayoutProps) {
   const [sideTab, setSideTab] = useState<'detail' | 'alerts'>('detail')
   const detailSectionRef = useRef<HTMLElement>(null)
   const detailExpanded = Boolean(detailKey)
-  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date())
+  const asOfLabel = formatAsOf(asOf)
 
   useEffect(() => {
     if (detailKey) {
@@ -94,8 +96,8 @@ export function ExecutivePageLayout({
                 {title}
               </h1>
             </div>
-            <time className={styles.headerDate} dateTime={today}>
-              {today.replaceAll('-', '.')} <span>기준</span>
+            <time className={styles.headerDate} dateTime={asOf ?? undefined}>
+              {asOfLabel} <span>기준</span>
             </time>
           </div>
 
@@ -124,4 +126,25 @@ export function ExecutivePageLayout({
       <Footer />
     </div>
   )
+}
+
+function formatAsOf(value: string | null) {
+  if (!value) return '데이터 없음'
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '데이터 없음'
+
+  const parts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date)
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((item) => item.type === type)?.value ?? ''
+
+  return `${part('year')}.${part('month')}.${part('day')} ${part('hour')}:${part('minute')} KST`
 }

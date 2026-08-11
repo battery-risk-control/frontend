@@ -45,7 +45,10 @@ export function ExecutiveSidePanel({ detail, alertCount, requestedTab = 'detail'
         )}
         {activeTab === 'briefings' && (
           <div className={styles.listSection}>
-            <div className={styles.panelHead}><h2>최근 브리핑</h2><Link to="/executive/briefings">전체 보기</Link></div>
+            <div className={styles.panelHead}>
+              <h2>최근 브리핑</h2>
+              <Link to="/executive/briefings">전체 {evidence.totalCount}건</Link>
+            </div>
             {evidence.loading ? (
               <div className={styles.listSection} aria-busy="true" aria-label="브리핑 불러오는 중">
                 {Array.from({ length: 4 }, (_, index) => (
@@ -58,9 +61,16 @@ export function ExecutiveSidePanel({ detail, alertCount, requestedTab = 'detail'
             ) : evidence.items.length === 0 ? (
               <p className={styles.empty}>저장된 브리핑이 없습니다.</p>
             ) : evidence.items.slice(0, 5).map((item) => (
-              <Link key={item.briefing_id} className={styles.briefing} to="/executive/briefings">
+              <Link
+                key={item.briefing_id}
+                className={styles.briefing}
+                to={`/executive/briefings?briefing=${encodeURIComponent(item.briefing_id)}`}
+              >
                 <strong>{item.subject_title ?? item.source_headline ?? item.material_name ?? '공급망 위험 브리핑'}</strong>
-                <span>{item.procurement_risk_level} · {item.procurement_risk_score.toFixed(0)}점</span>
+                <span>
+                  {item.procurement_risk_level} · {item.procurement_risk_score.toFixed(0)}점
+                  {isTranslationPending(item.subject_title ?? item.source_headline) ? ' · 번역 대기' : ''}
+                </span>
               </Link>
             ))}
           </div>
@@ -75,4 +85,8 @@ function TabButton({ active, onClick, count, children }: { active: boolean; onCl
   return <button type="button" role="tab" aria-selected={active} className={active ? styles.activeTab : styles.tab} onClick={onClick}>
     {children}{count != null && count > 0 && <span>{count}</span>}
   </button>
+}
+
+function isTranslationPending(title: string | null | undefined) {
+  return Boolean(title) && !/[가-힣]/.test(title ?? '')
 }

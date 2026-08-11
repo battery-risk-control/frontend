@@ -176,7 +176,7 @@ export function MaterialRiskSummaryTable({
                         >
                           {pendingAssessmentId === item.latest_assessment_id
                             ? '처리 중…'
-                            : '대응 완료'}
+                            : '확인 완료'}
                         </button>
                       )}
                     </td>

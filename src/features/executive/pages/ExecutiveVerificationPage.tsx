@@ -40,8 +40,9 @@ export function ExecutiveVerificationPage() {
       title="AI 검증"
       description="ERP와 계약 RAG 근거가 최종 위험 판단에 올바르게 반영됐는지 확인합니다."
       alertCount={summary?.review_required_count ?? 0}
+      asOf={dashboard?.kpi.latest_assessed_at}
       detailKey={selected ? `${selected.briefing_id}:${tab}` : null}
-      aside={<ExecutiveEvidencePanel item={selectedItem} tab={tab} onTabChange={setTab} />}
+      aside={<ExecutiveEvidencePanel item={selectedItem} tab={tab} onTabChange={setTab} mode="verification" />}
     >
       {(loading || evidence.loading) && (
         <>
@@ -55,7 +56,7 @@ export function ExecutiveVerificationPage() {
       {!loading && !errorMessage && dashboard && summary && (
         <>
           <section className={styles.section} aria-labelledby="executive-verification-heading">
-            <div className={styles.sectionHeader}><h2 id="executive-verification-heading">멀티에이전트 검증 요약</h2></div>
+            <div className={styles.sectionHeader}><h2 id="executive-verification-heading">저장 브리핑 누적 검증 요약</h2></div>
             <div className={styles.verificationGrid}>
               <VerificationItem label="전체 검증" value={summary.total_count} active={filter === 'all'} onClick={() => setFilter('all')} />
               <VerificationItem label="검증 통과" value={summary.passed_count} tone="success" active={filter === 'passed'} onClick={() => setFilter('passed')} />
@@ -85,7 +86,17 @@ export function ExecutiveVerificationPage() {
                   >
                     <div>
                       <strong>{item.subject_title ?? item.source_headline ?? item.material_name ?? '공급망 위험 분석'}</strong>
-                      <span>{item.material_name ?? item.material_category ?? '원자재'} · 위험 {item.procurement_risk_score.toFixed(0)}점</span>
+                      <span className={styles.verificationEvidenceRow}>
+                        <b className={item.erp_evidence ? styles.evidenceReady : styles.evidenceMissing}>
+                          ERP {item.erp_evidence ? '연결' : '누락'}
+                        </b>
+                        <b className={item.contract_findings.length > 0 ? styles.evidenceReady : styles.evidenceMissing}>
+                          계약 RAG {item.contract_findings.length > 0 ? `${item.contract_findings.length}건` : '누락'}
+                        </b>
+                        <b className={item.verification.warnings.length > 0 ? styles.evidenceWarning : styles.evidenceReady}>
+                          경고 {item.verification.warnings.length}건
+                        </b>
+                      </span>
                     </div>
                     <span className={item.verification.review_passed ? styles.success : styles.warning}>
                       {item.verification.review_passed ? '검증 통과' : '검토 필요'}
@@ -99,10 +110,10 @@ export function ExecutiveVerificationPage() {
           <section className={styles.section} aria-labelledby="verification-evidence-heading">
             <div className={styles.sectionHeader}><h2 id="verification-evidence-heading">근거 바로 확인</h2></div>
             <div className={styles.twoColumn}>
-              <button type="button" className={styles.listItem} onClick={() => evidence.items[0] && choose(evidence.items[0], 'erp')}>
+              <button type="button" className={styles.listItem} onClick={() => selectedItem && choose(selectedItem, 'erp')} disabled={!selectedItem}>
                 <div><strong>ERP 근거</strong><span>재고·입고 일정·공급사 의존도와 공급 공백을 확인합니다.</span></div>
               </button>
-              <button type="button" className={styles.listItem} onClick={() => evidence.items[0] && choose(evidence.items[0], 'contract')}>
+              <button type="button" className={styles.listItem} onClick={() => selectedItem && choose(selectedItem, 'contract')} disabled={!selectedItem}>
                 <div><strong>계약 RAG 근거</strong><span>검색된 계약 ID·페이지·납기 및 위약 조항을 확인합니다.</span></div>
               </button>
             </div>

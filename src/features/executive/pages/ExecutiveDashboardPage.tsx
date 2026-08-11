@@ -4,7 +4,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import type { AiBriefingDetail, NewsFeedItem, SelectedArticle } from '../../../api/types'
 import { useEffect } from 'react'
-import { fetchPublicNewsFeed } from '../../../api/public.api'
+import { fetchPublicNewsFeed, fetchPublicNewsFeedCount } from '../../../api/public.api'
 import { fromNewsFeedItem } from '../../../lib/selectedArticle'
 import { LatestNewsPanel } from '../../purchasing/components/LatestNewsPanel'
 import {
@@ -37,6 +37,7 @@ import styles from './ExecutiveDashboardPage.module.css'
 
 // 구매팀 대시보드와 동일한 공용 지도 기본 높이.
 const MAP_HEIGHT = 220
+const NEWS_FEED_PAGE_SIZE = 5
 
 export function ExecutiveDashboardPage() {
   const navigate = useNavigate()
@@ -57,8 +58,11 @@ export function ExecutiveDashboardPage() {
   const [selectedEvidence, setSelectedEvidence] = useState<AiBriefingDetail | null>(null)
   const [evidenceTab, setEvidenceTab] = useState<EvidenceTab>('summary')
   const [news, setNews] = useState<NewsFeedItem[]>([])
+  const [newsPage, setNewsPage] = useState(0)
+  const [newsTotal, setNewsTotal] = useState(0)
   const [newsLoading, setNewsLoading] = useState(true)
   const [selectedNews, setSelectedNews] = useState<SelectedArticle | null>(null)
+  const [detailInteractionKey, setDetailInteractionKey] = useState<string | null>(null)
   const priorityBriefing = evidence.items.find(
     (item) => item.composite && item.verification.review_passed === true,
   ) ?? evidence.items.find((item) => item.composite)
@@ -72,11 +76,27 @@ export function ExecutiveDashboardPage() {
 
   useEffect(() => {
     let active = true
-    fetchPublicNewsFeed(50, 0)
-      .then((items) => { if (active) setNews(items) })
-      .finally(() => { if (active) setNewsLoading(false) })
+    fetchPublicNewsFeedCount()
+      .then((total) => { if (active) setNewsTotal(total) })
+      .catch((error) => console.error('경영진 뉴스 건수 조회 실패', error))
     return () => { active = false }
   }, [liveRefreshKey])
+
+  useEffect(() => {
+    let active = true
+    fetchPublicNewsFeed(NEWS_FEED_PAGE_SIZE, newsPage * NEWS_FEED_PAGE_SIZE)
+      .then((items) => {
+        if (!active) return
+        setNews(items)
+        setSelectedNews((current) => current ?? (items[0] ? fromNewsFeedItem(items[0]) : null))
+      })
+      .catch((error) => {
+        console.error('경영진 뉴스 조회 실패', error)
+        if (active) setNews([])
+      })
+      .finally(() => { if (active) setNewsLoading(false) })
+    return () => { active = false }
+  }, [liveRefreshKey, newsPage])
 
   function openEvidence(item: AiBriefingDetail | undefined) {
     if (!item) return
@@ -84,6 +104,12 @@ export function ExecutiveDashboardPage() {
     setSelectedNews(null)
     setSelectedEvidence(item)
     setEvidenceTab('summary')
+    setDetailInteractionKey(item.briefing_id)
+  }
+
+  function changeNewsPage(page: number) {
+    setNewsLoading(true)
+    setNewsPage(page)
   }
 
   return (
@@ -96,7 +122,8 @@ export function ExecutiveDashboardPage() {
         dashboard?.verification_summary
           .review_required_count ?? 0
       }
-      detailKey={selectedNews?.id ?? selectedEvidence?.briefing_id ?? selectedDetail?.label ?? null}
+      asOf={dashboard?.kpi.latest_assessed_at}
+      detailKey={detailInteractionKey}
       aside={
         selectedNews ? <ExecutiveNewsDetail article={selectedNews} /> : selectedEvidence ? <ExecutiveEvidencePanel item={selectedEvidence} tab={evidenceTab} onTabChange={setEvidenceTab} sourceUrl={selectedEvidenceNews?.url} /> : <ExecutiveRiskDetailPanel
           selectedDetail={
@@ -163,24 +190,26 @@ export function ExecutiveDashboardPage() {
                     setSelectedEvidence(null)
                     setSelectedNews(null)
                     setSelectedDetail(detail)
+                    setDetailInteractionKey(detail?.label ?? null)
                   }
                 }
               />
             </section>
 
             <LatestNewsPanel
-              items={news.slice(0, 5)}
+              items={news}
               isLoading={newsLoading}
               selectedId={selectedNews?.id}
               onSelect={(item) => {
                 setSelectedEvidence(null)
                 setSelectedDetail(null)
                 setSelectedNews(fromNewsFeedItem(item))
+                setDetailInteractionKey(String(item.risk_event_id))
               }}
-              page={0}
-              pageSize={5}
-              total={Math.min(news.length, 5)}
-              onPageChange={() => undefined}
+              page={newsPage}
+              pageSize={NEWS_FEED_PAGE_SIZE}
+              total={newsTotal}
+              onPageChange={changeNewsPage}
             />
           </>
         )}

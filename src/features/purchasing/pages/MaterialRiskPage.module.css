@@ -177,6 +177,7 @@
 
 .row {
   border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
   transition: background var(--transition-fast);
 }
 
@@ -190,15 +191,14 @@
   box-shadow: inset 3px 0 0 var(--color-primary);
 }
 
+.row:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
 .rowButton {
-  padding: 0;
-  font: inherit;
   font-weight: var(--font-weight-medium);
   color: var(--color-text);
-  text-align: left;
-  background: none;
-  border: none;
-  cursor: pointer;
 }
 
 .rowButton:hover {

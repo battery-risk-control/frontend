@@ -1,4 +1,5 @@
 import { Header } from '../../../components/layout/Header'
+import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { KpiSummaryCards } from '../components/KpiSummaryCards'
@@ -63,6 +64,7 @@ export function MaterialRiskPage() {
           </QueryState>
         </main>
       </div>
+      <Footer />
     </div>
   )
 }

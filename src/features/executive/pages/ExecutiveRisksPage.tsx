@@ -36,6 +36,7 @@ export function ExecutiveRisksPage() {
         dashboard?.verification_summary
           .review_required_count ?? 0
       }
+      asOf={dashboard?.kpi.latest_assessed_at}
       detailKey={selected?.briefing_id ?? null}
       aside={selected ? <ExecutiveEvidencePanel item={selected} tab={tab} onTabChange={setTab} /> :
         <ExecutiveSummaryPanel
@@ -113,7 +114,7 @@ export function ExecutiveRisksPage() {
                           const match = evidence.items.find((item) =>
                             (item.material_name ?? item.material_category ?? '').toLowerCase().includes(risk.material.toLowerCase()),
                           ) ?? evidence.items[0]
-                          if (match) { setSelected(match); setTab('summary') }
+                          if (match) { setSelected(match); setTab('erp') }
                         }}
                       >
                         <div
@@ -177,7 +178,7 @@ export function ExecutiveRisksPage() {
                       'executive-risk-trend-heading'
                     }
                   >
-                    최근 30일 위험 추세
+                    최근 30일 누적 위험 추세
                   </h2>
                 </div>
               </div>

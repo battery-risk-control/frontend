@@ -88,7 +88,7 @@
 
 .resetButton:not(:disabled):hover,
 .refreshButton:hover {
-  background: var(--color-bg);
+  background: var(--color-surface);
 }
 
 /* 목록:상세 = 3:2. 상세는 sticky라 목록을 길게 스크롤해도 따라온다. */
@@ -154,8 +154,14 @@
 }
 
 .eventCardSelected {
-  background: var(--color-surface);
-  border-color: var(--color-primary);
+  background: var(--color-bg);
+  border-color: var(--color-border);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.eventCard:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .eventBadges {

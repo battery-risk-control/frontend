@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   fetchContractEvidence,
   fetchMaterialRiskDetail,
@@ -39,6 +39,7 @@ import styles from './MaterialRiskPage.module.css'
  */
 export function MaterialRiskPage() {
   const { accessToken } = useAuthState()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [summary, setSummary] = useState<MaterialRiskSummary | null>(null)
   const [materials, setMaterials] = useState<MaterialRiskItem[]>([])
   const [selected, setSelected] = useState<MaterialRiskDetail | null>(null)
@@ -85,14 +86,28 @@ export function MaterialRiskPage() {
     setReloadToken((previous) => previous + 1)
   }, [])
 
-  async function handleSelect(erpMaterialId: string) {
-    if (!accessToken) return
-    setDetailError(null)
-    try {
-      setSelected(await fetchMaterialRiskDetail(accessToken, erpMaterialId))
-    } catch (err) {
-      setDetailError(err instanceof Error ? err.message : '자재 상세를 불러오지 못했습니다.')
+  const requestedMaterialId = searchParams.get('material')
+  useEffect(() => {
+    if (!requestedMaterialId || !accessToken || selected?.erp_material_id === requestedMaterialId) return
+    let cancelled = false
+    fetchMaterialRiskDetail(accessToken, requestedMaterialId)
+      .then((detail) => {
+        if (cancelled) return
+        setDetailError(null)
+        setSelected(detail)
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setDetailError(err instanceof Error ? err.message : '자재 상세를 불러오지 못했습니다.')
+        }
+      })
+    return () => {
+      cancelled = true
     }
+  }, [accessToken, requestedMaterialId, selected?.erp_material_id])
+
+  function selectMaterial(erpMaterialId: string) {
+    setSearchParams({ material: erpMaterialId })
   }
 
   return (
@@ -158,16 +173,21 @@ export function MaterialRiskPage() {
                             ? `${styles.row} ${styles.rowSelected}`
                             : styles.row
                         }
-                        aria-current={selected?.erp_material_id === material.erp_material_id}
+                        role="button"
+                        tabIndex={0}
+                        aria-selected={selected?.erp_material_id === material.erp_material_id}
+                        onClick={() => selectMaterial(material.erp_material_id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            selectMaterial(material.erp_material_id)
+                          }
+                        }}
                       >
                         <td>
-                          <button
-                            type="button"
-                            className={styles.rowButton}
-                            onClick={() => void handleSelect(material.erp_material_id)}
-                          >
+                          <span className={styles.rowButton}>
                             {material.material_name}
-                          </button>
+                          </span>
                         </td>
                         <td>
                           {material.grade ? (

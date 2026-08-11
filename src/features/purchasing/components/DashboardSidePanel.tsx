@@ -34,6 +34,8 @@ interface DashboardSidePanelProps {
    * 안내 문구가 나온다. 두 원천이 필드가 달라 `SelectedArticle`로 모아서 받는다.
    */
   selectedNews: SelectedArticle | null
+  /** 국가뷰처럼 한 선택에 여러 기사가 묶인 경우 함께 표시한다. */
+  selectedNewsItems?: SelectedArticle[]
   /** 이미 `buildDashboardAlerts`로 걸러지고 정렬된 목록 — 이 컴포넌트는 순서를 바꾸지 않는다. */
   alerts: DashboardAlert[]
   briefings: AiBriefingListItem[]
@@ -279,6 +281,7 @@ function UploadCard() {
  */
 export function DashboardSidePanel({
   selectedNews,
+  selectedNewsItems,
   alerts,
   briefings,
   isNewsLoading = false,
@@ -339,6 +342,11 @@ export function DashboardSidePanel({
   const wrapperClassName = [styles.wrapper, !expanded && styles.collapsed, isPreviewing && styles.previewing]
     .filter(Boolean)
     .join(' ')
+  const visibleNewsItems = selectedNewsItems?.length
+    ? selectedNewsItems
+    : selectedNews
+      ? [selectedNews]
+      : []
 
   return (
     <aside className={wrapperClassName} aria-labelledby={expanded ? 'side-panel-heading' : undefined}>
@@ -382,11 +390,28 @@ export function DashboardSidePanel({
                     <Skeleton width="45%" />
                   </div>
                 ) : (
-                  <NewsDetail
-                    news={selectedNews}
-                    briefingLabel={newsBriefingLabel}
-                    briefingTo={newsBriefingTo}
-                  />
+                  <div className={styles.newsGroup}>
+                    {visibleNewsItems.length > 1 && (
+                      <p className={styles.newsGroupLabel}>선택 국가 관련 뉴스 {visibleNewsItems.length}건</p>
+                    )}
+                    {visibleNewsItems.length === 0 ? (
+                      <NewsDetail
+                        news={null}
+                        briefingLabel={newsBriefingLabel}
+                        briefingTo={newsBriefingTo}
+                      />
+                    ) : (
+                      visibleNewsItems.map((news) => (
+                        <div key={news.id} className={styles.newsGroupItem}>
+                          <NewsDetail
+                            news={news}
+                            briefingLabel={newsBriefingLabel}
+                            briefingTo={newsBriefingTo}
+                          />
+                        </div>
+                      ))
+                    )}
+                  </div>
                 ))}
               {activeTab === 'alerts' && (
                 <>

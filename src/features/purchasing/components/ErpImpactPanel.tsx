@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { ScrollCard } from '../../../components/ui/ScrollCard/ScrollCard'
 import type { MaterialRiskItem } from '../../../api/types'
 import { dataQualityLabel, dataQualityTone } from '../../../lib/dataQuality'
@@ -57,6 +58,11 @@ export function ErpImpactPanel({ materials }: ErpImpactPanelProps) {
     <ScrollCard
       headingId="erp-impact-heading"
       title="ERP 영향 자재 재고 계약 분석"
+      actions={
+        <Link to="/purchasing/materials" className={styles.detailLink}>
+          전체 자재 보기 →
+        </Link>
+      }
       // 리스트 항목 4개 초과 시 스크롤 트리거용 높이(design-tokens.md "카드 레이아웃·스크롤 규칙" d).
       maxBodyHeight={360}
     >
@@ -88,6 +94,12 @@ export function ErpImpactPanel({ materials }: ErpImpactPanelProps) {
                 {material.unavailable_reason && (
                   <p className={styles.candidates}>{material.unavailable_reason}</p>
                 )}
+                <Link
+                  to={`/purchasing/materials?material=${encodeURIComponent(material.erp_material_id)}`}
+                  className={styles.detailLink}
+                >
+                  이 자재 상세 보기 →
+                </Link>
               </li>
             )
           })}

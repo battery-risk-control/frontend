@@ -171,6 +171,12 @@ export function PlanningDashboardPage() {
           onPreviewMouseEnter={() => {}}
           onPreviewMouseLeave={() => {}}
           showUploadCard={false}
+          // 경영기획팀엔 리스크 모니터링 화면이 없어 "전체 보기"·기사 브리핑 버튼을 모두
+          // 경영기획팀 AI 브리핑(/planning/briefings)으로 보낸다(구매팀 전용 라우트로 넘어가
+          // RequireAuth 계층 불일치 모달이 뜨던 문제 해소).
+          alertsMoreTo="/planning/briefings"
+          newsBriefingLabel="이 기사의 브리핑 확인"
+          newsBriefingTo={() => '/planning/briefings'}
         />
       </div>
       <Footer />

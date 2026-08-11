@@ -62,6 +62,15 @@ interface DashboardSidePanelProps {
   onPreviewMouseLeave: () => void
   /** 우측 하단 "데이터 업로드" 카드 표시 여부 (기본값: true). 경영기획팀 등 미사용 화면에서 숨긴다. */
   showUploadCard?: boolean
+  /**
+   * "주요 알림" 탭의 "전체 보기" 링크 목적지. 기본은 구매팀 리스크 모니터링.
+   * 경영기획팀처럼 리스크 모니터링 화면이 없는 계층은 자기 화면(예: AI 브리핑)으로 넘긴다.
+   */
+  alertsMoreTo?: string
+  /** 뉴스 상세의 브리핑 액션 버튼 라벨. 기본 "이 기사로 브리핑 생성". */
+  newsBriefingLabel?: string
+  /** 뉴스 상세 브리핑 버튼 링크(선택 기사 ref 기준). 기본은 구매팀 브리핑 생성 화면. */
+  newsBriefingTo?: (briefingRef: string) => string
 }
 
 function AlertIcon() {
@@ -121,7 +130,15 @@ function AlertList({ alerts, limit }: { alerts: DashboardAlert[]; limit?: number
   )
 }
 
-function NewsDetail({ news }: { news: SelectedArticle | null }) {
+function NewsDetail({
+  news,
+  briefingLabel,
+  briefingTo,
+}: {
+  news: SelectedArticle | null
+  briefingLabel: string
+  briefingTo: (briefingRef: string) => string
+}) {
   if (!news) {
     return (
       <p className={styles.empty}>
@@ -178,11 +195,8 @@ function NewsDetail({ news }: { news: SelectedArticle | null }) {
           </a>
         )}
         {briefingRef !== null && (
-          <Link
-            to={`/purchasing/ai-briefing?source=NEWS&ref=${encodeURIComponent(briefingRef)}`}
-            className={styles.secondaryAction}
-          >
-            이 기사로 브리핑 생성
+          <Link to={briefingTo(briefingRef)} className={styles.secondaryAction}>
+            {briefingLabel}
           </Link>
         )}
       </div>
@@ -279,6 +293,10 @@ export function DashboardSidePanel({
   onPreviewMouseEnter,
   onPreviewMouseLeave,
   showUploadCard = true,
+  alertsMoreTo = '/purchasing/risk-monitoring',
+  newsBriefingLabel = '이 기사로 브리핑 생성',
+  newsBriefingTo = (briefingRef: string) =>
+    `/purchasing/ai-briefing?source=NEWS&ref=${encodeURIComponent(briefingRef)}`,
 }: DashboardSidePanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>('news')
 
@@ -377,11 +395,19 @@ export function DashboardSidePanel({
                       <p className={styles.newsGroupLabel}>선택 국가 관련 뉴스 {visibleNewsItems.length}건</p>
                     )}
                     {visibleNewsItems.length === 0 ? (
-                      <NewsDetail news={null} />
+                      <NewsDetail
+                        news={null}
+                        briefingLabel={newsBriefingLabel}
+                        briefingTo={newsBriefingTo}
+                      />
                     ) : (
                       visibleNewsItems.map((news) => (
                         <div key={news.id} className={styles.newsGroupItem}>
-                          <NewsDetail news={news} />
+                          <NewsDetail
+                            news={news}
+                            briefingLabel={newsBriefingLabel}
+                            briefingTo={newsBriefingTo}
+                          />
                         </div>
                       ))
                     )}
@@ -391,9 +417,9 @@ export function DashboardSidePanel({
                 <>
                   <div className={styles.panelHead}>
                     <span className={styles.panelTitle}>주요 알림</span>
-                    {/* 목업의 "전체 보기". 이 목록은 심각·주의만 추린 것이라, 전체는 등급 필터가
-                        있는 리스크 모니터링 화면에서 본다. */}
-                    <Link to="/purchasing/risk-monitoring" className={styles.panelMore}>
+                    {/* 목업의 "전체 보기". 기본은 등급 필터가 있는 구매팀 리스크 모니터링 화면.
+                        리스크 모니터링이 없는 계층(경영기획팀)은 alertsMoreTo로 자기 화면을 넘긴다. */}
+                    <Link to={alertsMoreTo} className={styles.panelMore}>
                       전체 보기
                     </Link>
                   </div>

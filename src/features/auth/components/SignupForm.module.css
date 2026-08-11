@@ -67,6 +67,33 @@
   color: var(--color-text-muted);
 }
 
+.hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.hintError {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger, #d92d20);
+}
+
+.formError {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-danger, #d92d20);
+}
+
+.linkButtonRow {
+  align-self: center;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .submitButton {
   padding: var(--space-3);
   border: none;

@@ -11,7 +11,9 @@ test.describe('2계층 드릴다운', () => {
     await loginAs(page, 'planning@test.local')
     await expect(page).toHaveURL(/\/planning$/)
 
-    await page.getByRole('link', { name: 'AI 브리핑' }).click()
+    // 정확일치로 좁힌다 — 대시보드 퀵링크 "AI 브리핑 사업부별 취합 보고"도 이름에 "AI 브리핑"을
+    // 포함해 함께 잡히므로(strict 위반), 사이드바 메뉴 링크만 집는다(briefing-detail.spec.ts와 동일).
+    await page.getByRole('link', { name: 'AI 브리핑', exact: true }).click()
     await expect(page).toHaveURL(/\/planning\/briefings$/)
 
     await page.getByRole('link', { name: /인도네시아 니켈 수출 관세 인상/ }).click()

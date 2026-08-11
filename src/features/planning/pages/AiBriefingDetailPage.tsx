@@ -37,10 +37,27 @@ export function AiBriefingDetailPage() {
                   <h1 className={styles.heading}>{detail.material} 브리핑 상세</h1>
                   <RiskGradeBadge grade={detail.grade} />
                   {detail.business_unit && <span className={styles.unit}>{detail.business_unit}</span>}
+                  {/* 원문 링크는 제목 줄 우측 끝에 둔다(.sourceButton margin-left:auto). */}
+                  {detail.source_url && (
+                    <a
+                      className={styles.sourceButton}
+                      href={detail.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      뉴스 원문 보기 ↗
+                    </a>
+                  )}
                 </div>
                 <section className={styles.section}>
-                  <h2 className={styles.sectionTitle}>이벤트 개요</h2>
-                  <p className={styles.bodyText}>{detail.event_content}</p>
+                  <h2 className={styles.sectionTitle}>뉴스 요약</h2>
+                  {/*
+                    경영기획 대시보드 전용 상세 요약(briefing_summary_kr)을 우선 보여준다.
+                    아직 생성 전이면 짧은 추출 요약(summary_kr) → 이벤트 본문 순으로 폴백한다.
+                  */}
+                  <p className={styles.bodyText}>
+                    {detail.briefing_summary_kr ?? detail.summary_kr ?? detail.event_content}
+                  </p>
                 </section>
                 <section className={styles.section}>
                   <h2 className={styles.sectionTitle}>AI 브리핑</h2>

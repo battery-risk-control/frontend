@@ -3,7 +3,6 @@ import {
   CartesianGrid,
   Line,
   LineChart,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -365,13 +364,6 @@ export function MaterialPriceDetail({
               tick={{ fill: 'var(--color-text-muted)', fontSize: 11 }}
               tickLine={false}
               axisLine={false}
-            />
-            {/* 기준선 100. 대칭 도메인과 함께 두면 화면 세로 중앙에 놓여, 각 선이 기준 위/아래
-                어디에 있는지 한눈에 읽힌다. */}
-            <ReferenceLine
-              y={100}
-              stroke="var(--color-text-muted)"
-              strokeDasharray="4 4"
             />
             <Tooltip
               isAnimationActive={false}

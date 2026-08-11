@@ -8,6 +8,7 @@ import {
   generateAiBriefing,
   isAiBriefingApiConfigured,
 } from '../../../api/aiBriefing.api'
+import { downloadContractDocument } from '../../../api/contractRag.api'
 import type {
   AiBriefingContext,
   AiBriefingDetail,
@@ -180,6 +181,7 @@ export function AiBriefingPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [isDownloadingContract, setIsDownloadingContract] = useState(false)
   const [recentToken, setRecentToken] = useState(0)
 
   const apiConfigured = isAiBriefingApiConfigured()
@@ -510,6 +512,27 @@ export function AiBriefingPage() {
   }
 
   /**
+   * "계약서에서 확인된 근거"가 참조하는 계약서 원본을 내려받는다. 브리핑 근거(contract_findings)에
+   * document_id가 이미 들어 있어, 계약을 다시 조회하지 않고 그 ID로 바로 받는다. PDF 다운로드와
+   * 같은 규약이라 실패는 상단 오류 줄에 띄우고, 저장은 saveBlob에 맡긴다.
+   */
+  async function handleDownloadContract(documentId: string) {
+    if (!accessToken) return
+    setActionError(null)
+    setIsDownloadingContract(true)
+    try {
+      const file = await downloadContractDocument(accessToken, documentId)
+      if ('error' in file) {
+        setActionError(file.message)
+      } else {
+        saveBlob(file.blob, file.fileName)
+      }
+    } finally {
+      setIsDownloadingContract(false)
+    }
+  }
+
+  /**
    * 필터를 바꾸면 페이지를 처음으로 되돌린다. 3페이지를 보다가 조건을 좁히면 결과가 그만큼
    * 없어서 빈 화면이 나오는데, 사용자는 "필터에 걸리는 게 없다"로 읽는다.
    */
@@ -611,7 +634,14 @@ export function AiBriefingPage() {
                     : '리스크 이벤트 · 원자재 위험 · 계약 · RAG 화면에서 대상을 골라 오거나, 최근 브리핑을 열어 보세요.'}
                 </p>
               )}
-              {detail && <BriefingResult detail={detail} />}
+              {detail && (
+                <BriefingResult
+                  detail={detail}
+                  canDownloadContract={Boolean(accessToken)}
+                  isDownloadingContract={isDownloadingContract}
+                  onDownloadContract={handleDownloadContract}
+                />
+              )}
             </section>
 
             <div className={styles.sideColumn}>
@@ -721,11 +751,21 @@ function TargetBar({
 }
 
 /** 좌측 본문 — 등급·브리핑 문구·ERP 노출 근거·계약 근거·권고 조치·검증 메타데이터. */
-function BriefingResult({ detail }: { detail: AiBriefingDetail }) {
+function BriefingResult({
+  detail,
+  canDownloadContract,
+  isDownloadingContract,
+  onDownloadContract,
+}: {
+  detail: AiBriefingDetail
+  canDownloadContract: boolean
+  isDownloadingContract: boolean
+  onDownloadContract: (documentId: string) => void
+}) {
   const evidence = detail.erp_evidence
   const verification = detail.verification
   const firstFinding = detail.contract_findings[0] as
-    | { contract_id?: number; page?: number; evidence_text?: string }
+    | { contract_id?: number; page?: number; evidence_text?: string; document_id?: string }
     | undefined
 
   return (
@@ -778,7 +818,21 @@ function BriefingResult({ detail }: { detail: AiBriefingDetail }) {
 
       {firstFinding && (
         <section className={styles.section}>
-          <h3 className={styles.sectionTitle}>계약서에서 확인된 근거</h3>
+          <div className={styles.sectionHeaderRow}>
+            <h3 className={styles.sectionTitle}>계약서에서 확인된 근거</h3>
+            {/* 근거가 나온 계약서 원본을 그 자리에서 내려받는다. 브리핑 근거에 document_id가
+                이미 들어 있어(계약 재조회 없이) 바로 받는다. 문서 ID가 없는 옛 브리핑은 버튼을 숨긴다. */}
+            {firstFinding.document_id && (
+              <button
+                type="button"
+                className={styles.downloadAction}
+                onClick={() => onDownloadContract(firstFinding.document_id as string)}
+                disabled={!canDownloadContract || isDownloadingContract}
+              >
+                {isDownloadingContract ? '내려받는 중…' : '계약서 다운로드'}
+              </button>
+            )}
+          </div>
           <p className={styles.sectionText}>
             계약 ID {firstFinding.contract_id ?? '—'}, 페이지 {firstFinding.page ?? '—'}
             <br />

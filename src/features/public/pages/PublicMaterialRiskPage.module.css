@@ -453,6 +453,15 @@
   border-radius: var(--radius-sm);
 }
 
+/* 심각(CRITICAL) 자재는 '심각' 배지와 같은 빨간색으로 안내 박스를 강조한다. */
+.reviewRequiredCritical {
+  border-left-color: var(--color-risk-critical);
+}
+
+.reviewRequiredCritical .reviewRequiredTitle {
+  color: var(--color-risk-critical);
+}
+
 .reviewRequiredTitle {
   margin: 0;
   font-weight: var(--font-weight-medium);

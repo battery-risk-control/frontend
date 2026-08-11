@@ -1,4 +1,5 @@
-import { fetchWithAuth, uploadWithAuth } from './http'
+import { downloadGetWithAuth, fetchWithAuth, uploadWithAuth } from './http'
+import type { DownloadedFile, FetchJsonError } from './http'
 import type {
   ContractClauseSearchResult,
   ContractDetail,
@@ -167,4 +168,56 @@ export async function reprocessContractDocuments(
     accessToken,
     { method: 'POST' },
   ))
+}
+
+/**
+ * 납품(아웃바운드) 계약서 추가 업로드. 인바운드 `uploadContractDocument`의 아웃바운드판 —
+ * 제품·고객사 ID는 백엔드가 계약에서 채우므로 화면은 파일만 보낸다.
+ */
+export async function uploadOutboundContractDocument(
+  accessToken: string,
+  outboundContractId: number,
+  file: File,
+): Promise<ContractUploadResult> {
+  const form = new FormData()
+  form.append('file', file)
+  return unwrap(await uploadWithAuth<ContractUploadResult>(
+    `/api/v1/contract-rag/outbound-contracts/${outboundContractId}/documents`,
+    accessToken,
+    form,
+  ))
+}
+
+/**
+ * 납품(아웃바운드) 계약 문서 재처리. 인바운드 `reprocessContractDocuments`의 아웃바운드판 —
+ * 이 계약에 달린 납품계약 문서를 전부 다시 임베딩한다.
+ */
+export async function reprocessOutboundContractDocuments(
+  accessToken: string,
+  outboundContractId: number,
+): Promise<ContractReprocessResult> {
+  return unwrap(await fetchWithAuth<ContractReprocessResult>(
+    `/api/v1/contract-rag/outbound-contracts/${outboundContractId}/reprocess`,
+    accessToken,
+    { method: 'POST' },
+  ))
+}
+
+/**
+ * 계약서 원본 파일 다운로드. `document_id`로 저장된 원본(PDF/TXT)을 바이너리로 받는다.
+ * AI 브리핑의 "계약서에서 확인된 근거"가 참조하는 계약서를 확인용으로 내려받는 데 쓴다.
+ *
+ * 다른 다운로드(브리핑 PDF·ERP 리포트)와 같은 규약이라, 성공하면 `{ blob, fileName }`,
+ * 실패하면 `{ error, message }`가 온다 — 호출부에서 `'error' in file`로 갈라 `saveBlob`한다.
+ * 파일명은 서버가 Content-Disposition으로 주므로 폴백만 넘긴다.
+ */
+export async function downloadContractDocument(
+  accessToken: string,
+  documentId: string,
+): Promise<DownloadedFile | FetchJsonError> {
+  return downloadGetWithAuth(
+    `/api/v1/contract-rag/documents/${documentId}/download`,
+    accessToken,
+    'contract-document',
+  )
 }

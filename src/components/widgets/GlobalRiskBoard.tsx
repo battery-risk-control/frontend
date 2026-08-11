@@ -325,6 +325,9 @@ export function GlobalRiskBoard({ items, onSelectItem, mapHeight, onSelect }: Gl
             // 나가지 않는다.
             maxBounds={[[-90, -180], [90, 180]]}
             maxBoundsViscosity={1.0}
+            // 지도 우하단 기본 저작권 표기('Leaflet | © OpenStreetMap … © CARTO') 컨트롤을 숨긴다.
+            // (OSM/CARTO는 어딘가에는 출처 표기를 요구하므로 TileLayer의 attribution 메타는 남겨 둔다.)
+            attributionControl={false}
             style={{ height: '100%', width: '100%' }}
           >
             <TileLayer

@@ -6,10 +6,14 @@ import {
   fetchContracts,
   isContractRagApiConfigured,
   reprocessContractDocuments,
+  reprocessOutboundContractDocuments,
+  downloadContractDocument,
   searchClauses,
   uploadContractDocument,
+  uploadOutboundContractDocument,
 } from '../../../api/contractRag.api'
 import type { ContractSearchKind } from '../../../api/contractRag.api'
+import { saveBlob } from '../../../lib/saveBlob'
 import type {
   ContractClauseHit,
   ContractClauseSearchResult,
@@ -176,6 +180,9 @@ export function ContractRagPage() {
   const [isSearching, setIsSearching] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  // 검색 결과 카드의 원문 다운로드 — 진행 중인 문서 id(버튼 비활성/문구용)와 실패 메시지.
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
   const [panelError, setPanelError] = useState<string | null>(null)
   const [panelNotice, setPanelNotice] = useState<PanelNotice | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -285,6 +292,27 @@ export function ContractRagPage() {
   }
 
   /**
+   * 검색 결과 조항의 원본 계약 문서를 내려받는다. AiBriefingPage.handleDownloadContract와 같은 규약 —
+   * 성공하면 saveBlob, 실패하면 오류 메시지. 매입(con_)·납품(outcon_) 문서 모두 같은 엔드포인트가
+   * document_id 접두로 갈라 서빙한다.
+   */
+  async function handleDownloadClause(documentId: string) {
+    if (!accessToken) return
+    setDownloadError(null)
+    setDownloadingId(documentId)
+    try {
+      const file = await downloadContractDocument(accessToken, documentId)
+      if ('error' in file) {
+        setDownloadError(file.message)
+      } else {
+        saveBlob(file.blob, file.fileName)
+      }
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
+  /**
    * 검색 범위만 바꾼다. 결과는 다음 검색부터 반영된다 — 필터를 건드렸다고 이미 받아둔 결과를
    * 지우면, 범위를 이리저리 바꿔 보는 동안 화면이 계속 비어 버린다.
    *
@@ -335,10 +363,17 @@ export function ContractRagPage() {
     setIsProcessing(true)
     setPanelError(null)
     setPanelNotice(null)
+    // 매입(INBOUND)/납품(OUTBOUND)이 각자 전용 엔드포인트를 쓴다 — 계약 PK 번호가 겹쳐
+    // 인바운드 경로로 아웃바운드를 보내면 엉뚱한 계약을 건드린다. detail.contract.contract_id는
+    // 아웃바운드 상세에서는 outbound_contract_id를 담고 온다(fetchOutboundContractDetail 기준).
+    const isOutbound = detail.contract.kind === 'OUTBOUND'
     try {
       if (stagedFile) {
-        const result = await uploadContractDocument(
-          accessToken, detail.contract.contract_id, stagedFile)
+        const result = isOutbound
+          ? await uploadOutboundContractDocument(
+              accessToken, detail.contract.contract_id, stagedFile)
+          : await uploadContractDocument(
+              accessToken, detail.contract.contract_id, stagedFile)
         setPanelNotice(result.duplicate
           ? {
               tone: 'info',
@@ -353,8 +388,11 @@ export function ContractRagPage() {
         setStagedFile(null)
         if (fileInputRef.current) fileInputRef.current.value = ''
       } else {
-        const result = await reprocessContractDocuments(
-          accessToken, detail.contract.contract_id)
+        const result = isOutbound
+          ? await reprocessOutboundContractDocuments(
+              accessToken, detail.contract.contract_id)
+          : await reprocessContractDocuments(
+              accessToken, detail.contract.contract_id)
         // 실패가 하나라도 있으면 성공 색으로 그리지 않는다 — 초록 상자에 "실패 2건"은 안 읽힌다.
         setPanelNotice(result.failed_count > 0
           ? {
@@ -372,7 +410,9 @@ export function ContractRagPage() {
       // 여기서 갱신하지 않으면 방금 올린 계약이 계속 "미적재"로 남는다.
       // 검색 결과는 일부러 다시 돌리지 않는다(검색 1회 = 임베딩 1콜). 대신 안내로 알린다.
       const [, rows] = await Promise.all([
-        loadContract(detail.contract.contract_id),
+        isOutbound
+          ? loadOutboundContract(detail.contract.contract_id)
+          : loadContract(detail.contract.contract_id),
         fetchContractList(),
       ])
       setContracts(rows)
@@ -636,12 +676,15 @@ export function ContractRagPage() {
                     selectedClause?.document_id === hit.document_id &&
                     selectedClause?.chunk_index === hit.chunk_index
                   return (
-                    <li key={key}>
+                    <li
+                      key={key}
+                      className={isSelected
+                        ? `${styles.clauseItem} ${styles.clauseItemSelected}`
+                        : styles.clauseItem}
+                    >
                       <button
                         type="button"
-                        className={isSelected
-                          ? `${styles.clauseCard} ${styles.clauseCardSelected}`
-                          : styles.clauseCard}
+                        className={styles.clauseCard}
                         onClick={() => handleSelectClause(hit)}
                         aria-current={isSelected}
                       >
@@ -691,10 +734,21 @@ export function ContractRagPage() {
                         </p>
                         <p className={styles.clauseContent}>{previewBody(hit)}</p>
                       </button>
+                      {/* 다운로드 줄 전체가 버튼 — 좌우 어디를 눌러도 원본이 받아진다.
+                          카드(선택)와는 형제라 버튼 중첩이 아니다. */}
+                      <button
+                        type="button"
+                        className={styles.downloadRow}
+                        onClick={() => handleDownloadClause(hit.document_id)}
+                        disabled={downloadingId === hit.document_id}
+                      >
+                        {downloadingId === hit.document_id ? '내려받는 중…' : '원문 다운로드 ↓'}
+                      </button>
                     </li>
                   )
                 })}
               </ul>
+              {downloadError && <p className={styles.error}>{downloadError}</p>}
             </section>
 
             <section className={styles.panel} aria-labelledby="contract-doc-heading">
@@ -822,50 +876,41 @@ export function ContractRagPage() {
                     </ul>
                   )}
 
-                  {/* 업로드·재처리는 매입계약 전용 엔드포인트다. 납품계약은 조회만 가능하고,
-                      문서 등록은 데이터 관리 화면(아웃바운드 업로드 흐름)의 몫이라 여기선 안내만 한다. */}
-                  {detail.contract.kind === 'OUTBOUND' ? (
-                    <p className={styles.notice}>
-                      납품계약 문서는 여기서 조회만 할 수 있습니다. 계약서 등록·재처리는
-                      "데이터 관리" 화면의 납품계약 업로드를 이용하세요.
+                  {/* 매입(INBOUND)·납품(OUTBOUND) 모두 이 화면에서 업로드·재처리한다 —
+                      handleProcess가 계약 kind에 따라 각자 전용 엔드포인트로 보낸다. */}
+                  <div
+                    className={isDragging ? `${styles.dropZone} ${styles.dropZoneActive}` : styles.dropZone}
+                    onDragOver={(event) => {
+                      event.preventDefault()
+                      setIsDragging(true)
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={handleDrop}
+                  >
+                    <p className={styles.dropZoneTitle}>계약서 추가 업로드</p>
+                    <p className={styles.dropZoneHint}>
+                      {stagedFile
+                        ? `선택됨: ${stagedFile.name} — "문서 재처리"를 누르면 적재합니다`
+                        : 'PDF / TXT 파일 끌어놓기'}
                     </p>
-                  ) : (
-                    <>
-                      <div
-                        className={isDragging ? `${styles.dropZone} ${styles.dropZoneActive}` : styles.dropZone}
-                        onDragOver={(event) => {
-                          event.preventDefault()
-                          setIsDragging(true)
-                        }}
-                        onDragLeave={() => setIsDragging(false)}
-                        onDrop={handleDrop}
-                      >
-                        <p className={styles.dropZoneTitle}>계약서 추가 업로드</p>
-                        <p className={styles.dropZoneHint}>
-                          {stagedFile
-                            ? `선택됨: ${stagedFile.name} — "문서 재처리"를 누르면 적재합니다`
-                            : 'PDF / TXT 파일 끌어놓기'}
-                        </p>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept=".pdf,.txt"
-                          className={styles.fileInput}
-                          onChange={(event) => stageFile(event.target.files?.[0] ?? null)}
-                          aria-label="계약서 파일 선택"
-                        />
-                      </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.txt"
+                      className={styles.fileInput}
+                      onChange={(event) => stageFile(event.target.files?.[0] ?? null)}
+                      aria-label="계약서 파일 선택"
+                    />
+                  </div>
 
-                      <button
-                        type="button"
-                        className={styles.secondaryButton}
-                        onClick={() => void handleProcess()}
-                        disabled={isProcessing}
-                      >
-                        {isProcessing ? '처리 중…' : '문서 재처리'}
-                      </button>
-                    </>
-                  )}
+                  <button
+                    type="button"
+                    className={styles.secondaryButton}
+                    onClick={() => void handleProcess()}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? '처리 중…' : '문서 재처리'}
+                  </button>
 
                   <button
                     type="button"

@@ -454,6 +454,11 @@ function fetchAiBriefingDetailMock(analysisId: string): AiBriefingDetailResponse
     grade: item.grade,
     headline: item.headline,
     event_content: item.headline,
+    // mock에는 분석이 만든 한국어 요약·원문 링크가 없어 폴백을 확인할 수 있도록 null로 둔다
+    // (실 백엔드는 analyses.summary_kr·source_url, ai_briefings.briefing_summary_kr을 채워 보낸다).
+    summary_kr: null,
+    briefing_summary_kr: null,
+    source_url: null,
     briefing: `${item.headline} — 관련 브리핑 본문(mock 임시값, 실제 LLM 생성 텍스트 아님).`,
     recommended_actions: ['대체 공급사 컨택 검토', '안전재고 확대 검토'],
     contract_findings: [],

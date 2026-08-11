@@ -537,6 +537,15 @@ export interface AiBriefingDetailResponse {
   grade: RiskGrade
   headline: string
   event_content: string
+  /** analyses.summary_kr — 추출 단계의 짧은(1줄) 한국어 요약. 상세 요약 폴백용. */
+  summary_kr: string | null
+  /**
+   * 경영기획 AI 브리핑 상세 전용으로 LLM이 새로 생성한 자세한 한국어 요약(ai_briefings.briefing_summary_kr).
+   * 없으면(아직 생성 전) null — 화면은 summary_kr로 폴백한다.
+   */
+  briefing_summary_kr: string | null
+  /** analyses.source_url — 뉴스 원문 링크. 없으면 null(원문 버튼 미표시). */
+  source_url: string | null
   briefing: string | null
   recommended_actions: string[] | null
   contract_findings: ContractFindingItem[] | null

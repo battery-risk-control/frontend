@@ -153,6 +153,14 @@
   color: var(--color-text-muted);
 }
 
+/* 섹션 제목(좌) + 보조 액션 버튼(우 상단)을 한 줄에 둔다 — "계약서 다운로드"가 여기 붙는다. */
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .sectionText {
   margin: 0;
   font-size: var(--font-size-sm);

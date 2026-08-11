@@ -70,6 +70,24 @@
   white-space: pre-line;
 }
 
+/* 뉴스 원문으로 나가는 버튼. 제목 줄(.titleRow) 우측 끝에 밀어 붙인다. */
+.sourceButton {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-surface);
+  background: var(--color-primary);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+
+.sourceButton:hover {
+  text-decoration: underline;
+}
+
 .pointList {
   margin: 0;
   padding-left: var(--space-6);

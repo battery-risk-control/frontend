@@ -1,0 +1,161 @@
+.panel {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 100vh;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(32, 105, 218, 0.2), transparent 31%),
+    radial-gradient(ellipse at 50% 46%, transparent 42%, rgba(2, 9, 24, 0.24) 100%),
+    linear-gradient(145deg, #061127 0%, #081d43 52%, #07152f 100%);
+  color: #f4f8ff;
+}
+
+.panel::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(120, 178, 255, 0.038) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 178, 255, 0.038) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, transparent 86%);
+  content: '';
+}
+
+.glow {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  width: min(34vw, 480px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(23, 111, 255, 0.21);
+  filter: blur(70px);
+  transform: translate(-50%, -50%);
+}
+
+.canvas {
+  position: absolute;
+  inset: 7% 5% 28%;
+  isolation: isolate;
+}
+
+.canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.fallbackCrystal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 150px;
+  height: 190px;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(143, 220, 255, 0.9), #165cdd 48%, #07183a);
+  clip-path: polygon(50% 0, 93% 32%, 82% 84%, 50% 100%, 15% 82%, 4% 34%);
+  filter: drop-shadow(0 24px 36px rgba(0, 73, 190, 0.46));
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.canvas:not(.webGlFailed) .fallbackCrystal {
+  display: none;
+}
+
+.ambientShadow {
+  position: absolute;
+  top: 77%;
+  left: 50%;
+  z-index: 1;
+  width: min(44%, 260px);
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(2, 15, 38, 0.56);
+  filter: blur(15px);
+  opacity: 0.38;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+
+.copy {
+  position: relative;
+  align-self: end;
+  z-index: 2;
+  padding: 0 clamp(32px, 6vw, 82px) clamp(54px, 8vh, 90px);
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #68b9e3;
+  font-size: clamp(0.52rem, 0.72vw, 0.64rem);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  white-space: nowrap;
+}
+
+.wordmark {
+  position: relative;
+  margin: 0;
+  color: #f5f8ff;
+  font-size: clamp(3.2rem, 6.6vw, 6.2rem);
+  font-weight: 800;
+  line-height: 0.94;
+  letter-spacing: 0.115em;
+  text-indent: 0.115em;
+  text-shadow: 0 7px 28px rgba(41, 94, 214, 0.2);
+}
+
+.spectrumI {
+  background: linear-gradient(180deg, #e7f3f8 8%, #8fc8d2 42%, #7f9bc2 70%, #9a91b7 94%);
+  background-clip: text;
+  color: transparent;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.tagline {
+  margin: 16px 0 0;
+  color: rgba(215, 229, 245, 0.62);
+  font-size: clamp(0.82rem, 1.28vw, 1rem);
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 780px) {
+  .panel {
+    min-height: 420px;
+  }
+
+  .canvas {
+    inset: 2% 8% 22%;
+  }
+
+  .copy {
+    padding-bottom: 30px;
+  }
+
+  .wordmark {
+    font-size: 3.25rem;
+  }
+
+}
+
+@media (min-width: 781px) and (max-height: 760px) {
+  .canvas {
+    inset: 8% 9% 30%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas {
+    transform: none;
+  }
+}

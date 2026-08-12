@@ -17,6 +17,7 @@ import { SignupForm } from '../components/SignupForm'
 import { PasswordExpiredResetForm } from '../components/PasswordExpiredResetForm'
 import { PendingApprovalScreen } from '../components/PendingApprovalScreen'
 import { SecurityBadge } from '../components/SecurityBadge'
+import { AuthPrismScene } from '../components/AuthPrismScene'
 import { PrivacyPolicyModal } from '../../../components/layout/PrivacyPolicyModal'
 import styles from './AuthPage.module.css'
 
@@ -36,6 +37,7 @@ export function AuthPage() {
   // 비밀번호 만료로 재설정이 필요한 계정의 로그인 아이디(이메일). 설정되면 재설정 화면으로 전환한다.
   const [expiredEmail, setExpiredEmail] = useState<string | null>(null)
   const [policyOpen, setPolicyOpen] = useState(false)
+  const showPrismExperiment = import.meta.env.VITE_AUTH_PRISM_EXPERIMENT !== 'off'
 
   useEffect(() => {
     if (orgTier) {
@@ -121,9 +123,13 @@ export function AuthPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.placeholderPanel}>
-        <span>플랫폼 소개 영역 (준비 중)</span>
-      </div>
+      {showPrismExperiment ? (
+        <AuthPrismScene />
+      ) : (
+        <div className={styles.placeholderPanel}>
+          <span>플랫폼 소개 영역 (준비 중)</span>
+        </div>
+      )}
       <div className={styles.formPanel}>
         <Link to="/" className={styles.homeLink}>
           ← 홈으로

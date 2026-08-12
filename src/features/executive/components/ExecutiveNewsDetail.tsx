@@ -7,7 +7,7 @@ export function ExecutiveNewsDetail({ article }: { article: SelectedArticle }) {
       <div className={styles.heading}>
         <div><span className={styles.eyebrow}>뉴스 상세</span><h2>{article.headline}</h2></div>
       </div>
-      <div className={styles.content}>
+      <div className={`${styles.content} ${styles.newsContent}`}>
         <h3>관련 정보</h3>
         <dl className={styles.metrics}>
           <div><dt>원자재</dt><dd>{article.material}</dd></div>

@@ -58,11 +58,17 @@ export function ImportDependencyPage() {
                 <>
                   <KpiSummaryCards items={dashboard.kpi_summary} />
                   <div className={styles.grid2}>
-                    <RankedBarChart title="국가별 의존도" caption="전 자재 가중 평균" items={countryItems} />
+                    <RankedBarChart
+                      title="국가별 의존도"
+                      caption="전 자재 가중 평균"
+                      items={countryItems}
+                      executiveDependencyStyle
+                    />
                     <RankedBarChart
                       title="사업부별 의존 매트릭스"
                       caption="선택한 사업부의 국가별 내역"
                       items={unitItems}
+                      executiveDependencyStyle
                       titleAction={
                         <select
                           className={styles.unitSelect}

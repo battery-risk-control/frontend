@@ -16,6 +16,8 @@ interface RankedBarChartProps {
   titleAction?: ReactNode
   /** 막대 색상(tone)이 무슨 뜻인지 알려주는 범례 — 제공되면 캡션 아래 색점+텍스트 칩으로 렌더링. */
   legend?: { tone: NonNullable<RankedBarItem['tone']>; label: string }[]
+  /** 경영진 공급망 그래프와 동일한 파란 그라데이션 막대 스타일. */
+  executiveDependencyStyle?: boolean
 }
 
 const TONE_COLOR: Record<NonNullable<RankedBarItem['tone']>, string> = {
@@ -34,7 +36,7 @@ const TONE_COLOR: Record<NonNullable<RankedBarItem['tone']>, string> = {
  * 사용 예:
  *   <RankedBarChart title="자재별 위험 순위" items={ranking} />
  */
-export function RankedBarChart({ title, caption, items, titleAction, legend }: RankedBarChartProps) {
+export function RankedBarChart({ title, caption, items, titleAction, legend, executiveDependencyStyle = false }: RankedBarChartProps) {
   const chartHeight = Math.max(items.length * ROW_HEIGHT_PX, MIN_CHART_HEIGHT_PX)
 
   return (
@@ -64,6 +66,14 @@ export function RankedBarChart({ title, caption, items, titleAction, legend }: R
             margin={{ top: 8, right: 24, left: 8, bottom: 0 }}
             barCategoryGap="30%"
           >
+            {executiveDependencyStyle && (
+              <defs>
+                <linearGradient id="executive-dependency-bar" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#1557b0" />
+                  <stop offset="100%" stopColor="#60a5fa" />
+                </linearGradient>
+              </defs>
+            )}
             <CartesianGrid horizontal={false} stroke="var(--color-border)" />
             <XAxis type="number" hide domain={[0, 'dataMax + 15']} />
             <YAxis
@@ -92,7 +102,10 @@ export function RankedBarChart({ title, caption, items, titleAction, legend }: R
             />
             <Bar dataKey="value" maxBarSize={28} radius={[0, 4, 4, 0]} isAnimationActive={false}>
               {items.map((item) => (
-                <Cell key={item.name} fill={TONE_COLOR[item.tone ?? 'neutral']} />
+                <Cell
+                  key={item.name}
+                  fill={executiveDependencyStyle ? 'url(#executive-dependency-bar)' : TONE_COLOR[item.tone ?? 'neutral']}
+                />
               ))}
               <LabelList
                 dataKey="value"

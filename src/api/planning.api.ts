@@ -123,8 +123,8 @@ function fetchPlanningDashboardMock(): PlanningDashboardResponse {
     },
   )
 
-  // mock risk_event에는 분석 실행 시각이 없어(id에 날짜만 인코딩) 데모용으로 현재 시각을 쓴다 —
-  // 실 백엔드에서는 strategy-dashboard의 as_of(MAX assessed_at)가 온다.
+  // mock에는 실제 수집 뉴스가 없어 데모용으로 현재 시각을 쓴다 —
+  // 실 백엔드에서는 strategy-dashboard의 as_of(최신 공급망 뉴스 수집 시각, MAX collected_at)가 온다.
   return {
     business_unit: '전체',
     period: '2026Q3',

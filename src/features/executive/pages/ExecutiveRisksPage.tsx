@@ -36,7 +36,7 @@ export function ExecutiveRisksPage() {
         dashboard?.verification_summary
           .review_required_count ?? 0
       }
-      asOf={dashboard?.kpi.latest_assessed_at}
+      asOf={dashboard?.as_of}
       detailKey={selected?.briefing_id ?? null}
       aside={selected ? <ExecutiveEvidencePanel item={selected} tab={tab} onTabChange={setTab} /> :
         <ExecutiveSummaryPanel

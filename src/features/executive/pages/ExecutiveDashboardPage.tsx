@@ -122,7 +122,7 @@ export function ExecutiveDashboardPage() {
         dashboard?.verification_summary
           .review_required_count ?? 0
       }
-      asOf={dashboard?.kpi.latest_assessed_at}
+      asOf={dashboard?.as_of}
       detailKey={detailInteractionKey}
       aside={
         selectedNews ? <ExecutiveNewsDetail article={selectedNews} /> : selectedEvidence ? <ExecutiveEvidencePanel item={selectedEvidence} tab={evidenceTab} onTabChange={setEvidenceTab} sourceUrl={selectedEvidenceNews?.url} /> : <ExecutiveRiskDetailPanel

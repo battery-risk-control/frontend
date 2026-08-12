@@ -35,6 +35,9 @@ const PERIOD_OPTIONS = [
 
 const GRADE_OPTIONS = [ALL, '심각', '주의', '정상']
 
+/** 신뢰도(확정/경고/참고) 필터. 백엔드 confidence_label 값과 정확히 일치해야 서버 필터가 먹는다. */
+const CONFIDENCE_OPTIONS = [ALL, '확정', '경고', '참고']
+
 /**
  * 자재 필터. 백엔드 {@code RiskEventService.MATERIAL_NAME_KO}의 8종과 같은 값이며 <b>닫힌 집합</b>이라
  * 데이터에서 뽑지 않고 고정한다 — 수집된 뉴스에 없는 자재도 선택할 수 있어야 "흑연 관련 뉴스가
@@ -49,6 +52,7 @@ const DEFAULT_DAYS = 7
 /** 조회 시점에 확정된 필터 값. effect가 최신 state를 인자로 받아 쓰도록 묶어 둔다. */
 interface AppliedFilters {
   grade: string
+  confidence: string
   country: string
   material: string
   days: number
@@ -93,6 +97,7 @@ export function RiskMonitoringPage() {
   const [events, setEvents] = useState<RiskMonitoringEvent[]>([])
   const [selected, setSelected] = useState<RiskMonitoringDetail | null>(null)
   const [grade, setGrade] = useState(ALL)
+  const [confidence, setConfidence] = useState(ALL)
   const [country, setCountry] = useState(ALL)
   const [material, setMaterial] = useState(ALL)
   const [days, setDays] = useState(DEFAULT_DAYS)
@@ -119,6 +124,7 @@ export function RiskMonitoringPage() {
         const result = await fetchRiskMonitoringEvents(token, {
           days: filters.days,
           grade: filters.grade === ALL ? undefined : filters.grade,
+          confidence: filters.confidence === ALL ? undefined : filters.confidence,
           country: filters.country === ALL ? undefined : filters.country,
           material: filters.material === ALL ? undefined : filters.material,
           // 백엔드 상한(200)까지 요청한다 — 기존 50은 프론트에서만 걸던 제한이라 그 이상 존재하는
@@ -141,11 +147,11 @@ export function RiskMonitoringPage() {
         if (!cancelled) setIsLoading(false)
       }
     }
-    void load(accessToken, { grade, country, material, days })
+    void load(accessToken, { grade, confidence, country, material, days })
     return () => {
       cancelled = true
     }
-  }, [accessToken, apiConfigured, country, days, grade, material, reloadToken])
+  }, [accessToken, apiConfigured, confidence, country, days, grade, material, reloadToken])
 
   /**
    * URL의 {@code ?eventId=}로 상세를 복원한다. AI 브리핑에서 돌아왔을 때(returnTo) 같은 기사가
@@ -185,10 +191,11 @@ export function RiskMonitoringPage() {
     setReloadToken((previous) => previous + 1)
   }, [])
 
-  /** 필터 4개를 한 번에 되돌린다. 하나씩 "전체"로 바꾸면 그때마다 조회가 나간다. */
+  /** 필터를 한 번에 되돌린다. 하나씩 "전체"로 바꾸면 그때마다 조회가 나간다. */
   function resetFilters() {
     requestReload(() => {
       setGrade(ALL)
+      setConfidence(ALL)
       setCountry(ALL)
       setMaterial(ALL)
       setDays(DEFAULT_DAYS)
@@ -196,7 +203,7 @@ export function RiskMonitoringPage() {
   }
 
   const filtersApplied =
-    grade !== ALL || country !== ALL || material !== ALL || days !== DEFAULT_DAYS
+    grade !== ALL || confidence !== ALL || country !== ALL || material !== ALL || days !== DEFAULT_DAYS
 
   /**
    * 선택한 이벤트를 URL에 남긴다 — AI 브리핑에 다녀와도 같은 기사가 열려 있어야 하기 때문이다.
@@ -256,6 +263,20 @@ export function RiskMonitoringPage() {
                 }}
               >
                 {GRADE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+            <label className={styles.filter}>
+              <span className={styles.filterLabel}>신뢰도</span>
+              <select
+                value={confidence}
+                onChange={(event) => {
+                  const next = event.target.value
+                  requestReload(() => setConfidence(next))
+                }}
+              >
+                {CONFIDENCE_OPTIONS.map((option) => (
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>

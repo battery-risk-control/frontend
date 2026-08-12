@@ -17,6 +17,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined
 export interface RiskMonitoringFilters {
   /** 심각/주의/정상. 생략하면 전체 */
   grade?: string
+  /** 확정/경고/참고(신뢰도). 생략하면 전체 */
+  confidence?: string
   /** ISO 3166-1 alpha-2. 생략하면 전체 */
   country?: string
   /** 자재 표기명(리튬) 또는 대분류(LITHIUM). 생략하면 전체 */
@@ -34,6 +36,7 @@ export function isRiskMonitoringApiConfigured(): boolean {
 function toQuery(filters: RiskMonitoringFilters): string {
   const params = new URLSearchParams()
   if (filters.grade) params.set('grade', filters.grade)
+  if (filters.confidence) params.set('confidence', filters.confidence)
   if (filters.country) params.set('country', filters.country)
   if (filters.material) params.set('material', filters.material)
   if (filters.days !== undefined) params.set('days', String(filters.days))

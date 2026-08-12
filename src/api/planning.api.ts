@@ -123,7 +123,16 @@ function fetchPlanningDashboardMock(): PlanningDashboardResponse {
     },
   )
 
-  return { business_unit: '전체', period: '2026Q3', kpi_summary, risk_exposure_by_unit, vendor_risk_history }
+  // mock risk_event에는 분석 실행 시각이 없어(id에 날짜만 인코딩) 데모용으로 현재 시각을 쓴다 —
+  // 실 백엔드에서는 strategy-dashboard의 as_of(MAX assessed_at)가 온다.
+  return {
+    business_unit: '전체',
+    period: '2026Q3',
+    kpi_summary,
+    risk_exposure_by_unit,
+    vendor_risk_history,
+    as_of: new Date().toISOString(),
+  }
 }
 
 /**

@@ -392,6 +392,8 @@ export interface PlanningDashboardResponse {
   kpi_summary: KpiSummaryItem[]
   risk_exposure_by_unit: RiskExposureByUnit[]
   vendor_risk_history: VendorRiskHistoryItem[]
+  /** 마지막 위험분석 실행 시각(기준 시각 칩). 경영진 `latest_assessed_at`과 같은 근원(MAX assessed_at). */
+  as_of: string | null
 }
 
 /**

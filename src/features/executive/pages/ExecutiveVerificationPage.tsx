@@ -40,7 +40,7 @@ export function ExecutiveVerificationPage() {
       title="AI 검증"
       description="ERP와 계약 RAG 근거가 최종 위험 판단에 올바르게 반영됐는지 확인합니다."
       alertCount={summary?.review_required_count ?? 0}
-      asOf={dashboard?.kpi.latest_assessed_at}
+      asOf={dashboard?.as_of}
       detailKey={selected ? `${selected.briefing_id}:${tab}` : null}
       aside={<ExecutiveEvidencePanel item={selectedItem} tab={tab} onTabChange={setTab} mode="verification" />}
     >

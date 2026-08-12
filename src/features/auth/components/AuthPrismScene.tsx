@@ -197,9 +197,9 @@ export function AuthPrismScene() {
     camera.position.set(0, 0.05, 6.9)
 
     const hexSignals = [
-      createHexSignal('NEWS', 0x789bb6, new THREE.Vector3(-1.46, 0.7, -0.5), 0.72),
-      createHexSignal('ERP', 0x789bb6, new THREE.Vector3(-1.68, -0.01, 0.35), 0.68),
-      createHexSignal('RAG', 0x789bb6, new THREE.Vector3(-1.42, -0.72, -0.7), 0.63),
+      createHexSignal('NEWS', 0x789bb6, new THREE.Vector3(-1.46, 0.7, -0.5), 0.73),
+      createHexSignal('ERP', 0x789bb6, new THREE.Vector3(-1.68, -0.01, 0.35), 0.7),
+      createHexSignal('RAG', 0x789bb6, new THREE.Vector3(-1.42, -0.72, -0.7), 0.72),
       createHexSignal('RISK', 0xc09a66, new THREE.Vector3(1.4, 0.68, 0.25), 0.73, true),
       createHexSignal('IMPACT', 0x4fbbcd, new THREE.Vector3(1.72, -0.01, -0.45), 0.7, true),
       createHexSignal('BRIEFING', 0x776fc0, new THREE.Vector3(1.42, -0.72, 0.42), 0.72, true),

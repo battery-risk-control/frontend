@@ -41,6 +41,7 @@
 | `components/widgets/GlobalRiskBoard.tsx` | 글로벌 리스크 관제 맵(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용). **2026-08-03(tier1 재동기화)** — `onSelectItem?` 선택적 prop 추가, 넘기면 마커 클릭 시 카드 내부 상세 패널 대신 콜백만 호출(우측 `DashboardSidePanel`용, 넘기지 않는 기존 소비처는 무수정 동작) |
 | `components/widgets/MaterialPriceDetail.tsx` | 원자재 가격 추이(Phase 9.4에서 `features/public/components/`→여기로 승격 — 구매팀 대시보드도 재사용). **2026-08-03(minji 이식)** — `period`/`onPeriodChange`가 필수 prop으로 전환(내부 `useState` 제거, 조회는 호출부 소유), 국가·지역 필터가 `countries` 응답 기반 실동작으로 전환. **2026-08-04(tier1 재동기화 1차 배치)** — `isLoading?` 선택 prop 추가, 차트 영역에 `Skeleton` 자리표시자 |
 | `features/auth/components/AuthTabs.tsx` | 로그인/권한 신청 탭 토글 |
+| `features/auth/components/AuthPrismScene.tsx` | 로그인 좌측 PRISM Hero — 환경맵 기반 Three.js 광물 Crystal과 `NEWS / ERP / RAG → PRISM Core → RISK / IMPACT / BRIEFING` 데이터 흐름, 360° 회전 및 절제된 pulse 애니메이션, WebGL 실패 시 CSS 폴백. `VITE_AUTH_PRISM_EXPERIMENT=off`로 기존 준비 중 영역 복원 |
 | `features/auth/components/LoginForm.tsx` | 로그인 폼 |
 | `features/auth/components/PendingApprovalScreen.tsx` | 승인 대기 보안 락 화면 |
 | `features/auth/components/SecurityBadge.tsx` | 보안 안내 배지(IP 제어/OTP) |

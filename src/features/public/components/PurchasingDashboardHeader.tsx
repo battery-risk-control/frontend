@@ -1,3 +1,4 @@
+import { formatAsOf } from '../../../lib/formatAsOf'
 import styles from './PurchasingDashboardHeader.module.css'
 
 interface PurchasingDashboardHeaderProps {
@@ -13,22 +14,6 @@ interface PurchasingDashboardHeaderProps {
    * 잦아도 레이트리밋과 무관하다.
    */
   asOf?: string | null
-}
-
-/**
- * ISO 타임스탬프(`2026-07-31T14:00:00Z`) → `2026.07.31 14:00`. 브라우저 현지 시간대(KST) 기준·24시간.
- *
- * `toLocale*`을 쓰지 않는다 — ko-KR은 점·공백을 붙이고 `hour12` 기본값이 12시간제를 타서
- * `PM 02:00`처럼 나온다(`formatCollectedAt`와 같은 판단). 파싱이 안 되면 원문 앞부분을 그대로 보여준다.
- */
-function formatAsOf(iso: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso.slice(0, 16).replace('T', ' ')
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return (
-    `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ` +
-    `${pad(date.getHours())}:${pad(date.getMinutes())}`
-  )
 }
 
 /**

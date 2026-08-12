@@ -17,6 +17,7 @@ import { useAiBriefing, useStrategyDashboard, useGlobalRiskBoard } from '../hook
 import { PLANNING_SIDE_NAV_ITEMS } from '../../../lib/planningNav'
 import { useAlertsPanelState } from '../../../lib/useAlertsPanelState'
 import { fromNewsFeedItem, fromRiskBoardItem } from '../../../lib/selectedArticle'
+import { formatAsOf } from '../../../lib/formatAsOf'
 import { useLiveRefresh } from '../../../lib/useLiveRefresh'
 import { LatestNewsPanel } from '../../purchasing/components/LatestNewsPanel'
 import type { NewsFeedItem, SelectedArticle } from '../../../api/types'
@@ -94,10 +95,15 @@ export function PlanningDashboardPage() {
         <SideNav items={PLANNING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <header className={styles.topBar}>
-            <h1 className={styles.heading}>경영기획팀 대시보드</h1>
-            <div className={styles.filters}>
+            <div className={styles.titleGroup}>
+              <h1 className={styles.heading}>경영기획팀 대시보드</h1>
               <span className={styles.staticUnitLabel}>사업부 전체</span>
             </div>
+            {query.data?.as_of && (
+              <time className={styles.asOf} dateTime={query.data.as_of}>
+                {formatAsOf(query.data.as_of)} <span className={styles.asOfSuffix}>기준</span>
+              </time>
+            )}
           </header>
           <QueryState query={query}>
             {(dashboard) => <KpiSummaryCards items={dashboard.kpi_summary} />}

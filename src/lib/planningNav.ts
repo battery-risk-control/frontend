@@ -10,7 +10,8 @@ export const PLANNING_SIDE_NAV_ITEMS: SideNavItem[] = [
   { label: '자재 위험', href: '/planning/materials' },
   { label: '수입 의존도', href: '/planning/import-dependency' },
   { label: '공급사 분석', href: '/planning/suppliers' },
-  { label: '계약 현황', href: '/planning/contracts' },
-  { label: 'AI 브리핑', href: '/planning/briefings' },
+  // 상세 드릴다운(단수 경로)에서도 목록 탭이 활성으로 남도록 matchPrefix를 준다.
+  { label: '계약 현황', href: '/planning/contracts', matchPrefix: '/planning/contract' },
+  { label: 'AI 브리핑', href: '/planning/briefings', matchPrefix: '/planning/briefing' },
   { label: '데이터 품질', href: '/planning/data-quality' },
 ]

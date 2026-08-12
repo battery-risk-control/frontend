@@ -453,7 +453,14 @@ function MaterialDetailView({
         보여주므로, 좁은 패널에 같은 목록이 두 번 쌓이지 않게 한다.
       */}
       {detail.contract_review_required && contract && (
-        <div className={styles.reviewRequired}>
+        <div
+          className={
+            // 심각(CRITICAL) 자재는 등급 색(빨강)과 맞춰 안내 박스도 빨간색으로 강조한다.
+            detail.exposure_level === 'CRITICAL'
+              ? `${styles.reviewRequired} ${styles.reviewRequiredCritical}`
+              : styles.reviewRequired
+          }
+        >
           <p className={styles.reviewRequiredTitle}>
             ERP 상황상 계약 조항 확인이 필요한 자재입니다.
           </p>

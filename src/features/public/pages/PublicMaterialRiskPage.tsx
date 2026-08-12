@@ -413,7 +413,14 @@ function MaterialDetailView({
         뒤에는 목록을 감춘다 — 아래 결과 영역이 같은 질문을 답과 함께 다시 보여준다.
       */}
       {detail.contract_review_required && contract && (
-        <div className={styles.reviewRequired}>
+        <div
+          className={
+            // 심각(CRITICAL) 자재는 등급 색(빨강)과 맞춰 안내 박스도 빨간색으로 강조한다.
+            detail.exposure_level === 'CRITICAL'
+              ? `${styles.reviewRequired} ${styles.reviewRequiredCritical}`
+              : styles.reviewRequired
+          }
+        >
           <p className={styles.reviewRequiredTitle}>
             ERP 상황상 계약 조항 확인이 필요한 자재입니다.
           </p>

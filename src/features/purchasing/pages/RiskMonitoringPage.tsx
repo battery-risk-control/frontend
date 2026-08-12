@@ -7,6 +7,7 @@ import {
 } from '../../../api/riskMonitoring.api'
 import type {
   RiskExternalSignal,
+  RiskGrade,
   RiskMonitoringDetail,
   RiskMonitoringEvent,
 } from '../../../api/types'
@@ -120,7 +121,9 @@ export function RiskMonitoringPage() {
           grade: filters.grade === ALL ? undefined : filters.grade,
           country: filters.country === ALL ? undefined : filters.country,
           material: filters.material === ALL ? undefined : filters.material,
-          limit: 50,
+          // 백엔드 상한(200)까지 요청한다 — 기존 50은 프론트에서만 걸던 제한이라 그 이상 존재하는
+          // 이벤트가 잘려 보였다(7일 내 실제 79건 등).
+          limit: 200,
         })
         if (cancelled) return
         setEvents(result)
@@ -397,6 +400,17 @@ export function RiskMonitoringPage() {
   )
 }
 
+/**
+ * 잠정 등급 안내 문구의 왼쪽 테두리 색을 등급색으로 매핑한다(정상 초록/주의 주황/심각 빨강).
+ * 이 문구는 등급을 설명하므로 신뢰도 색(참고/경고)이 아니라 등급색을 써야 한다.
+ * RiskGradeBadge와 같은 매핑 패턴.
+ */
+const PROVISIONAL_GRADE_CLASS: Record<RiskGrade, string> = {
+  정상: styles.provisionalNoteNormal,
+  주의: styles.provisionalNoteWarning,
+  심각: styles.provisionalNoteCritical,
+}
+
 function EventDetailView({
   detail,
   onErpImpact,
@@ -426,7 +440,7 @@ function EventDetailView({
 
       {/* 등급이 아직 잠정인 이유를 문장으로도 밝힌다 — 배지만으론 무엇이 남았는지 알 수 없다. */}
       {!detail.multi_agent_completed && detail.grade && (
-        <p className={styles.provisionalNote}>
+        <p className={`${styles.provisionalNote} ${PROVISIONAL_GRADE_CLASS[detail.grade]}`}>
           외부신호(트리아지·LLM)만 반영된 잠정 등급입니다. ERP·계약 영향 분석을 실행하면 종합
           위험도로 갱신됩니다.
         </p>

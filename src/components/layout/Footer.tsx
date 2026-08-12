@@ -38,6 +38,26 @@ export function Footer() {
           </a>
           {' · '}한국수출입은행 현재환율
         </p>
+        <p className={styles.credits}>
+          지도{' '}
+          <a
+            className={styles.creditLink}
+            href="https://www.openstreetmap.org/copyright"
+            target="_blank"
+            rel="noreferrer"
+          >
+            © OpenStreetMap
+          </a>
+          {' contributors · '}
+          <a
+            className={styles.creditLink}
+            href="https://carto.com/attributions"
+            target="_blank"
+            rel="noreferrer"
+          >
+            © CARTO
+          </a>
+        </p>
       </footer>
 
       {isPrivacyOpen && <PrivacyPolicyModal onClose={() => setIsPrivacyOpen(false)} />}

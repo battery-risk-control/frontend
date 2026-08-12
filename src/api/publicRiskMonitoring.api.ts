@@ -20,6 +20,8 @@ export const LOGIN_REQUIRED_MESSAGE = '로그인 후 이용 가능합니다.'
 export interface RiskMonitoringFilters {
   /** 심각/주의/정상. 생략하면 전체 */
   grade?: string
+  /** 확정/경고/참고(신뢰도). 생략하면 전체 */
+  confidence?: string
   /** ISO 3166-1 alpha-2. 생략하면 전체 */
   country?: string
   /** 자재 표기명(리튬) 또는 대분류(LITHIUM). 생략하면 전체 */
@@ -182,6 +184,7 @@ function toMockDetail(event: RiskMonitoringEvent): RiskMonitoringDetail {
 function applyFilters(events: RiskMonitoringEvent[], filters: RiskMonitoringFilters): RiskMonitoringEvent[] {
   return events
     .filter((event) => !filters.grade || event.grade === filters.grade)
+    .filter((event) => !filters.confidence || event.confidence_label === filters.confidence)
     .filter((event) => !filters.country || event.country_code === filters.country)
     .filter((event) => !filters.material || event.material === filters.material)
     .slice(0, filters.limit ?? events.length)
@@ -190,6 +193,7 @@ function applyFilters(events: RiskMonitoringEvent[], filters: RiskMonitoringFilt
 function toQuery(filters: RiskMonitoringFilters): string {
   const params = new URLSearchParams()
   if (filters.grade) params.set('grade', filters.grade)
+  if (filters.confidence) params.set('confidence', filters.confidence)
   if (filters.country) params.set('country', filters.country)
   if (filters.material) params.set('material', filters.material)
   if (filters.days !== undefined) params.set('days', String(filters.days))

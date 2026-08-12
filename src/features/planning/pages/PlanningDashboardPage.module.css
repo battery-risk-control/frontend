@@ -28,6 +28,13 @@
   gap: var(--space-3);
 }
 
+.titleGroup {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
 .heading {
   margin: 0;
   font-size: var(--font-size-xl);
@@ -35,10 +42,21 @@
   color: var(--color-text);
 }
 
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+/* 기준 시각 칩 — 비로그인 PurchasingDashboardHeader의 .asOf/.asOfSuffix 톤과 맞춘다. */
+.asOf {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.asOfSuffix {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
 }
 
 .staticUnitLabel {

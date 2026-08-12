@@ -25,6 +25,7 @@ import {
   useState,
 } from 'react'
 import { ExecutiveSidePanel } from './ExecutiveSidePanel'
+import { formatAsOf } from '../../../lib/formatAsOf'
 import styles from '../pages/ExecutiveDashboardPage.module.css'
 
 interface ExecutivePageLayoutProps {
@@ -126,25 +127,4 @@ export function ExecutivePageLayout({
       <Footer />
     </div>
   )
-}
-
-function formatAsOf(value: string | null) {
-  if (!value) return '데이터 없음'
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '데이터 없음'
-
-  const parts = new Intl.DateTimeFormat('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(date)
-  const part = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((item) => item.type === type)?.value ?? ''
-
-  return `${part('year')}.${part('month')}.${part('day')} ${part('hour')}:${part('minute')} KST`
 }

@@ -38,6 +38,11 @@ async function fetchExecutiveOverviewMock(): Promise<ExecutiveOverviewResponse> 
           (material.ranking.reduce((sum, item) => sum + item.score, 0) / material.ranking.length) * 10,
         ) / 10
 
+  const maxRiskScore24h =
+    material.ranking.length === 0
+      ? null
+      : Math.round(Math.max(...material.ranking.map((item) => item.score)) * 10) / 10
+
   const kpi: ExecutiveKpi = {
     critical_count: criticalCount,
     warning_count: warningCount,
@@ -46,6 +51,9 @@ async function fetchExecutiveOverviewMock(): Promise<ExecutiveOverviewResponse> 
     // 검증 요약과 같은 근원을 쓴다 — 심각 등급 브리핑을 재검토 대상으로 간주(mock 한정 규칙).
     review_required_count: briefing.recent.filter((item) => item.grade === '심각').length,
     latest_assessed_at: new Date().toISOString(),
+    // mock에는 24시간 이력이 없어 데모용으로 현재 지도 이벤트 수·최고 점수를 그대로 쓴다.
+    collected_count_24h: riskMap.length,
+    max_risk_score_24h: maxRiskScore24h,
   }
 
   // 최근 14일 추세. 오늘의 등급 분포를 기준으로 과거로 갈수록 완만히 줄어드는 모양만 만든다

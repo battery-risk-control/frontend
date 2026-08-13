@@ -1,7 +1,6 @@
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
-import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { KpiSummaryCards } from '../components/KpiSummaryCards'
 import { RankedBarChart } from '../components/RankedBarChart'
 import { QueryState } from '../components/QueryState'
@@ -22,7 +21,6 @@ export function MaterialRiskPage() {
     <div className={styles.page}>
       <Header />
       <div className={styles.body}>
-        <SideNavToggleButton />
         <SideNav items={PLANNING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <div>

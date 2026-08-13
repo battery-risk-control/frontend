@@ -4,8 +4,6 @@ import { fetchPublicNewsFeed, fetchPublicNewsFeedCount } from '../../../api/publ
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
-import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
-import { SidePanelToggleButton } from '../../../components/layout/SidePanelToggleButton'
 import { DashboardSidePanel } from '../../purchasing/components/DashboardSidePanel'
 import { KpiSummaryCards } from '../components/KpiSummaryCards'
 import { ExecutiveKpiPanel } from '../../executive/components/ExecutiveKpiPanel'
@@ -95,7 +93,6 @@ export function PlanningDashboardPage() {
     <div className={styles.page}>
       <Header />
       <div className={styles.body}>
-        <SideNavToggleButton />
         <SideNav items={PLANNING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <header className={styles.topBar}>
@@ -175,7 +172,6 @@ export function PlanningDashboardPage() {
             onPageChange={setNewsPage}
           />
         </main>
-        <SidePanelToggleButton />
         <DashboardSidePanel
           selectedNews={selectedNews}
           selectedNewsItems={selectedNewsItems}

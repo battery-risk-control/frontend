@@ -1,7 +1,6 @@
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
-import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { KpiSummaryCards } from '../components/KpiSummaryCards'
 import { RankedBarChart } from '../components/RankedBarChart'
 import { QueryState } from '../components/QueryState'
@@ -21,7 +20,6 @@ export function DataQualityPage() {
     <div className={styles.page}>
       <Header />
       <div className={styles.body}>
-        <SideNavToggleButton />
         <SideNav items={PLANNING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <div>
@@ -57,7 +55,19 @@ export function DataQualityPage() {
                     {statusCards.map((card) => (
                       <div key={card.label} className={styles.insightCard}>
                         <h2 className={styles.insightTitle}>{card.label}</h2>
-                        <p className={styles.insightBody}>{card.value}</p>
+                        {/* 상태값만 색을 준다 — '정상' 초록, '실패' 빨강. 타임스탬프(마지막 갱신)·
+                            '적재 이력 없음' 등은 어디에도 안 걸려 기본색으로 남는다. */}
+                        <p
+                          className={
+                            card.value === '정상'
+                              ? `${styles.insightBody} ${styles.statusOk}`
+                              : card.value.includes('실패')
+                                ? `${styles.insightBody} ${styles.statusFail}`
+                                : styles.insightBody
+                          }
+                        >
+                          {card.value}
+                        </p>
                       </div>
                     ))}
                   </div>

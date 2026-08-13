@@ -38,8 +38,6 @@ import type {
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
-import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
-import { SidePanelToggleButton } from '../../../components/layout/SidePanelToggleButton'
 import { AlertsBellButton } from '../../../components/layout/AlertsBellButton'
 import { GlobalRiskBoard } from '../../../components/widgets/GlobalRiskBoard'
 import { PageSectionDots } from '../../../components/ui/PageSectionDots/PageSectionDots'
@@ -112,7 +110,6 @@ const SECTION_DOTS_SECTIONS = [
   // 이름이 비슷한 두 섹션이 나란히 있다. 위쪽은 최종 합성 점수(7종 표), 아래쪽은 ERP 노출도
   // 게이지다 — 점수의 뜻이 달라 도트에서도 구분되게 라벨을 나눴다.
   { id: '원자재별 리스크 점수', headingId: 'material-risk-composite-heading' },
-  { id: '원자재 리스크 개요', headingId: 'material-risk-summary-heading' },
   { id: '원자재 공급사 리스크 현황', headingId: 'material-risk-heading' },
   { id: 'ERP 영향', headingId: 'erp-impact-heading' },
   { id: '구매 대응 우선순위', headingId: 'purchase-priority-heading' },
@@ -606,7 +603,6 @@ export function PurchasingDashboardPage() {
         }
       />
       <div className={styles.body}>
-        <SideNavToggleButton />
         <SideNav items={PURCHASING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           {/* ── 목업에 있는 구성 (위) ─────────────────────────────── */}
@@ -686,9 +682,6 @@ export function PurchasingDashboardPage() {
           <SupplierOverviewPanel overview={supplierOverview} isLoading={supplierLoading} />
         </main>
         <PageSectionDots variant="withAside" sections={SECTION_DOTS_SECTIONS} />
-        {/* 패널이 접히면 폭이 0이 되어 안쪽에 토글을 둘 수 없다 — 좌측 SideNavToggleButton과
-            같은 이유로 패널 바깥에 따로 세운다. */}
-        <SidePanelToggleButton />
         <DashboardSidePanel
           selectedNews={selectedNews}
           selectedNewsItems={selectedNewsItems}

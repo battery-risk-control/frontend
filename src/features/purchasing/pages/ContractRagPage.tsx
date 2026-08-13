@@ -23,7 +23,6 @@ import type {
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
-import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
 import { hasMeaningfulPageNumbers } from '../../../lib/clausePages'
 import { useAuthState } from '../../../lib/useAuthState'
@@ -517,7 +516,6 @@ export function ContractRagPage() {
     <div className={styles.page}>
       <Header />
       <div className={styles.body}>
-        <SideNavToggleButton />
         <SideNav items={PURCHASING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <div>

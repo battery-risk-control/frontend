@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAuthState } from '../../lib/useAuthState'
 import { TIER_LABEL } from '../../lib/tierLabels'
 import { maskEmailLocal } from '../../lib/masking'
+import { DASHBOARD_PATH_BY_TIER } from '../../lib/dashboardPaths'
+import { PrismHomeMark } from './PrismHomeMark'
 import styles from './Header.module.css'
 
 interface HeaderProps {
@@ -11,25 +13,6 @@ interface HeaderProps {
    * 의미가 있다. AlertsPanel처럼 특정 화면에만 있는 기능을 Header에 직접 결합시키지 않기
    * 위한 슬롯이다(SideNavToggleButton을 SideNav 바깥으로 분리한 것과 같은 이유). */
   accountExtra?: ReactNode
-}
-
-function HomeIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 9.5 12 3l9 6.5" />
-      <path d="M5 9.5V21h14V9.5" />
-    </svg>
-  )
 }
 
 /**
@@ -47,6 +30,7 @@ function HomeIcon() {
  */
 export function Header({ children, accountExtra }: HeaderProps) {
   const { orgTier, email, signOut } = useAuthState()
+  const homePath = orgTier ? DASHBOARD_PATH_BY_TIER[orgTier] : '/'
 
   function handleLogout() {
     // react-router의 SPA navigate()를 쓰면 history 리스너가 인증 Context 갱신과 다른
@@ -61,10 +45,10 @@ export function Header({ children, accountExtra }: HeaderProps) {
   return (
     <header className={styles.header}>
       <div className={styles.left}>
-        <Link to="/" className={styles.homeIconLink} aria-label="홈으로 이동">
-          <HomeIcon />
+        <Link to={homePath} className={styles.homeIconLink} aria-label="홈으로 이동">
+          <PrismHomeMark />
         </Link>
-        <Link to="/" className={styles.brand}>
+        <Link to={homePath} className={styles.brand}>
           PRISM: 배터리 원자재 공급망 리스크 관제
         </Link>
       </div>

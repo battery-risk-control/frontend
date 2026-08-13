@@ -8,6 +8,8 @@ import { SideNavToggleButton } from '../../../components/layout/SideNavToggleBut
 import { SidePanelToggleButton } from '../../../components/layout/SidePanelToggleButton'
 import { DashboardSidePanel } from '../../purchasing/components/DashboardSidePanel'
 import { KpiSummaryCards } from '../components/KpiSummaryCards'
+import { ExecutiveKpiPanel } from '../../executive/components/ExecutiveKpiPanel'
+import { useExecutiveDashboard } from '../../executive/useExecutiveDashboard'
 import { ComparisonChart } from '../components/ComparisonChart'
 import { VendorRiskHistory } from '../components/VendorRiskHistory'
 import { RankedBarChart } from '../components/RankedBarChart'
@@ -17,6 +19,7 @@ import { useAiBriefing, useStrategyDashboard, useGlobalRiskBoard } from '../hook
 import { PLANNING_SIDE_NAV_ITEMS } from '../../../lib/planningNav'
 import { useAlertsPanelState } from '../../../lib/useAlertsPanelState'
 import { fromNewsFeedItem, fromRiskBoardItem } from '../../../lib/selectedArticle'
+import { formatAsOf } from '../../../lib/formatAsOf'
 import { useLiveRefresh } from '../../../lib/useLiveRefresh'
 import { LatestNewsPanel } from '../../purchasing/components/LatestNewsPanel'
 import type { NewsFeedItem, SelectedArticle } from '../../../api/types'
@@ -32,6 +35,8 @@ const NEWS_PAGE_SIZE = 5
  */
 export function PlanningDashboardPage() {
   const query = useStrategyDashboard()
+  // 경영기획팀 화면 상단에 경영진 대시보드의 "핵심 위험 요약" 카드를 함께 노출한다.
+  const executive = useExecutiveDashboard()
   const mapQuery = useGlobalRiskBoard()
   const briefingQuery = useAiBriefing(0)
   const liveRefreshKey = useLiveRefresh()
@@ -94,11 +99,22 @@ export function PlanningDashboardPage() {
         <SideNav items={PLANNING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <header className={styles.topBar}>
-            <h1 className={styles.heading}>경영기획팀 대시보드</h1>
-            <div className={styles.filters}>
+            <div className={styles.titleGroup}>
+              <h1 className={styles.heading}>경영기획팀 대시보드</h1>
               <span className={styles.staticUnitLabel}>사업부 전체</span>
             </div>
+            {query.data?.as_of && (
+              <time className={styles.asOf} dateTime={query.data.as_of}>
+                {formatAsOf(query.data.as_of)} <span className={styles.asOfSuffix}>기준</span>
+              </time>
+            )}
           </header>
+          {executive.dashboard && (
+            <ExecutiveKpiPanel
+              kpi={executive.dashboard.kpi}
+              topRiskScore={executive.dashboard.top_risks[0]?.score}
+            />
+          )}
           <QueryState query={query}>
             {(dashboard) => <KpiSummaryCards items={dashboard.kpi_summary} />}
           </QueryState>

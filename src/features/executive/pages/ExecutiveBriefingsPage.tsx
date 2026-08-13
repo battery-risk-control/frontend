@@ -31,7 +31,7 @@ export function ExecutiveBriefingsPage() {
       title="AI 브리핑"
       description="구매 위험의 영향, 근거와 권고 조치를 경영진 관점에서 확인합니다."
       alertCount={dashboard?.verification_summary.review_required_count ?? 0}
-      asOf={dashboard?.kpi.latest_assessed_at}
+      asOf={dashboard?.as_of}
       detailKey={selected?.briefing_id ?? null}
       aside={<ExecutiveEvidencePanel item={selectedItem} tab={tab} onTabChange={setTab} mode="briefing" />}
     >

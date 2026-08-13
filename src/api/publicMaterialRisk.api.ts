@@ -107,6 +107,7 @@ const MOCK_OVERVIEW: MaterialRiskOverview = {
     average_inventory_days: 15.8,
     data_quality_status: 'VALID',
     as_of: '2026-07-31T14:00:00Z',
+    news_as_of: '2026-07-31T14:00:00Z',
   },
   materials: MOCK_MATERIALS,
 }

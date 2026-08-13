@@ -83,6 +83,8 @@ async function fetchExecutiveOverviewMock(): Promise<ExecutiveOverviewResponse> 
     alternative_suppliers: dependency.alternative_suppliers,
     recent_briefings: briefing.recent,
     verification_summary,
+    // mock에는 실제 수집 뉴스가 없어 데모용으로 현재 시각을 쓴다 — 실 백엔드는 MAX(collected_at)를 내려준다.
+    as_of: new Date().toISOString(),
   }
 }
 

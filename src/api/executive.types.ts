@@ -49,4 +49,6 @@ export interface ExecutiveOverviewResponse {
   alternative_suppliers: EntityBadgeItem[]
   recent_briefings: BriefingSummaryItem[]
   verification_summary: ExecutiveVerificationSummary
+  /** 기준 시각 칩 — 최신 공급망 뉴스 수집 시각(MAX collected_at). 경영기획 as_of와 같은 소스. */
+  as_of: string | null
 }

@@ -392,6 +392,8 @@ export interface PlanningDashboardResponse {
   kpi_summary: KpiSummaryItem[]
   risk_exposure_by_unit: RiskExposureByUnit[]
   vendor_risk_history: VendorRiskHistoryItem[]
+  /** 마지막 위험분석 실행 시각(기준 시각 칩). 경영진 `latest_assessed_at`과 같은 근원(MAX assessed_at). */
+  as_of: string | null
 }
 
 /**
@@ -908,6 +910,8 @@ export interface MaterialRiskSummary {
    */
   data_quality_status: string
   as_of: string
+  /** 헤더 '기준' 칩 — 최신 공급망 뉴스 수집 시각(MAX collected_at). 2·3계층 as_of와 같은 소스. 수집 뉴스 없으면 null. */
+  news_as_of: string | null
 }
 
 /**

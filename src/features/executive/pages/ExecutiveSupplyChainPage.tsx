@@ -33,7 +33,7 @@ export function ExecutiveSupplyChainPage() {
         dashboard?.verification_summary
           .review_required_count ?? 0
       }
-      asOf={dashboard?.kpi.latest_assessed_at}
+      asOf={dashboard?.as_of}
       detailKey={selectedSupplier || selectedAlternative ? JSON.stringify(selectedSupplier ?? selectedAlternative) : null}
       aside={selectedSupplier || selectedAlternative ? (
         <SupplierDetail supplier={selectedSupplier} alternative={selectedAlternative} />

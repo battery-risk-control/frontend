@@ -65,7 +65,7 @@ export function Header({ children, accountExtra }: HeaderProps) {
           <HomeIcon />
         </Link>
         <Link to="/" className={styles.brand}>
-          배터리 원자재 공급망 리스크 관제
+          PRISM: 배터리 원자재 공급망 리스크 관제
         </Link>
       </div>
       <div className={styles.actions}>

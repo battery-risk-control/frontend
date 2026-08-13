@@ -13,7 +13,7 @@ export function Footer() {
     <>
       <footer className={styles.footer}>
         <p className={styles.text}>
-          배터리 원자재 공급망 리스크 관제 AI 에이전트 시스템
+          PRISM: 배터리 원자재 공급망 리스크 관제 AI 에이전트 시스템
           <span className={styles.divider}> · </span>
           <button
             type="button"

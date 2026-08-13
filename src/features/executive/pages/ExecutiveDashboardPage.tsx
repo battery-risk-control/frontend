@@ -14,6 +14,8 @@ import {
 import {
   ExecutiveKpiPanel,
 } from '../components/ExecutiveKpiPanel'
+import { KpiSummaryCards } from '../../planning/components/KpiSummaryCards'
+import { useStrategyDashboard } from '../../planning/hooks/usePlanningQueries'
 import {
   ExecutivePageLayout,
 } from '../components/ExecutivePageLayout'
@@ -47,6 +49,8 @@ export function ExecutiveDashboardPage() {
     loading,
     errorMessage,
   } = useExecutiveDashboard()
+  // 경영진 화면에도 경영기획팀 "KPI 요약 카드"를 함께 노출하기 위해 2계층 전략 대시보드를 조회한다.
+  const planningQuery = useStrategyDashboard()
 
   const [
     selectedDetail,
@@ -156,6 +160,10 @@ export function ExecutiveDashboardPage() {
               kpi={dashboard.kpi}
               topRiskScore={priorityBriefing?.procurement_risk_score ?? dashboard.top_risks[0]?.score}
             />
+
+            {planningQuery.data && (
+              <KpiSummaryCards items={planningQuery.data.kpi_summary} />
+            )}
 
             <ExecutivePriorityAlert
               risk={dashboard.top_risks[0]}

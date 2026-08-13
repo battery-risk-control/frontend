@@ -1,0 +1,29 @@
+.frame {
+  position: relative;
+  display: grid;
+  width: 36px;
+  height: 42px;
+  place-items: center;
+}
+
+.frame::after {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 23px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(70, 159, 226, 0.28);
+  filter: blur(3px);
+  content: '';
+  transform: translateX(-50%);
+}
+
+.frame canvas {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 36px;
+  height: 42px;
+  pointer-events: none;
+}

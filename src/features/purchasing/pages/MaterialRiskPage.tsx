@@ -15,7 +15,6 @@ import type {
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
-import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
 import { hasMeaningfulPageNumbers } from '../../../lib/clausePages'
@@ -114,7 +113,6 @@ export function MaterialRiskPage() {
     <div className={styles.page}>
       <Header />
       <div className={styles.body}>
-        <SideNavToggleButton />
         <SideNav items={PURCHASING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <div className={styles.titleRow}>

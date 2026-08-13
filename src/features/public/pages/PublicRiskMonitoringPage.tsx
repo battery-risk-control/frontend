@@ -5,9 +5,9 @@ import type { RiskExternalSignal, RiskGrade, RiskMonitoringDetail, RiskMonitorin
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
-import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { ConfidenceBadge } from '../../../components/ui/ConfidenceBadge'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
+import { Pagination } from '../../../components/ui/Pagination/Pagination'
 import { useAuthState } from '../../../lib/useAuthState'
 import { PUBLIC_SIDE_NAV_ITEMS } from '../../../lib/publicNav'
 import styles from './PublicRiskMonitoringPage.module.css'
@@ -38,6 +38,9 @@ const MATERIAL_OPTIONS = [
 ]
 
 const DEFAULT_DAYS = 7
+
+/** 이벤트 목록 한 페이지 건수. */
+const EVENTS_PER_PAGE = 6
 
 /** 조회 시점에 확정된 필터 값. effect가 최신 state를 인자로 받아 쓰도록 묶어 둔다. */
 interface AppliedFilters {
@@ -112,6 +115,8 @@ export function PublicRiskMonitoringPage() {
   const [isLoading, setIsLoading] = useState(true)
   /** 같은 필터로 다시 조회(새로고침)하려면 의존성이 실제로 바뀌어야 한다. */
   const [reloadToken, setReloadToken] = useState(0)
+  /** 이벤트 목록 현재 페이지(0-indexed). 필터 변경·새로고침 시 0으로 되돌린다. */
+  const [page, setPage] = useState(0)
 
   useEffect(() => {
     // 필터를 빠르게 바꾸면 이전 요청이 늦게 도착해 최신 결과를 덮어쓸 수 있다.
@@ -184,6 +189,7 @@ export function PublicRiskMonitoringPage() {
   const requestReload = useCallback((apply?: () => void) => {
     setIsLoading(true)
     apply?.()
+    setPage(0)
     setReloadToken((previous) => previous + 1)
   }, [])
 
@@ -200,6 +206,14 @@ export function PublicRiskMonitoringPage() {
 
   const filtersApplied =
     grade !== ALL || confidence !== ALL || country !== ALL || material !== ALL || days !== DEFAULT_DAYS
+
+  // 목록을 6건씩 나눠 보여준다. events가 줄어 현재 페이지가 범위를 벗어나면 마지막 페이지로 클램프한다.
+  const pageCount = Math.max(1, Math.ceil(events.length / EVENTS_PER_PAGE))
+  const currentPage = Math.min(page, pageCount - 1)
+  const pagedEvents = events.slice(
+    currentPage * EVENTS_PER_PAGE,
+    currentPage * EVENTS_PER_PAGE + EVENTS_PER_PAGE,
+  )
 
   /**
    * 선택한 이벤트를 URL에 남긴다 — AI 브리핑에 다녀와도 같은 기사가 열려 있어야 하기 때문이다.
@@ -232,7 +246,6 @@ export function PublicRiskMonitoringPage() {
     <div className={styles.page}>
       <Header />
       <div className={styles.body}>
-        <SideNavToggleButton />
         <SideNav items={PUBLIC_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <div>
@@ -346,7 +359,7 @@ export function PublicRiskMonitoringPage() {
                 </p>
               )}
               <ul className={styles.eventList}>
-                {events.map((event) => (
+                {pagedEvents.map((event) => (
                   <li key={event.event_id}>
                     <button
                       type="button"
@@ -378,6 +391,9 @@ export function PublicRiskMonitoringPage() {
                   </li>
                 ))}
               </ul>
+              {!isLoading && !listError && events.length > 0 && (
+                <Pagination page={currentPage} pageCount={pageCount} onChange={setPage} />
+              )}
             </section>
 
             <section className={styles.detailPanel} aria-labelledby="event-detail-heading">

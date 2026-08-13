@@ -30,9 +30,36 @@
   font-size: var(--font-size-sm);
 }
 
+/* 큰 숫자와 24h 보조 줄을 감싼다. 색은 큰 숫자(strong)에만 주고 보조 줄은 회색으로 둬
+   두 값이 같은 무게로 읽히지 않게 한다(1계층 PurchasingKpiRow와 같은 규칙). */
+.valueBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .card strong {
   font-size: var(--font-size-xl);
   line-height: 1.2;
+}
+
+/* 24시간 보조 줄. 모집단이 달라 큰 숫자와 뺄셈하면 안 되는 값이라(1계층과 동일) 회색·작은
+   글씨로만 둔다. */
+.subValue {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.subLabel {
+  padding: 0 4px;
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
 }
 
 .critical {

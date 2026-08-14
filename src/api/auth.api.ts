@@ -31,6 +31,8 @@ const TEST_ACCOUNTS: { email: string; password: string; org_tier: OrgTier }[] = 
   { email: 'purchasing@test.local', password: 'test1234!', org_tier: 'purchasing' },
   { email: 'planning@test.local', password: 'test1234!', org_tier: 'planning' },
   { email: 'executive@test.local', password: 'test1234!', org_tier: 'executive' },
+  // 시연용 마스터 — mock 모드에서도 로그인되게 목록에 넣는다. RequireAuth가 master를 모든 계층에서 통과시킨다.
+  { email: 'master@test.local', password: 'test1234!', org_tier: 'master' },
 ]
 
 /** Figma 와이어프레임 회원가입 폼에는 소속 회사명 입력이 없어 임시로 고정한다. */

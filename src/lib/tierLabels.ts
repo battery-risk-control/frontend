@@ -6,4 +6,5 @@ export const TIER_LABEL: Record<OrgTier, string> = {
   planning: '경영기획팀',
   executive: '경영진',
   admin: '관리자',
+  master: '마스터',
 }

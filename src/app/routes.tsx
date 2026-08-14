@@ -92,7 +92,9 @@ function RequireAuth({ tier, children }: { tier: OrgTier; children: ReactNode })
   if (!orgTier) {
     return <Navigate to="/auth" replace />
   }
-  if (orgTier !== tier) {
+  // 시연용 마스터 계정은 계층 불일치 게이트를 통과한다 — 한 계정으로 1·2·3계층 대시보드를 모두
+  // 열람하기 위한 것이다(백엔드도 master에게 세 계층 역할 권한을 모두 부여해 API가 함께 열린다).
+  if (orgTier !== tier && orgTier !== 'master') {
     return (
       <ConfirmModal
         message={`이 화면은 회원님의 권한(${TIER_LABEL[orgTier]})으로 접근할 수 없습니다.`}

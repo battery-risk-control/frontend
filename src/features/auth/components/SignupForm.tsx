@@ -4,7 +4,7 @@ import { isValidPassword, PASSWORD_RULE_TEXT } from '../../../lib/passwordPolicy
 import { ConsentSection } from './ConsentSection'
 import styles from './SignupForm.module.css'
 
-type SignupTier = Exclude<OrgTier, 'admin'>
+type SignupTier = Exclude<OrgTier, 'admin' | 'master'>
 
 interface SignupFormProps {
   onSubmit: (values: SignupFormValues) => void

@@ -18,7 +18,7 @@ test.describe('Header 계정 정보 및 로그아웃', () => {
 
     await page.getByRole('button', { name: '로그아웃' }).click()
     await expect(page).toHaveURL(/\/$/)
-    await expect(page.getByText('글로벌 리스크 관제 맵')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '구매 위험 관제 대시보드', exact: true })).toBeVisible()
 
     await page.goto('/purchasing')
     await expect(page).toHaveURL(/\/auth$/)

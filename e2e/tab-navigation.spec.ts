@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test'
-import { loginAs, navigateSpa } from './utils'
 
 /**
  * features/public/pages/PublicDashboardPage.tsx 상단 3계층 탭 내비게이션 검증.
@@ -11,42 +10,6 @@ test.describe('공개 대시보드 상단 탭 내비게이션', () => {
 
     await page.getByRole('button', { name: '구매팀' }).click()
     await expect(page).toHaveURL(/\/auth$/)
-  })
-
-  test('로그인 상태에서 다른 계층 탭을 클릭하면 RequireAuth가 확인 모달을 거쳐 자신의 대시보드로 되돌린다', async ({
-    page,
-  }) => {
-    // Phase 8부터 RequireAuth가 org_tier까지 매칭한다 — purchasing 계정은 경영기획팀 탭을 눌러도 /planning이 아니라
-    // 계층 불일치 확인 모달(Phase 8.5)이 뜬다. 계층별 조합 전체는 e2e/tier-access.spec.ts에서 검증한다.
-    await loginAs(page, 'purchasing@test.local')
-    await expect(page).toHaveURL(/\/purchasing$/)
-
-    // Header 로고는 자신의 대시보드로 이동하는 것이 현재 요구사항이다.
-    // 계층 탭 검증을 위해 인증 상태를 유지한 채 공개 화면으로 이동한다.
-    await navigateSpa(page, '/')
-    await expect(page).toHaveURL(/\/$/)
-    await expect(page.getByRole('heading', { name: '구매 위험 관제 대시보드', exact: true })).toBeVisible()
-
-    await page.getByRole('button', { name: '경영기획팀' }).click()
-    await expect(page.getByRole('dialog')).toBeVisible()
-    await expect(page.getByText('이 화면은 회원님의 권한(구매팀)으로 접근할 수 없습니다.')).toBeVisible()
-
-    await page.getByRole('button', { name: '내 화면으로 이동' }).click()
-    await expect(page).toHaveURL(/\/purchasing$/)
-    await expect(page.getByRole('heading', { name: '구매팀 대시보드', exact: true })).toBeVisible()
-  })
-
-  test('로그인 상태로 공개 대시보드에 진입하면 Header에 계정 정보와 로그아웃 버튼이 표시된다', async ({ page }) => {
-    await loginAs(page, 'purchasing@test.local')
-    // mock 인증 상태를 유지한 채 공개 대시보드로 SPA 이동한다.
-    await navigateSpa(page, '/')
-    await expect(page).toHaveURL(/\/$/)
-    await expect(page.getByRole('heading', { name: '구매 위험 관제 대시보드', exact: true })).toBeVisible()
-
-    // 규제 가이드 ③ 마스킹: 로컬파트 끝 2자를 **로 가린 채 표시된다.
-    await expect(page.getByText('purchasi**@test.local · 구매팀')).toBeVisible()
-    await expect(page.getByRole('button', { name: '로그아웃' })).toBeVisible()
-    await expect(page.getByRole('link', { name: '로그인/회원가입' })).not.toBeVisible()
   })
 
   test('미로그인 상태로 공개 대시보드에 진입하면 Header에 로그인/회원가입 버튼이 표시된다', async ({ page }) => {

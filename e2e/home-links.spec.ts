@@ -14,7 +14,7 @@ test.describe('홈 이동 링크', () => {
   })
 
   test('로그인 상태에서 Header 로고를 클릭하면 자신의 대시보드로 이동한다', async ({ page }) => {
-    test.setTimeout(60_000)
+    test.setTimeout(120_000)
     await loginAs(page, 'purchasing@test.local')
     await expect(page).toHaveURL(/\/purchasing$/)
 

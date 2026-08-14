@@ -35,6 +35,12 @@ interface MaterialPriceDetailProps {
   layout?: 'inline' | 'split'
   /** split 레이아웃에서 상단 좌측(도넛 등)에 놓을 슬롯. inline에서는 무시된다. */
   leadingPanel?: ReactNode
+  /**
+   * 외부에서 특정 원자재를 미리 선택해 그래프를 한 자재(단일 선)로 좁힌다. 주요 알림의
+   * "○○ 가격 변동성 주의"를 눌렀을 때 그 자재만 보이도록 페이지가 넘긴다. 값이 바뀌면 반영하되,
+   * 이후 사용자가 필터/카드로 다시 바꾸는 것은 막지 않는다.
+   */
+  selectedMaterial?: string
 }
 
 interface ChartRow {
@@ -161,9 +167,18 @@ export function MaterialPriceDetail({
   isLoading = false,
   layout = 'inline',
   leadingPanel,
+  selectedMaterial,
 }: MaterialPriceDetailProps) {
   const [materialFilterOpen, setMaterialFilterOpen] = useState(false)
-  const [materialFilterLabel, setMaterialFilterLabel] = useState('전체')
+  const [materialFilterLabel, setMaterialFilterLabel] = useState(selectedMaterial ?? ALL_OPTION)
+  // 외부에서 넘어온 선택 자재가 바뀌면 그 자재로 그래프를 좁힌다(주요 알림 클릭 → 단일 선).
+  // effect 대신 렌더 중 "이전 prop 비교" 패턴을 쓴다(React 공식 권장 — 불필요한 재렌더를 피함).
+  // 이후 사용자가 필터/카드로 다시 바꾸는 것은 막지 않는다.
+  const [prevSelectedMaterial, setPrevSelectedMaterial] = useState(selectedMaterial)
+  if (selectedMaterial !== prevSelectedMaterial) {
+    setPrevSelectedMaterial(selectedMaterial)
+    if (selectedMaterial) setMaterialFilterLabel(selectedMaterial)
+  }
   const [countryFilterOpen, setCountryFilterOpen] = useState(false)
   const [countryFilterLabel, setCountryFilterLabel] = useState('전체')
 

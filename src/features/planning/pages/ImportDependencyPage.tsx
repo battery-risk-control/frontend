@@ -2,9 +2,7 @@ import { useState } from 'react'
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
-import { KpiSummaryCards } from '../components/KpiSummaryCards'
 import { RankedBarChart } from '../components/RankedBarChart'
-import { EntityBadgeList } from '../components/EntityBadgeList'
 import { QueryState } from '../components/QueryState'
 import { useImportDependency } from '../hooks/usePlanningQueries'
 import { PLANNING_SIDE_NAV_ITEMS } from '../../../lib/planningNav'
@@ -54,7 +52,6 @@ export function ImportDependencyPage() {
 
               return (
                 <>
-                  <KpiSummaryCards items={dashboard.kpi_summary} />
                   <div className={styles.grid2}>
                     <RankedBarChart
                       title="국가별 의존도"
@@ -83,7 +80,6 @@ export function ImportDependencyPage() {
                       }
                     />
                   </div>
-                  <EntityBadgeList title="대체 공급망 후보" items={dashboard.alternative_suppliers} />
                 </>
               )
             }}

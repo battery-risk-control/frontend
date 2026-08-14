@@ -53,6 +53,14 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
+  cursor: pointer;
+}
+
+/* 클릭(선택)한 원자재 위험 순위 칸 — 회색으로 표시해 지금 상세를 보고 있는 행을 구분한다. */
+.riskCardSelected {
+  border-color: #9aa5b1;
+  background: #eceef1;
+  box-shadow: inset 3px 0 0 #627d98;
 }
 
 .riskRank {

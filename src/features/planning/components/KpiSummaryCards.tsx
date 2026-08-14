@@ -38,8 +38,16 @@ function toneClass(item: KpiSummaryItem): string | undefined {
     case '심각 자재':
       return styles.critical
 
+    // 등급 건수 — 심각=빨강 / 주의=주황(있을 때) / 정상=초록. 0건이면 초록(양호).
+    case '심각':
+      return item.value > 0 ? styles.critical : styles.fast
+    case '주의':
+      return item.value > 0 ? styles.slow : styles.fast
+    case '정상':
+      return styles.fast
+
     // 위험 비율(%)·점수 — 높을수록 나쁨: ≥70 빨강 / ≥40 주황 / else 초록
-    case 'CRITICAL 비중':
+    case '심각 비중':
     case '전체 수입 의존도':
     case '최고 위험 점수':
       return riskScaleClass(item.value)

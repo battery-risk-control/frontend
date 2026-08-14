@@ -144,9 +144,22 @@ function toPriceAlerts(
         ]
           .filter(Boolean)
           .join(' · '),
-        href: targets.priceDetailPath,
+        // 가격 추이 섹션 앵커(#...) 앞에 `?material=자재`를 끼워 넣어, 클릭하면 그 자재만
+        // 단일 선으로 좁혀 보이게 한다. priceDetailPath는 이미 해시를 품고 있어 분리해 재조립한다.
+        href: withMaterialQuery(targets.priceDetailPath, summary.material),
       }
     })
+}
+
+/**
+ * `priceDetailPath`(해시 앵커 포함)에 `?material=자재` 쿼리를 끼워 넣는다. 페이지가 이 쿼리를 읽어
+ * 가격 추이 그래프를 그 자재 단일 선으로 좁힌다. 해시는 스크롤 대상 앵커라 쿼리 뒤에 그대로 붙인다.
+ *   `/#material-price-detail-heading` → `/?material=흑연#material-price-detail-heading`
+ */
+function withMaterialQuery(priceDetailPath: string, material: string): string {
+  const [path, hash] = priceDetailPath.split('#')
+  const query = `?material=${encodeURIComponent(material)}`
+  return `${path}${query}${hash ? `#${hash}` : ''}`
 }
 
 /**

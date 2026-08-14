@@ -31,7 +31,7 @@ test.describe('공개 대시보드 상단 탭 내비게이션', () => {
 
     await page.getByRole('button', { name: '내 화면으로 이동' }).click()
     await expect(page).toHaveURL(/\/purchasing$/)
-    await expect(page.getByText('구매 위험 관제 대시보드')).toBeVisible()
+    await expect(page.getByText('구매팀 대시보드')).toBeVisible()
   })
 
   test('로그인 상태로 공개 대시보드에 진입하면 Header에 계정 정보와 로그아웃 버튼이 표시된다', async ({ page }) => {

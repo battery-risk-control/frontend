@@ -47,6 +47,7 @@ import { fromNewsFeedItem, fromRiskBoardItem } from '../../../lib/selectedArticl
 import { PUBLIC_SIDE_NAV_ITEMS } from '../../../lib/publicNav'
 import { DEFAULT_PERIOD, PERIOD_DAYS } from '../../../lib/materialPricePeriods'
 import { useLiveRefresh } from '../../../lib/useLiveRefresh'
+import { useDashboardAlertTarget } from '../../../lib/useDashboardAlertTarget'
 import { PurchasingDashboardHeader } from '../components/PurchasingDashboardHeader'
 import { PurchasingKpiRow } from '../components/PurchasingKpiRow'
 import { LiveNewsMarquee } from '../components/LiveNewsMarquee'
@@ -153,6 +154,8 @@ export function PublicDashboardPage() {
   const { accessToken, orgTier } = useAuthState()
   const navigate = useNavigate()
   const liveRefreshKey = useLiveRefresh()
+  // 주요 알림(가격 변동성 주의) 클릭 시 넘어온 자재 선택 + 섹션 스크롤 처리.
+  const alertMaterial = useDashboardAlertTarget()
 
   // --- 공개 API 6종 ---
   const [riskBoardItems, setRiskBoardItems] = useState<GlobalRiskBoardItem[]>([])
@@ -584,6 +587,7 @@ export function PublicDashboardPage() {
             isPriceLoading={priceLoading}
             period={period}
             onPeriodChange={setPeriod}
+            selectedMaterial={alertMaterial}
           />
 
           {/* 원자재 7종 · 최종 합성 점수(외부신호+ERP노출+계약공백). 아래 게이지 행과 자리가

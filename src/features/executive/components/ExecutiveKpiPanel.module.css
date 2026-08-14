@@ -78,6 +78,11 @@
   color: var(--color-risk-normal);
 }
 
+/* 검토 필요 — 주의(.warning)와 색을 공유하지 않도록 전용 톤. 검은색(본문색)으로 표시한다. */
+.review {
+  color: var(--color-text);
+}
+
 @media (max-width: 720px) {
   .grid {
     grid-template-columns: 1fr 1fr;

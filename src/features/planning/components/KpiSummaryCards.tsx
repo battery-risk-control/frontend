@@ -4,6 +4,7 @@ import styles from './KpiSummaryCards.module.css'
 
 interface KpiSummaryCardsProps {
   items: KpiSummaryItem[]
+  onItemClick?: (item: KpiSummaryItem) => void
 }
 
 /** 백엔드가 내려준 tone → 색 클래스. 화면이 기준을 지어내면 안 되는 지표(재고일수 등)에 쓴다. */
@@ -92,7 +93,7 @@ function toneClass(item: KpiSummaryItem): string | undefined {
  * 사용 예:
  *   <KpiSummaryCards items={dashboard.kpi_summary} />
  */
-export function KpiSummaryCards({ items }: KpiSummaryCardsProps) {
+export function KpiSummaryCards({ items, onItemClick }: KpiSummaryCardsProps) {
   return (
     <section className={styles.panel} aria-labelledby="kpi-summary-cards-heading">
       <h2 id="kpi-summary-cards-heading" className={styles.title}>
@@ -100,7 +101,12 @@ export function KpiSummaryCards({ items }: KpiSummaryCardsProps) {
       </h2>
       <div className={styles.grid}>
         {items.map((item) => (
-          <article key={item.label} className={styles.card}>
+          <article key={item.label} className={styles.card}
+            role={onItemClick ? 'button' : undefined} tabIndex={onItemClick ? 0 : undefined}
+            onClick={() => onItemClick?.(item)}
+            onKeyDown={(event) => {
+              if (onItemClick && (event.key === 'Enter' || event.key === ' ')) onItemClick(item)
+            }}>
             <span className={styles.label}>{item.label}</span>
             <strong className={[styles.value, toneClass(item)].filter(Boolean).join(' ')}>
               {formatScore(item.value)}

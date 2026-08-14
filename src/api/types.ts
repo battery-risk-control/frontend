@@ -481,6 +481,19 @@ export interface ContractStatusDashboardResponse {
   kpi_summary: KpiSummaryItem[]
   coverage_by_unit: ContractCoverageItem[]
   expiring: EntityBadgeItem[]
+  contracts: ContractListItem[]
+}
+
+export interface ContractListItem {
+  contract_number: string
+  contract_name: string
+  supplier_name: string
+  business_unit: string | null
+  status: string
+  end_date: string | null
+  document_loaded: boolean
+  rag_ready: boolean
+  documents: ContractDocumentItem[]
 }
 
 /** AI 브리핑 탭. */

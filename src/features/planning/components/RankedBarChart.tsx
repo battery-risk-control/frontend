@@ -18,6 +18,7 @@ interface RankedBarChartProps {
   legend?: { tone: NonNullable<RankedBarItem['tone']>; label: string }[]
   /** 경영진 공급망 그래프와 동일한 파란 그라데이션 막대 스타일. */
   executiveDependencyStyle?: boolean
+  onItemClick?: (item: RankedBarItem) => void
 }
 
 const TONE_COLOR: Record<NonNullable<RankedBarItem['tone']>, string> = {
@@ -36,7 +37,7 @@ const TONE_COLOR: Record<NonNullable<RankedBarItem['tone']>, string> = {
  * 사용 예:
  *   <RankedBarChart title="자재별 위험 순위" items={ranking} />
  */
-export function RankedBarChart({ title, caption, items, titleAction, legend, executiveDependencyStyle = false }: RankedBarChartProps) {
+export function RankedBarChart({ title, caption, items, titleAction, legend, executiveDependencyStyle = false, onItemClick }: RankedBarChartProps) {
   const chartHeight = Math.max(items.length * ROW_HEIGHT_PX, MIN_CHART_HEIGHT_PX)
 
   return (
@@ -65,6 +66,10 @@ export function RankedBarChart({ title, caption, items, titleAction, legend, exe
             layout="vertical"
             margin={{ top: 8, right: 24, left: 8, bottom: 0 }}
             barCategoryGap="30%"
+            onClick={(state) => {
+              const item = items.find((entry) => entry.name === state?.activeLabel)
+              if (item) onItemClick?.(item)
+            }}
           >
             {executiveDependencyStyle && (
               <defs>

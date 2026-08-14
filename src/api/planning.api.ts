@@ -339,7 +339,18 @@ function fetchContractStatusDashboardMock(): ContractStatusDashboardResponse {
     { id: 'BA-2025-0022', primary: 'BA-2025-0022', secondary: '배터리셀사업부', badge: { label: 'D-30', tone: 'warning' } },
   ]
 
-  return { kpi_summary, coverage_by_unit, expiring }
+  const contracts = expiring.map((item) => ({
+    contract_number: item.id,
+    contract_name: `${item.id} 공급 계약`,
+    supplier_name: '공급사A',
+    business_unit: item.secondary ?? null,
+    status: 'ACTIVE',
+    end_date: null,
+    document_loaded: false,
+    rag_ready: false,
+    documents: [],
+  }))
+  return { kpi_summary, coverage_by_unit, expiring, contracts }
 }
 
 /**
@@ -389,16 +400,12 @@ function fetchAiBriefingSummaryDashboardMock(page: number, size: number): AiBrie
     tone: 'neutral',
   }))
 
-  const criticalCount = events.filter((event) => event.grade === '심각').length
-  const warningCount = events.filter((event) => event.grade === '주의').length
-  const normalCount = events.filter((event) => event.grade === '정상').length
   const kpi_summary: KpiSummaryItem[] = [
     // risk_event 표본(7건)은 "이번 분기 브리핑"을 대표하기엔 규모가 작아 예시값 사용 — mock 임시값
     { label: '이번 분기 브리핑', value: 32, unit: '건' },
-    { label: '심각 비중', value: Math.round((criticalCount / events.length) * 1000) / 10, unit: '%' },
-    { label: '정상', value: normalCount, unit: '건' },
-    { label: '주의', value: warningCount, unit: '건' },
-    { label: '심각', value: criticalCount, unit: '건' },
+    { label: '정상', value: events.filter((event) => event.grade === '정상').length, unit: '건' },
+    { label: '주의', value: events.filter((event) => event.grade === '주의').length, unit: '건' },
+    { label: '심각', value: events.filter((event) => event.grade === '심각').length, unit: '건' },
   ]
 
   return { kpi_summary, by_unit, recent, recent_total_count }

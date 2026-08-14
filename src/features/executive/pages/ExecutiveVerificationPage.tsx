@@ -33,7 +33,15 @@ export function ExecutiveVerificationPage() {
     setTab(nextTab)
   }
 
-  const summary = dashboard?.verification_summary
+  // KPI and filtered lists must use the same fetched evidence population.
+  const summary = useMemo(() => ({
+    total_count: evidence.items.length,
+    passed_count: evidence.items.filter((item) => item.verification.review_passed === true).length,
+    review_required_count: evidence.items.filter((item) => item.verification.review_passed !== true).length,
+    erp_evidence_missing_count: evidence.items.filter((item) => !item.erp_evidence).length,
+    contract_evidence_missing_count: evidence.items.filter((item) => item.contract_findings.length === 0).length,
+    llm_warning_count: evidence.items.filter((item) => Boolean(item.verification.llm_error) || item.verification.warnings.length > 0).length,
+  }), [evidence.items])
 
   return (
     <ExecutivePageLayout

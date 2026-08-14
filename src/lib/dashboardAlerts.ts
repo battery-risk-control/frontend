@@ -25,13 +25,13 @@ export interface DashboardAlertTargets {
 /** 로그인 구매팀 대시보드(`/purchasing`)용 링크 묶음. */
 export const PURCHASING_ALERT_TARGETS: DashboardAlertTargets = {
   riskMonitoringPath: '/purchasing/risk-monitoring',
-  priceDetailPath: '/purchasing#material-price-detail-heading',
+  priceDetailPath: '/purchasing?material={material}#material-price-detail-heading',
 }
 
 /** 비로그인 대시보드(`/`)용 링크 묶음. */
 export const PUBLIC_ALERT_TARGETS: DashboardAlertTargets = {
   riskMonitoringPath: '/public/risk-monitoring',
-  priceDetailPath: '/#material-price-detail-heading',
+  priceDetailPath: '/?material={material}#material-price-detail-heading',
 }
 
 /**

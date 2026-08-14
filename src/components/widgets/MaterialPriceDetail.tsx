@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   CartesianGrid,
   Line,
@@ -169,8 +170,10 @@ export function MaterialPriceDetail({
   leadingPanel,
   selectedMaterial,
 }: MaterialPriceDetailProps) {
+  const [searchParams] = useSearchParams()
+  const requestedMaterial = searchParams.get('material')
   const [materialFilterOpen, setMaterialFilterOpen] = useState(false)
-  const [materialFilterLabel, setMaterialFilterLabel] = useState(selectedMaterial ?? ALL_OPTION)
+  const [materialFilterLabel, setMaterialFilterLabel] = useState(selectedMaterial ?? requestedMaterial ?? ALL_OPTION)
   // 외부에서 넘어온 선택 자재가 바뀌면 그 자재로 그래프를 좁힌다(주요 알림 클릭 → 단일 선).
   // effect 대신 렌더 중 "이전 prop 비교" 패턴을 쓴다(React 공식 권장 — 불필요한 재렌더를 피함).
   // 이후 사용자가 필터/카드로 다시 바꾸는 것은 막지 않는다.
@@ -181,6 +184,7 @@ export function MaterialPriceDetail({
   }
   const [countryFilterOpen, setCountryFilterOpen] = useState(false)
   const [countryFilterLabel, setCountryFilterLabel] = useState('전체')
+
 
   const materialFilterOptions = [ALL_OPTION, ...series.map((materialSeries) => materialSeries.material)]
   const countryFilterOptions = toCountryOptions(series)

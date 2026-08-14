@@ -3,6 +3,7 @@ import { AppRoutes } from './app/routes'
 import { AuthProvider } from './lib/AuthProvider'
 import { SideNavProvider } from './lib/SideNavProvider'
 import { AlertsPanelProvider } from './lib/AlertsPanelProvider'
+import { ScrollToTop } from './components/layout/ScrollToTop'
 
 // retry:false — 실패는 값(FetchJsonError)으로 반환되거나 throw되는 모델이라(fetchWithAuth),
 // 일시적 네트워크 실패를 자동 재시도하는 TanStack Query 기본값(3회)이 이 프로젝트 관례와
@@ -17,6 +18,7 @@ function App() {
       <AuthProvider>
         <SideNavProvider>
           <AlertsPanelProvider>
+            <ScrollToTop />
             <AppRoutes />
           </AlertsPanelProvider>
         </SideNavProvider>

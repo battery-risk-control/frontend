@@ -47,7 +47,7 @@ export function ContractStatusPage() {
                 value_suffix: '건',
                 tone: 'neutral' as const,
               }))
-              const contracts = dashboard.contracts.filter((contract) => {
+              const contracts = (dashboard.contracts ?? []).filter((contract) => {
                 if (unitFilter && contract.business_unit !== unitFilter) return false
                 if (statusFilter === 'ACTIVE' && contract.status !== 'ACTIVE') return false
                 if (statusFilter === 'EXPIRING') {

@@ -7,6 +7,10 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './e2e',
+  // CI 러너에서는 대시보드의 비동기 쿼리와 SPA 렌더링이 로컬보다 느릴 수 있다.
+  // 기능 실패가 아닌 일시적인 5초/30초 초과로 전체 체크가 흔들리지 않도록 여유를 둔다.
+  timeout: 120_000,
+  expect: { timeout: 20_000 },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

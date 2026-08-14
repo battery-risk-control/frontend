@@ -532,18 +532,22 @@ export function PublicDashboardPage() {
           />
         }
       >
-        <div className={styles.tierTabs}>
-          {TIER_TABS.map((tab) => (
-            <button
-              key={tab.label}
-              type="button"
-              className={styles.tierTab}
-              onClick={() => handleTierTabClick(tab.path)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {/* 마스터 계정은 Header 자체가 전 화면 공통 계층 탭을 렌더하므로(Header.tsx
+            MASTER_TIER_TABS) 여기 자체 탭을 겹쳐 그리지 않는다 — 같은 탭이 두 벌 보이는 중복 방지. */}
+        {orgTier !== 'master' && (
+          <div className={styles.tierTabs}>
+            {TIER_TABS.map((tab) => (
+              <button
+                key={tab.label}
+                type="button"
+                className={styles.tierTab}
+                onClick={() => handleTierTabClick(tab.path)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
       </Header>
       <div className={styles.body}>
         <SideNav items={PUBLIC_SIDE_NAV_ITEMS} />

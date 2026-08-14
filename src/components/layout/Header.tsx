@@ -1,11 +1,23 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuthState } from '../../lib/useAuthState'
 import { TIER_LABEL } from '../../lib/tierLabels'
 import { maskEmailLocal } from '../../lib/masking'
 import { DASHBOARD_PATH_BY_TIER } from '../../lib/dashboardPaths'
 import { PrismHomeMark } from './PrismHomeMark'
 import styles from './Header.module.css'
+
+/**
+ * 시연용 마스터 계정 전용 계층 전환 탭. 마스터는 RequireAuth를 전 계층에서 통과하므로
+ * (routes.tsx), 어느 화면에 있든 이 탭으로 1·2·3계층 대시보드를 바로 오간다.
+ * 공개 대시보드('/')의 비로그인용 상단 탭(PublicDashboardPage TIER_TABS)과 같은 구성이며,
+ * 그 화면에서는 중복을 피해 마스터일 때 자체 탭을 숨긴다.
+ */
+const MASTER_TIER_TABS = [
+  { label: '구매팀', path: '/purchasing' },
+  { label: '경영기획팀', path: '/planning' },
+  { label: '경영진', path: '/executive' },
+]
 
 interface HeaderProps {
   children?: ReactNode
@@ -30,6 +42,7 @@ interface HeaderProps {
  */
 export function Header({ children, accountExtra }: HeaderProps) {
   const { orgTier, email, signOut } = useAuthState()
+  const { pathname } = useLocation()
   const homePath = orgTier ? DASHBOARD_PATH_BY_TIER[orgTier] : '/'
 
   function handleLogout() {
@@ -54,6 +67,25 @@ export function Header({ children, accountExtra }: HeaderProps) {
       </div>
       <div className={styles.actions}>
         {children}
+        {/* 마스터 전용 계층 전환 탭 — 어느 화면에서든 다른 계층 대시보드로 바로 이동한다.
+            현재 보고 있는 계층은 강조 표시해 "지금 어느 계층 화면인지"를 시연 중에 바로 알 수 있게 한다. */}
+        {orgTier === 'master' && (
+          <nav className={styles.tierTabs} aria-label="계층 대시보드 전환">
+            {MASTER_TIER_TABS.map((tab) => (
+              <Link
+                key={tab.path}
+                to={tab.path}
+                className={
+                  pathname.startsWith(tab.path)
+                    ? `${styles.tierTab} ${styles.tierTabActive}`
+                    : styles.tierTab
+                }
+              >
+                {tab.label}
+              </Link>
+            ))}
+          </nav>
+        )}
         {orgTier ? (
           <div className={styles.account}>
             <span className={styles.accountInfo}>

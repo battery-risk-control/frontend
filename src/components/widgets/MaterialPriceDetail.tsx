@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   CartesianGrid,
   Line,
@@ -162,10 +163,15 @@ export function MaterialPriceDetail({
   layout = 'inline',
   leadingPanel,
 }: MaterialPriceDetailProps) {
+  const [searchParams] = useSearchParams()
+  const requestedMaterial = searchParams.get('material')
   const [materialFilterOpen, setMaterialFilterOpen] = useState(false)
-  const [materialFilterLabel, setMaterialFilterLabel] = useState('전체')
+  // The query arrives before the async price series, so retain it even while series is empty.
+  const initialMaterial = requestedMaterial ?? '전체'
+  const [materialFilterLabel, setMaterialFilterLabel] = useState(initialMaterial)
   const [countryFilterOpen, setCountryFilterOpen] = useState(false)
   const [countryFilterLabel, setCountryFilterLabel] = useState('전체')
+
 
   const materialFilterOptions = [ALL_OPTION, ...series.map((materialSeries) => materialSeries.material)]
   const countryFilterOptions = toCountryOptions(series)

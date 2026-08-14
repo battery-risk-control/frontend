@@ -4,7 +4,6 @@ import { SideNav } from '../../../components/layout/SideNav'
 import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { KpiSummaryCards } from '../components/KpiSummaryCards'
 import { RankedBarChart } from '../components/RankedBarChart'
-import { EntityBadgeList } from '../components/EntityBadgeList'
 import { QueryState } from '../components/QueryState'
 import { useSupplierAnalysis } from '../hooks/usePlanningQueries'
 import { PLANNING_SIDE_NAV_ITEMS } from '../../../lib/planningNav'
@@ -70,7 +69,17 @@ export function SupplierAnalysisPage() {
                       items={linkedUnitItems}
                     />
                   </div>
-                  <EntityBadgeList title="적격 공급사 추천" items={dashboard.recommended} />
+                  <section className={styles.insightCard} aria-labelledby="supplier-list-heading">
+                    <h2 id="supplier-list-heading" className={styles.insightTitle}>공급사 리스트</h2>
+                    <ul className={styles.supplierList}>
+                      {dashboard.ranking.map((supplier) => (
+                        <li key={supplier.vendor_id} className={styles.supplierItem}>
+                          <div><strong>{supplier.vendor_name}</strong><span>{supplier.linked_units.join(' · ')}</span></div>
+                          <div><span>최근 90일 {supplier.risk_count_90d}건</span><b>{supplier.approved_status}</b></div>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 </>
               )
             }}

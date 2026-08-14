@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   AuthApiError,
@@ -17,9 +17,16 @@ import { SignupForm } from '../components/SignupForm'
 import { PasswordExpiredResetForm } from '../components/PasswordExpiredResetForm'
 import { PendingApprovalScreen } from '../components/PendingApprovalScreen'
 import { SecurityBadge } from '../components/SecurityBadge'
-import { AuthPrismScene } from '../components/AuthPrismScene'
 import { PrivacyPolicyModal } from '../../../components/layout/PrivacyPolicyModal'
 import styles from './AuthPage.module.css'
+
+// three.js 로그인 히어로 연출은 무겁고(three 청크) 로그인 폼과 무관하므로 lazy로 뗀다 —
+// 폼이 먼저 그려지고 입력 가능해진 뒤 배경 연출이 채워진다.
+// [ROLLBACK] 되돌리려면 이 lazy 선언을 지우고 위에서 `import { AuthPrismScene } from
+// '../components/AuthPrismScene'` 정적 import를 복원한다.
+const AuthPrismScene = lazy(() =>
+  import('../components/AuthPrismScene').then((m) => ({ default: m.AuthPrismScene })),
+)
 
 /**
  * 로그인/회원가입 통합 페이지 (Seq 32). 좌:우 5:6 스플릿 스크린.
@@ -44,6 +51,28 @@ export function AuthPage() {
       navigate(DASHBOARD_PATH_BY_TIER[orgTier], { replace: true })
     }
   }, [orgTier, navigate])
+
+  // [성능] 사용자가 자격증명을 입력하는 동안(수 초) 유휴 시점에 각 계층 대시보드 청크를 미리
+  // 받아 둔다. 로그인 성공 직후의 화면 전환이 청크 다운로드를 기다리지 않아 체감상 즉시 열린다.
+  // routes.tsx의 lazy와 같은 import 지정자라 청크를 공유한다(중복 다운로드 없음). 유휴 실행이라
+  // 폼 상호작용을 막지 않고, 실패는 그냥 나중에 정식 lazy 로드로 재시도되므로 삼킨다.
+  useEffect(() => {
+    const preload = () => {
+      void import('../../purchasing/pages/PurchasingDashboardPage').catch(() => {})
+      void import('../../planning/pages/PlanningDashboardPage').catch(() => {})
+      void import('../../executive/pages/ExecutiveDashboardPage').catch(() => {})
+    }
+    const ric = (window as unknown as {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number
+    }).requestIdleCallback
+    if (ric) {
+      const id = ric(preload, { timeout: 2000 })
+      return () => (window as unknown as { cancelIdleCallback?: (id: number) => void })
+        .cancelIdleCallback?.(id)
+    }
+    const t = window.setTimeout(preload, 400)
+    return () => window.clearTimeout(t)
+  }, [])
 
   async function refreshCaptcha() {
     try {
@@ -124,7 +153,9 @@ export function AuthPage() {
   return (
     <div className={styles.page}>
       {showPrismExperiment ? (
-        <AuthPrismScene />
+        <Suspense fallback={<div className={styles.placeholderPanel} aria-hidden="true" />}>
+          <AuthPrismScene />
+        </Suspense>
       ) : (
         <div className={styles.placeholderPanel}>
           <span>플랫폼 소개 영역 (준비 중)</span>

@@ -1,32 +1,5 @@
-import type { ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
-import { PublicDashboardPage } from '../features/public/pages/PublicDashboardPage'
-import { PublicRiskMonitoringPage } from '../features/public/pages/PublicRiskMonitoringPage'
-import { PublicMaterialRiskPage } from '../features/public/pages/PublicMaterialRiskPage'
-import { PublicContractRagPage } from '../features/public/pages/PublicContractRagPage'
-import { PublicAiBriefingPage } from '../features/public/pages/PublicAiBriefingPage'
-import { AuthPage } from '../features/auth/pages/AuthPage'
-import { PurchasingDashboardPage } from '../features/purchasing/pages/PurchasingDashboardPage'
-import { RiskMonitoringPage } from '../features/purchasing/pages/RiskMonitoringPage'
-import { MaterialRiskPage } from '../features/purchasing/pages/MaterialRiskPage'
-import { ContractRagPage } from '../features/purchasing/pages/ContractRagPage'
-import { AiBriefingPage } from '../features/purchasing/pages/AiBriefingPage'
-import { DataManagementPage } from '../features/purchasing/pages/DataManagementPage'
-import { PlanningDashboardPage } from '../features/planning/pages/PlanningDashboardPage'
-import { MaterialRiskPage as PlanningMaterialRiskPage } from '../features/planning/pages/MaterialRiskPage'
-import { ImportDependencyPage } from '../features/planning/pages/ImportDependencyPage'
-import { SupplierAnalysisPage } from '../features/planning/pages/SupplierAnalysisPage'
-import { ContractStatusPage } from '../features/planning/pages/ContractStatusPage'
-import { AiBriefingSummaryPage } from '../features/planning/pages/AiBriefingSummaryPage'
-import { DataQualityPage } from '../features/planning/pages/DataQualityPage'
-import { AiBriefingDetailPage } from '../features/planning/pages/AiBriefingDetailPage'
-import { ContractDetailPage } from '../features/planning/pages/ContractDetailPage'
-import { ExecutiveDashboardPage } from '../features/executive/pages/ExecutiveDashboardPage'
-import { ExecutiveRisksPage } from '../features/executive/pages/ExecutiveRisksPage'
-import { ExecutiveSupplyChainPage } from '../features/executive/pages/ExecutiveSupplyChainPage'
-import { ExecutiveBriefingsPage } from '../features/executive/pages/ExecutiveBriefingsPage'
-import { ExecutiveVerificationPage } from '../features/executive/pages/ExecutiveVerificationPage'
-import { AdminApprovalsPage } from '../features/admin/pages/AdminApprovalsPage'
 import { DashboardBootstrapSkeleton } from '../components/layout/DashboardBootstrapSkeleton'
 import { ScrollToTop } from '../components/layout/ScrollToTop'
 import { useAuthState } from '../lib/useAuthState'
@@ -34,6 +7,70 @@ import { DASHBOARD_PATH_BY_TIER } from '../lib/dashboardPaths'
 import { TIER_LABEL } from '../lib/tierLabels'
 import { ConfirmModal } from '../components/ui/ConfirmModal'
 import type { OrgTier } from '../api/types'
+
+/*
+ * [ROLLBACK] 코드 스플리팅 이전에는 27개 페이지를 아래처럼 전부 정적 import 해 단일 번들
+ * (JS 약 1.36MB)로 묶었다. 되돌리려면 아래 lazy 선언 블록을 지우고 이 주석을 되살린 뒤
+ * <Suspense>도 걷어내면 된다. lazy 선언과 1:1 대응하도록 같은 순서로 남겨 둔다.
+ *
+ * import { PublicDashboardPage } from '../features/public/pages/PublicDashboardPage'
+ * import { PublicRiskMonitoringPage } from '../features/public/pages/PublicRiskMonitoringPage'
+ * import { PublicMaterialRiskPage } from '../features/public/pages/PublicMaterialRiskPage'
+ * import { PublicContractRagPage } from '../features/public/pages/PublicContractRagPage'
+ * import { PublicAiBriefingPage } from '../features/public/pages/PublicAiBriefingPage'
+ * import { AuthPage } from '../features/auth/pages/AuthPage'
+ * import { PurchasingDashboardPage } from '../features/purchasing/pages/PurchasingDashboardPage'
+ * import { RiskMonitoringPage } from '../features/purchasing/pages/RiskMonitoringPage'
+ * import { MaterialRiskPage } from '../features/purchasing/pages/MaterialRiskPage'
+ * import { ContractRagPage } from '../features/purchasing/pages/ContractRagPage'
+ * import { AiBriefingPage } from '../features/purchasing/pages/AiBriefingPage'
+ * import { DataManagementPage } from '../features/purchasing/pages/DataManagementPage'
+ * import { PlanningDashboardPage } from '../features/planning/pages/PlanningDashboardPage'
+ * import { MaterialRiskPage as PlanningMaterialRiskPage } from '../features/planning/pages/MaterialRiskPage'
+ * import { ImportDependencyPage } from '../features/planning/pages/ImportDependencyPage'
+ * import { SupplierAnalysisPage } from '../features/planning/pages/SupplierAnalysisPage'
+ * import { ContractStatusPage } from '../features/planning/pages/ContractStatusPage'
+ * import { AiBriefingSummaryPage } from '../features/planning/pages/AiBriefingSummaryPage'
+ * import { DataQualityPage } from '../features/planning/pages/DataQualityPage'
+ * import { AiBriefingDetailPage } from '../features/planning/pages/AiBriefingDetailPage'
+ * import { ContractDetailPage } from '../features/planning/pages/ContractDetailPage'
+ * import { ExecutiveDashboardPage } from '../features/executive/pages/ExecutiveDashboardPage'
+ * import { ExecutiveRisksPage } from '../features/executive/pages/ExecutiveRisksPage'
+ * import { ExecutiveSupplyChainPage } from '../features/executive/pages/ExecutiveSupplyChainPage'
+ * import { ExecutiveBriefingsPage } from '../features/executive/pages/ExecutiveBriefingsPage'
+ * import { ExecutiveVerificationPage } from '../features/executive/pages/ExecutiveVerificationPage'
+ * import { AdminApprovalsPage } from '../features/admin/pages/AdminApprovalsPage'
+ */
+
+// 라우트 단위 코드 스플리팅. 각 페이지를 별도 청크로 떼어 첫 진입 시 필요한 것만 받는다.
+// named export라 `.then(m => ({ default: ... }))`로 매핑한다. 위 [ROLLBACK] 블록과 같은 순서.
+const PublicDashboardPage = lazy(() => import('../features/public/pages/PublicDashboardPage').then((m) => ({ default: m.PublicDashboardPage })))
+const PublicRiskMonitoringPage = lazy(() => import('../features/public/pages/PublicRiskMonitoringPage').then((m) => ({ default: m.PublicRiskMonitoringPage })))
+const PublicMaterialRiskPage = lazy(() => import('../features/public/pages/PublicMaterialRiskPage').then((m) => ({ default: m.PublicMaterialRiskPage })))
+const PublicContractRagPage = lazy(() => import('../features/public/pages/PublicContractRagPage').then((m) => ({ default: m.PublicContractRagPage })))
+const PublicAiBriefingPage = lazy(() => import('../features/public/pages/PublicAiBriefingPage').then((m) => ({ default: m.PublicAiBriefingPage })))
+const AuthPage = lazy(() => import('../features/auth/pages/AuthPage').then((m) => ({ default: m.AuthPage })))
+const PurchasingDashboardPage = lazy(() => import('../features/purchasing/pages/PurchasingDashboardPage').then((m) => ({ default: m.PurchasingDashboardPage })))
+const RiskMonitoringPage = lazy(() => import('../features/purchasing/pages/RiskMonitoringPage').then((m) => ({ default: m.RiskMonitoringPage })))
+const MaterialRiskPage = lazy(() => import('../features/purchasing/pages/MaterialRiskPage').then((m) => ({ default: m.MaterialRiskPage })))
+const ContractRagPage = lazy(() => import('../features/purchasing/pages/ContractRagPage').then((m) => ({ default: m.ContractRagPage })))
+const AiBriefingPage = lazy(() => import('../features/purchasing/pages/AiBriefingPage').then((m) => ({ default: m.AiBriefingPage })))
+const DataManagementPage = lazy(() => import('../features/purchasing/pages/DataManagementPage').then((m) => ({ default: m.DataManagementPage })))
+const PlanningDashboardPage = lazy(() => import('../features/planning/pages/PlanningDashboardPage').then((m) => ({ default: m.PlanningDashboardPage })))
+const PlanningMaterialRiskPage = lazy(() => import('../features/planning/pages/MaterialRiskPage').then((m) => ({ default: m.MaterialRiskPage })))
+const ImportDependencyPage = lazy(() => import('../features/planning/pages/ImportDependencyPage').then((m) => ({ default: m.ImportDependencyPage })))
+const SupplierAnalysisPage = lazy(() => import('../features/planning/pages/SupplierAnalysisPage').then((m) => ({ default: m.SupplierAnalysisPage })))
+const ContractStatusPage = lazy(() => import('../features/planning/pages/ContractStatusPage').then((m) => ({ default: m.ContractStatusPage })))
+const AiBriefingSummaryPage = lazy(() => import('../features/planning/pages/AiBriefingSummaryPage').then((m) => ({ default: m.AiBriefingSummaryPage })))
+const DataQualityPage = lazy(() => import('../features/planning/pages/DataQualityPage').then((m) => ({ default: m.DataQualityPage })))
+const AiBriefingDetailPage = lazy(() => import('../features/planning/pages/AiBriefingDetailPage').then((m) => ({ default: m.AiBriefingDetailPage })))
+const ContractDetailPage = lazy(() => import('../features/planning/pages/ContractDetailPage').then((m) => ({ default: m.ContractDetailPage })))
+const ExecutiveDashboardPage = lazy(() => import('../features/executive/pages/ExecutiveDashboardPage').then((m) => ({ default: m.ExecutiveDashboardPage })))
+const ExecutiveRisksPage = lazy(() => import('../features/executive/pages/ExecutiveRisksPage').then((m) => ({ default: m.ExecutiveRisksPage })))
+const ExecutiveSupplyChainPage = lazy(() => import('../features/executive/pages/ExecutiveSupplyChainPage').then((m) => ({ default: m.ExecutiveSupplyChainPage })))
+const ExecutiveBriefingsPage = lazy(() => import('../features/executive/pages/ExecutiveBriefingsPage').then((m) => ({ default: m.ExecutiveBriefingsPage })))
+const ExecutiveVerificationPage = lazy(() => import('../features/executive/pages/ExecutiveVerificationPage').then((m) => ({ default: m.ExecutiveVerificationPage })))
+const AdminApprovalsPage = lazy(() => import('../features/admin/pages/AdminApprovalsPage').then((m) => ({ default: m.AdminApprovalsPage })))
 
 /**
  * 로그인 상태(orgTier)와 계층(tier)이 모두 일치해야 통과하는 라우트 가드.
@@ -76,6 +113,12 @@ export function AppRoutes() {
   return (
     <>
       <ScrollToTop />
+      {/*
+        lazy 페이지 청크를 받는 동안의 fallback. 세션 부트스트랩과 같은 대시보드 골격
+        스켈레톤을 재사용해, 부트스트랩 스켈레톤 → 청크 로드 → 페이지 자체 데이터 스켈레톤이
+        시각적으로 끊기지 않게 잇는다.
+      */}
+      <Suspense fallback={<DashboardBootstrapSkeleton />}>
       <Routes>
       <Route path="/" element={<PublicDashboardPage />} />
       {/*
@@ -280,6 +323,7 @@ export function AppRoutes() {
         }
       />
       </Routes>
+      </Suspense>
     </>
   )
 }

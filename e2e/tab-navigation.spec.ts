@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { loginAs } from './utils'
+import { loginAs, navigateSpa } from './utils'
 
 /**
  * features/public/pages/PublicDashboardPage.tsx 상단 3계층 탭 내비게이션 검증.
@@ -7,7 +7,7 @@ import { loginAs } from './utils'
 test.describe('공개 대시보드 상단 탭 내비게이션', () => {
   test('미로그인 상태로 탭 클릭 시 /auth로 이동한다', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByText('글로벌 리스크 관제 맵')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '구매 위험 관제 대시보드', exact: true })).toBeVisible()
 
     await page.getByRole('button', { name: '구매팀' }).click()
     await expect(page).toHaveURL(/\/auth$/)
@@ -21,9 +21,11 @@ test.describe('공개 대시보드 상단 탭 내비게이션', () => {
     await loginAs(page, 'purchasing@test.local')
     await expect(page).toHaveURL(/\/purchasing$/)
 
-    // Header 로고로 SPA 내 이동(인증 상태 유지, 하드 리로드 아님)
-    await page.getByRole('link', { name: '배터리 원자재 공급망 리스크 관제' }).click()
+    // Header 로고는 자신의 대시보드로 이동하는 것이 현재 요구사항이다.
+    // 계층 탭 검증을 위해 인증 상태를 유지한 채 공개 화면으로 이동한다.
+    await navigateSpa(page, '/')
     await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByRole('heading', { name: '구매 위험 관제 대시보드', exact: true })).toBeVisible()
 
     await page.getByRole('button', { name: '경영기획팀' }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
@@ -31,13 +33,15 @@ test.describe('공개 대시보드 상단 탭 내비게이션', () => {
 
     await page.getByRole('button', { name: '내 화면으로 이동' }).click()
     await expect(page).toHaveURL(/\/purchasing$/)
-    await expect(page.getByText('구매팀 대시보드')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '구매팀 대시보드', exact: true })).toBeVisible()
   })
 
   test('로그인 상태로 공개 대시보드에 진입하면 Header에 계정 정보와 로그아웃 버튼이 표시된다', async ({ page }) => {
     await loginAs(page, 'purchasing@test.local')
-    await page.getByRole('link', { name: '배터리 원자재 공급망 리스크 관제' }).click()
+    // mock 인증 상태를 유지한 채 공개 대시보드로 SPA 이동한다.
+    await navigateSpa(page, '/')
     await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByRole('heading', { name: '구매 위험 관제 대시보드', exact: true })).toBeVisible()
 
     // 규제 가이드 ③ 마스킹: 로컬파트 끝 2자를 **로 가린 채 표시된다.
     await expect(page.getByText('purchasi**@test.local · 구매팀')).toBeVisible()

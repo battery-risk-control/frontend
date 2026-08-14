@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { loginAs } from './utils'
+import { loginAs, navigateSpa } from './utils'
 
 /**
  * app/routes.tsx RequireAuth의 org_tier 매칭 검증(roadmap.md Phase 8) + 계층 불일치 확인
@@ -16,9 +16,19 @@ const TIER_TAB_LABEL: Record<string, string> = {
 }
 
 const CASES = [
-  { email: 'purchasing@test.local', ownPath: '/purchasing', ownHeading: '구매팀 대시보드', tryPath: '/executive' },
+  {
+    email: 'purchasing@test.local',
+    ownPath: '/purchasing',
+    ownHeading: '구매팀 대시보드',
+    tryPath: '/executive',
+  },
   { email: 'planning@test.local', ownPath: '/planning', ownHeading: '경영기획팀 대시보드', tryPath: '/purchasing' },
-  { email: 'executive@test.local', ownPath: '/executive', ownHeading: '경영진 대시보드', tryPath: '/planning' },
+  {
+    email: 'executive@test.local',
+    ownPath: '/executive',
+    ownHeading: '경영진 대시보드',
+    tryPath: '/planning',
+  },
 ] as const
 
 test.describe('계층 불일치 확인 모달', () => {
@@ -26,11 +36,15 @@ test.describe('계층 불일치 확인 모달', () => {
     test(`${email} 계정이 다른 계층 탭을 클릭하면 모달이 뜨고, "내 화면으로 이동"을 누르면 자신의 대시보드(${ownPath})로 이동한다`, async ({
       page,
     }) => {
+      // 대시보드 mock 데이터와 지도 렌더링까지 포함하므로 기본 30초보다 여유를 둔다.
+      test.setTimeout(60_000)
       await loginAs(page, email)
       await expect(page).toHaveURL(new RegExp(`${ownPath}$`))
 
-      await page.getByRole('link', { name: '배터리 원자재 공급망 리스크 관제' }).click()
+      // 로그인 상태를 유지하면서 계층 선택 버튼이 있는 공개 화면으로 이동한다.
+      await navigateSpa(page, '/')
       await expect(page).toHaveURL(/\/$/)
+      await expect(page.getByRole('heading', { name: '구매 위험 관제 대시보드', exact: true })).toBeVisible()
 
       await page.getByRole('button', { name: TIER_TAB_LABEL[tryPath] }).click()
       await expect(page.getByRole('dialog')).toBeVisible()
@@ -38,22 +52,26 @@ test.describe('계층 불일치 확인 모달', () => {
 
       await page.getByRole('button', { name: '내 화면으로 이동' }).click()
       await expect(page).toHaveURL(new RegExp(`${ownPath}$`))
-      await expect(page.getByText(ownHeading)).toBeVisible()
+      await expect(page.getByRole('dialog')).toBeHidden()
+      await expect(page.getByRole('heading', { name: ownHeading, exact: true })).toBeVisible()
     })
   }
 
   test('"취소"를 누르면 이동하지 않고 홈으로 돌아간다', async ({ page }) => {
+    test.setTimeout(60_000)
     await loginAs(page, 'purchasing@test.local')
     await expect(page).toHaveURL(/\/purchasing$/)
 
-    await page.getByRole('link', { name: '배터리 원자재 공급망 리스크 관제' }).click()
+    // 로그인 Header 로고는 /purchasing으로 향하므로 공개 화면은 SPA helper로 연다.
+    await navigateSpa(page, '/')
     await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByRole('heading', { name: '구매 위험 관제 대시보드', exact: true })).toBeVisible()
 
     await page.getByRole('button', { name: '경영기획팀' }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
 
     await page.getByRole('button', { name: '취소' }).click()
     await expect(page).toHaveURL(/\/$/)
-    await expect(page.getByText('글로벌 리스크 관제 맵')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '구매 위험 관제 대시보드', exact: true })).toBeVisible()
   })
 })

@@ -20,7 +20,6 @@ import { SkeletonText } from '../../../components/ui/Skeleton/Skeleton'
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
-import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { useAuthState } from '../../../lib/useAuthState'
 import { saveBlob } from '../../../lib/saveBlob'
 import { PUBLIC_SIDE_NAV_ITEMS } from '../../../lib/publicNav'
@@ -331,7 +330,6 @@ export function PublicAiBriefingPage() {
     <div className={styles.page}>
       <Header />
       <div className={styles.body}>
-        <SideNavToggleButton />
         <SideNav items={PUBLIC_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <div>

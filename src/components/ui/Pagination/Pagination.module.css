@@ -1,0 +1,107 @@
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.pages {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 번호 버튼과 이동(‹ › « ») 버튼 공통 모양. */
+.page,
+.step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.page:hover,
+.step:hover:not(:disabled) {
+  background: var(--color-bg);
+}
+
+.step:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pageActive {
+  color: var(--color-surface);
+  font-weight: var(--font-weight-bold);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.pageActive:hover {
+  background: var(--color-primary);
+}
+
+.ellipsis {
+  min-width: 24px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.jumpForm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.jumpInput {
+  width: 64px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.jumpButton {
+  height: 32px;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.jumpButton:hover {
+  background: var(--color-bg);
+}
+
+.total {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}

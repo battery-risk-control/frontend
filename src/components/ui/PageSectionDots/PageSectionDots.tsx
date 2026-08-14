@@ -30,7 +30,7 @@ interface PageSectionDotsProps {
  *
  * `variant="withAside"`는 main-aside 사이 레일에 sticky로, `variant="standalone"`은
  * 뷰포트 우측 끝에 sticky로 배치되는 걸 전제로 한 스타일을 적용한다.
- * 하단 리모컨의 "목록" 버튼은 자리만 확보한 placeholder — 클릭 핸들러 없음(후속 기능).
+ * 하단 리모컨은 "맨 위로"·"맨 아래로" 두 버튼이다(기능 없던 "목록" 버튼은 제거).
  *
  * 마지막 섹션은 rootMargin 기반 IntersectionObserver만으로는 영영 active가 안 될 수 있다
  * (C7) — heading이 "뷰포트 상단 40%"에 들어오려면 그만큼 아래로 더 스크롤할 여유가
@@ -222,21 +222,6 @@ export function PageSectionDots({ sections, variant }: PageSectionDotsProps) {
             aria-hidden="true"
           >
             <path d="M6 9l6 6 6-6" />
-          </svg>
-        </button>
-        <button type="button" className={styles.remoteButton} disabled aria-label="목록 (준비 중)">
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
       </div>

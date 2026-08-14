@@ -370,6 +370,11 @@ export interface KpiSummaryItem {
   label: string
   value: number
   unit: string
+  /**
+   * 값 색상 힌트. 절대 기준을 화면이 지어내면 안 되는 지표(예: 재고일수는 재고÷안전재고 비율로
+   * 판정)를 백엔드가 계산해 내려줄 때 쓴다. 없으면 화면이 라벨 규칙으로 칠한다.
+   */
+  tone?: 'critical' | 'warning' | 'normal' | null
 }
 
 /** risk_event에는 사업부(business_unit) 필드가 없어 자재→사업부 매핑을 가정해 파생한다(코드 주석 참고). */

@@ -192,8 +192,10 @@ function fetchMaterialRiskDashboardMock(): MaterialRiskDashboardResponse {
   const kpi_summary: KpiSummaryItem[] = [
     { label: '평가 자재', value: ranking.length, unit: '종' },
     { label: '심각 자재', value: ranking.filter((item) => item.grade === '심각').length, unit: '건' },
-    // risk_event에는 재고일수 필드가 없어 예시값 사용 — mock 임시값, 후속 검증 필요
-    { label: '평균 재고일수', value: 34, unit: '일' },
+    // risk_event에는 재고일수 필드가 없어 예시값 사용 — mock 임시값, 후속 검증 필요.
+    // tone은 실백엔드가 재고÷안전재고 비율로 계산해 내려주는 값 — mock에선 34일(≈안전재고 이상)을
+    // 가정해 'normal'로 둔다.
+    { label: '평균 재고일수', value: 34, unit: '일', tone: 'normal' },
     { label: '최고 위험 점수', value: ranking[0]?.score ?? 0, unit: '점' },
   ]
 

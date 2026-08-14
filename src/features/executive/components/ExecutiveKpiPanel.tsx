@@ -13,40 +13,57 @@ interface KpiItem {
   label: string
   value: string
   tone: 'critical' | 'warning' | 'primary' | 'success'
+  /**
+   * 카드 하단 24h 보조 줄. 1계층 KPI와 같은 취지로, 건수 카드는 "최근 24시간 수집 건수"를,
+   * 최고 위험 점수 카드는 "최근 24시간 최고 점수"를 보여준다. 큰 숫자와 모집단이 달라 뺄셈
+   * 하면 안 되는 값이라 회색·작은 글씨로만 둔다.
+   */
+  sub: string
 }
 
 export function ExecutiveKpiPanel({
   kpi,
   topRiskScore,
 }: ExecutiveKpiPanelProps) {
+  // 심각·주의·검증완료·검토필요 카드는 모두 "24시간 총 수집 건수"를 공유한다(요구사항).
+  // 값이 없으면(예: 24h 필드가 없는 구버전 응답) 0으로 폴백해 "undefined건"이 뜨지 않게 한다.
+  const collected24h = `${kpi.collected_count_24h ?? 0}건`
+  const maxScore24h =
+    kpi.max_risk_score_24h == null ? '—' : `${kpi.max_risk_score_24h.toFixed(1)}점`
+
   const items: KpiItem[] = [
     {
-      label: '심각 위험',
+      label: '심각',
       value: `${kpi.critical_count}건`,
       tone: 'critical',
+      sub: collected24h,
     },
     {
-      label: '주의 위험',
+      label: '주의',
       value: `${kpi.warning_count}건`,
       tone: 'warning',
+      sub: collected24h,
     },
     {
       label: topRiskScore == null ? '평균 위험 점수' : '최고 위험 점수',
       value:
         `${(topRiskScore ?? kpi.average_risk_score).toFixed(1)}점`,
       tone: 'primary',
+      sub: maxScore24h,
     },
     {
       label: '검증 완료 브리핑',
       value:
         `${kpi.verified_briefing_count}건`,
       tone: 'success',
+      sub: collected24h,
     },
     {
       label: '검토 필요',
       value:
         `${kpi.review_required_count}건`,
       tone: 'warning',
+      sub: collected24h,
     },
   ]
 
@@ -65,13 +82,20 @@ export function ExecutiveKpiPanel({
               {item.label}
             </span>
 
-            <strong
-              className={
-                styles[item.tone]
-              }
-            >
-              {item.value}
-            </strong>
+            <div className={styles.valueBlock}>
+              <strong
+                className={
+                  styles[item.tone]
+                }
+              >
+                {item.value}
+              </strong>
+
+              <span className={styles.subValue}>
+                <span className={styles.subLabel}>24h</span>
+                {item.sub}
+              </span>
+            </div>
           </article>
         ))}
       </div>

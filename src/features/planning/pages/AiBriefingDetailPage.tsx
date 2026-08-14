@@ -2,7 +2,6 @@ import { Link, useParams } from 'react-router-dom'
 import { Header } from '../../../components/layout/Header'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
-import { SideNavToggleButton } from '../../../components/layout/SideNavToggleButton'
 import { Breadcrumb } from '../../../components/layout/Breadcrumb'
 import { RiskGradeBadge } from '../../../components/ui/RiskGradeBadge'
 import { QueryState } from '../components/QueryState'
@@ -23,7 +22,6 @@ export function AiBriefingDetailPage() {
     <div className={styles.page}>
       <Header />
       <div className={styles.body}>
-        <SideNavToggleButton />
         <SideNav items={PLANNING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
           <Breadcrumb items={[{ label: '경영기획팀 대시보드', href: '/planning' }, { label: 'AI 브리핑 상세' }]} />

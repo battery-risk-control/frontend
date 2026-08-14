@@ -14,9 +14,6 @@ import {
   SideNav,
 } from '../../../components/layout/SideNav'
 import {
-  SideNavToggleButton,
-} from '../../../components/layout/SideNavToggleButton'
-import {
   EXECUTIVE_SIDE_NAV_ITEMS,
 } from '../../../lib/executiveNav'
 import {
@@ -79,7 +76,6 @@ export function ExecutivePageLayout({
       />
 
       <div className={styles.body}>
-        <SideNavToggleButton />
 
         <SideNav
           items={

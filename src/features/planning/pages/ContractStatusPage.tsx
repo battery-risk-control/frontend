@@ -62,9 +62,15 @@ export function ContractStatusPage() {
 
               return (
                 <>
-                  <KpiSummaryCards items={dashboard.kpi_summary} />
+                  <KpiSummaryCards items={dashboard.kpi_summary} onItemClick={(item) => {
+                    const filters: Record<string, typeof statusFilter> = {
+                      ACTIVE: 'ACTIVE', '만료 임박': 'EXPIRING', '문서 적재': 'DOCUMENT', 'RAG 검색 가능': 'RAG',
+                    }
+                    setStatusFilter(filters[item.label] ?? 'ALL')
+                  }} />
                   <div className={styles.grid2}>
-                    <RankedBarChart title="사업부별 계약 커버리지" items={coverageItems} />
+                    <RankedBarChart title="사업부별 계약 커버리지" items={coverageItems}
+                      onItemClick={(item) => setUnitFilter(item.name)} />
                     <EntityBadgeList
                       title="만료 임박 계약"
                       items={dashboard.expiring}

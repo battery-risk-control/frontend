@@ -52,7 +52,10 @@ async function fetchExecutiveOverviewMock(): Promise<ExecutiveOverviewResponse> 
     review_required_count: briefing.recent.filter((item) => item.grade === '심각').length,
     latest_assessed_at: new Date().toISOString(),
     // mock에는 24시간 이력이 없어 데모용으로 현재 지도 이벤트 수·최고 점수를 그대로 쓴다.
-    collected_count_24h: riskMap.length,
+    critical_count_24h: riskMap.filter((item) => item.grade === '심각').length,
+    warning_count_24h: riskMap.filter((item) => item.grade === '주의').length,
+    verified_briefing_count_24h: briefing.recent.filter((item) => item.grade !== '심각').length,
+    review_required_count_24h: briefing.recent.filter((item) => item.grade === '심각').length,
     max_risk_score_24h: maxRiskScore24h,
   }
 

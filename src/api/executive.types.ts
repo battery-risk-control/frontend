@@ -16,7 +16,10 @@ export interface ExecutiveKpi {
   review_required_count: number
   latest_assessed_at: string | null
   /** 최근 24시간에 수집·평가된 구매 리스크 건수(카드 하단 "24h N건" 보조 줄용). */
-  collected_count_24h: number
+  critical_count_24h: number
+  warning_count_24h: number
+  verified_briefing_count_24h: number
+  review_required_count_24h: number
   /** 최근 24시간 최고 위험 점수. 평가 0건이면 null → "—". */
   max_risk_score_24h: number | null
 }

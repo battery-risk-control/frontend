@@ -27,7 +27,6 @@ export function ExecutiveKpiPanel({
 }: ExecutiveKpiPanelProps) {
   // 심각·주의·검증완료·검토필요 카드는 모두 "24시간 총 수집 건수"를 공유한다(요구사항).
   // 값이 없으면(예: 24h 필드가 없는 구버전 응답) 0으로 폴백해 "undefined건"이 뜨지 않게 한다.
-  const collected24h = `${kpi.collected_count_24h ?? 0}건`
   const maxScore24h =
     kpi.max_risk_score_24h == null ? '—' : `${kpi.max_risk_score_24h.toFixed(1)}점`
 
@@ -36,13 +35,13 @@ export function ExecutiveKpiPanel({
       label: '심각',
       value: `${kpi.critical_count}건`,
       tone: 'critical',
-      sub: collected24h,
+      sub: `${kpi.critical_count_24h ?? 0}건`,
     },
     {
       label: '주의',
       value: `${kpi.warning_count}건`,
       tone: 'warning',
-      sub: collected24h,
+      sub: `${kpi.warning_count_24h ?? 0}건`,
     },
     {
       label: topRiskScore == null ? '평균 위험 점수' : '최고 위험 점수',
@@ -56,14 +55,14 @@ export function ExecutiveKpiPanel({
       value:
         `${kpi.verified_briefing_count}건`,
       tone: 'success',
-      sub: collected24h,
+      sub: `${kpi.verified_briefing_count_24h ?? 0}건`,
     },
     {
       label: '검토 필요',
       value:
         `${kpi.review_required_count}건`,
       tone: 'warning',
-      sub: collected24h,
+      sub: `${kpi.review_required_count_24h ?? 0}건`,
     },
   ]
 

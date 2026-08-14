@@ -70,3 +70,16 @@
   font-size: var(--font-size-sm);
   color: var(--color-text);
 }
+
+.contractSection { padding: var(--space-5); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.contractHeader { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+.contractHeader h2 { margin: 0; font-size: var(--font-size-lg); }
+.filters, .unitFilters { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.unitFilters { margin: var(--space-3) 0; }
+.filters button, .unitFilters button { padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); cursor: pointer; }
+.filters .activeFilter, .unitFilters .activeFilter { color: var(--color-surface); background: var(--color-primary); border-color: var(--color-primary); }
+.tableWrap { overflow-x: auto; }
+.tableWrap table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
+.tableWrap th, .tableWrap td { padding: var(--space-3); text-align: left; border-top: 1px solid var(--color-border); white-space: nowrap; }
+.download { padding: var(--space-1) var(--space-2); border: 0; border-radius: var(--radius-sm); color: var(--color-surface); background: var(--color-primary); cursor: pointer; }
+.empty { text-align: center !important; color: var(--color-text-muted); }

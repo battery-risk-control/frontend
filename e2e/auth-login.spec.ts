@@ -6,12 +6,9 @@ import { loginAs } from './utils'
  * 정확히 로그인되는지 확인한다.
  */
 const TEST_ACCOUNTS = [
-  // 제목이 '구매팀 대시보드' → '구매 위험 관제 대시보드'로 바뀌었다(2026-08-02, 목업 반영).
-  { email: 'purchasing@test.local', path: '/purchasing', heading: '구매 위험 관제 대시보드' },
+  { email: 'purchasing@test.local', path: '/purchasing', heading: '구매팀 대시보드' },
   { email: 'planning@test.local', path: '/planning', heading: '경영기획팀 대시보드' },
-  // 3계층 화면이 mock 카드(누적 리스크 탐지 KPI 등)에서 실 API 기반 대시보드로 교체되며
-  // 제목도 바뀌었다(2026-08-04, badapyobum-tier3 통합).
-  { email: 'executive@test.local', path: '/executive', heading: '경영진 공급망 위험 대시보드' },
+  { email: 'executive@test.local', path: '/executive', heading: '경영진 대시보드' },
 ] as const
 
 test.describe('테스트 계정 로그인', () => {

@@ -24,6 +24,7 @@ export function ExecutiveRisksPage() {
   } = useExecutiveDashboard()
   const evidence = useExecutiveEvidence()
   const [selected, setSelected] = useState<AiBriefingDetail | null>(null)
+  const [selectedRiskKey, setSelectedRiskKey] = useState<string | null>(null)
   const [tab, setTab] = useState<EvidenceTab>('summary')
 
   return (
@@ -100,17 +101,21 @@ export function ExecutiveRisksPage() {
               ) : (
                 <div className={styles.riskGrid}>
                   {dashboard.top_risks.map(
-                    (risk) => (
+                    (risk) => {
+                      const riskKey = `${risk.rank}-${risk.material}`
+                      return (
                       <article
-                        key={
-                          `${risk.rank}-${risk.material}`
-                        }
+                        key={riskKey}
                         className={
-                          styles.riskCard
+                          riskKey === selectedRiskKey
+                            ? `${styles.riskCard} ${styles.riskCardSelected}`
+                            : styles.riskCard
                         }
                         role="button"
                         tabIndex={0}
+                        aria-pressed={riskKey === selectedRiskKey}
                         onClick={() => {
+                          setSelectedRiskKey(riskKey)
                           const match = evidence.items.find((item) =>
                             (item.material_name ?? item.material_category ?? '').toLowerCase().includes(risk.material.toLowerCase()),
                           ) ?? evidence.items[0]
@@ -155,7 +160,8 @@ export function ExecutiveRisksPage() {
                           {risk.grade}
                         </span>
                       </article>
-                    ),
+                    )
+                    },
                   )}
                 </div>
               )}

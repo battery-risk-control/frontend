@@ -65,7 +65,10 @@ export function SideNav({ items }: SideNavProps) {
   const { hasOverflowTop, hasOverflowBottom } = useScrollOverflowHint(navRef, !collapsed)
 
   return (
-    <div className={collapsed ? `${styles.wrapper} ${styles.collapsed}` : styles.wrapper}>
+    // .rail: .body 전체 높이를 채우는 좌측 흰 배경(레일). 그 위에서 .wrapper(메뉴)가 sticky로
+    // 고정된다 — 레일이 아래 빈 공간을 흰색으로 채우고, 메뉴는 헤더 아래에 계속 붙어 있는다.
+    <div className={collapsed ? `${styles.rail} ${styles.collapsed}` : styles.rail}>
+      <div className={styles.wrapper}>
       <nav
         ref={navRef}
         className={styles.sideNav}
@@ -113,6 +116,7 @@ export function SideNav({ items }: SideNavProps) {
           </span>
         </div>
       )}
+      </div>
     </div>
   )
 }

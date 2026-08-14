@@ -17,7 +17,7 @@ interface PurchasingDashboardHeaderProps {
 }
 
 /**
- * 구매팀 대시보드 페이지 헤더 — 목업의 제목줄("구매 위험 관제 대시보드" + 부제 + 기준 시각).
+ * 구매팀 대시보드 페이지 헤더 — 목업의 제목줄("구매팀 대시보드" + 부제 + 기준 시각).
  *
  * 공용 `Header`(브랜드·계정·로그아웃·알림 벨)는 그대로 두고 그 아래에 놓이는 **페이지 단위**
  * 제목줄이다. 목업에는 상단 바가 없고 브랜드가 사이드바에 올라가 있지만, `Header`·`SideNav`는
@@ -31,7 +31,7 @@ export function PurchasingDashboardHeader({ asOf }: PurchasingDashboardHeaderPro
   return (
     <div className={styles.header}>
       <div className={styles.titleGroup}>
-        <h1 className={styles.title}>구매 위험 관제 대시보드</h1>
+        <h1 className={styles.title}>구매팀 대시보드</h1>
         <p className={styles.subtitle}>외부 위험 · ERP · 계약 근거 통합</p>
       </div>
       {asOf && (

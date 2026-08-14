@@ -1,23 +1,35 @@
-.wrapper {
-  position: sticky;
-  top: var(--header-height); /* sticky Header(56px)와 겹치지 않도록 그 아래에서부터 고정 */
-  height: calc(100vh - var(--header-height));
-  width: 220px;
+/* 좌측 흰 레일 — .body 전체 높이를 채워 좌측 컬럼에 빈(회색) 공간이 안 생기게 한다.
+   배경/테두리는 여기(레일)가 담당하고, 실제 메뉴(.wrapper)는 그 위에서 sticky로 고정된다. */
+.rail {
+  align-self: stretch; /* .body(flex row) 높이만큼 늘어나 full-height 배경이 된다 */
+  width: var(--sidenav-width);
   flex-shrink: 0;
-  overflow: hidden;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
   transition: width 0.2s ease;
 }
 
-.wrapper.collapsed {
+.rail.collapsed {
   width: 0;
+  overflow: hidden;
+  border-right: 0;
+}
+
+/* 메뉴 고정. 높이를 내용(메뉴)만큼 두고 max-height로만 상한 → 페이지 맨 아래(footer)까지
+   내려도 sticky 고정 해제가 안 일어나 헤더 아래에 계속 붙는다. 배경은 .rail이 대므로 투명. */
+.wrapper {
+  position: sticky;
+  top: var(--header-height); /* sticky Header(56px) 바로 아래에 고정 */
+  max-height: calc(100vh - var(--header-height));
+  width: var(--sidenav-width);
+  overflow: hidden;
 }
 
 .sideNav {
-  height: 100%;
-  width: 220px;
+  /* 화면보다 메뉴가 길 때만(2/3계층 긴 목록·짧은 화면) 내부 스크롤. 평소엔 내용 높이 그대로. */
+  max-height: calc(100vh - var(--header-height));
+  width: var(--sidenav-width);
   padding: var(--space-4) 0;
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none; /* Firefox */

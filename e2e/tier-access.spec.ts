@@ -16,12 +16,9 @@ const TIER_TAB_LABEL: Record<string, string> = {
 }
 
 const CASES = [
-  // 제목이 '구매팀 대시보드' → '구매 위험 관제 대시보드'로 바뀌었다(2026-08-02, 목업 반영).
-  { email: 'purchasing@test.local', ownPath: '/purchasing', ownHeading: '구매 위험 관제 대시보드', tryPath: '/executive' },
+  { email: 'purchasing@test.local', ownPath: '/purchasing', ownHeading: '구매팀 대시보드', tryPath: '/executive' },
   { email: 'planning@test.local', ownPath: '/planning', ownHeading: '경영기획팀 대시보드', tryPath: '/purchasing' },
-  // 3계층 화면이 mock 카드(누적 리스크 탐지 KPI 등)에서 실 API 기반 대시보드로 교체되며
-  // 제목도 바뀌었다(2026-08-04, badapyobum-tier3 통합).
-  { email: 'executive@test.local', ownPath: '/executive', ownHeading: '경영진 공급망 위험 대시보드', tryPath: '/planning' },
+  { email: 'executive@test.local', ownPath: '/executive', ownHeading: '경영진 대시보드', tryPath: '/planning' },
 ] as const
 
 test.describe('계층 불일치 확인 모달', () => {

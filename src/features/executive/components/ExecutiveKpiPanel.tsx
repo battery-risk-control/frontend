@@ -12,7 +12,7 @@ interface ExecutiveKpiPanelProps {
 interface KpiItem {
   label: string
   value: string
-  tone: 'critical' | 'warning' | 'primary' | 'success'
+  tone: 'critical' | 'warning' | 'primary' | 'success' | 'review'
   /**
    * 카드 하단 24h 보조 줄. 1계층 KPI와 같은 취지로, 건수 카드는 "최근 24시간 수집 건수"를,
    * 최고 위험 점수 카드는 "최근 24시간 최고 점수"를 보여준다. 큰 숫자와 모집단이 달라 뺄셈
@@ -62,7 +62,7 @@ export function ExecutiveKpiPanel({
       label: '검토 필요',
       value:
         `${kpi.review_required_count}건`,
-      tone: 'warning',
+      tone: 'review',
       sub: collected24h,
     },
   ]

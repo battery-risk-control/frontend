@@ -13,6 +13,8 @@ interface ImportDependencyRowProps {
   /** 선택된 기간 라벨. 조회는 페이지가 소유하므로 여기서는 내려주고 통지만 한다. */
   period: string
   onPeriodChange: (period: string) => void
+  /** 주요 알림에서 넘어온 선택 자재(그래프를 단일 선으로 좁힘). MaterialPriceDetail로 그대로 전달. */
+  selectedMaterial?: string
 }
 
 /**
@@ -36,6 +38,7 @@ export function ImportDependencyRow({
   isPriceLoading = false,
   period,
   onPeriodChange,
+  selectedMaterial,
 }: ImportDependencyRowProps) {
   // item 6(2026-08-06): 그래프를 전체폭 별도 섹션으로 내리는 split 레이아웃. 수입 의존도 도넛은
   // leadingPanel 슬롯으로 넘기고, MaterialPriceDetail이 상단 [도넛 | 필터+요약카드] + 하단
@@ -49,6 +52,7 @@ export function ImportDependencyRow({
       isLoading={isPriceLoading}
       period={period}
       onPeriodChange={onPeriodChange}
+      selectedMaterial={selectedMaterial}
     />
   )
 

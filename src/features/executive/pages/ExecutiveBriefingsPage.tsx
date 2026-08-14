@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import type { AiBriefingDetail } from '../../../api/types'
+import type { AiBriefingDetail, KpiSummaryItem } from '../../../api/types'
 import { ExecutivePageLayout } from '../components/ExecutivePageLayout'
 import { ExecutiveEvidencePanel, type EvidenceTab } from '../components/ExecutiveEvidencePanel'
 import { ExecutiveSectionSkeleton } from '../components/ExecutiveSectionSkeleton'
+import { KpiSummaryCards } from '../../planning/components/KpiSummaryCards'
 import { useExecutiveDashboard } from '../useExecutiveDashboard'
 import { useExecutiveEvidence } from '../useExecutiveEvidence'
 import styles from '../components/ExecutiveDashboardSections.module.css'
@@ -14,11 +15,30 @@ export function ExecutiveBriefingsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [selected, setSelected] = useState<AiBriefingDetail | null>(null)
   const [tab, setTab] = useState<EvidenceTab>('summary')
+  // 신뢰도 '확정' 기준 = 멀티에이전트 종합 완료(composite) + 검증 통과(review_passed).
+  // 브리핑까지 다 생성돼 확정된 건만 목록에 노출한다(다른 화면의 판정 기준과 동일).
+  const confirmedItems = evidence.items.filter(
+    (item) => item.composite && item.verification.review_passed === true,
+  )
   const requestedBriefingId = searchParams.get('briefing')
   const requestedItem = requestedBriefingId
-    ? evidence.items.find((item) => item.briefing_id === requestedBriefingId) ?? null
+    ? confirmedItems.find((item) => item.briefing_id === requestedBriefingId) ?? null
     : null
-  const selectedItem = requestedItem ?? selected ?? evidence.items[0] ?? null
+  const selectedItem = requestedItem ?? selected ?? confirmedItems[0] ?? null
+
+  // 확정 브리핑 기준 KPI(2계층 AI 브리핑과 동일 구성: 심각 비중 / 정상 / 주의 / 심각).
+  const criticalCount = confirmedItems.filter((item) => item.procurement_risk_level === 'CRITICAL').length
+  const warningCount = confirmedItems.filter((item) => item.procurement_risk_level === 'WARNING').length
+  const normalCount = confirmedItems.filter((item) => item.procurement_risk_level === 'NORMAL').length
+  const criticalRatio =
+    confirmedItems.length > 0 ? Math.round((criticalCount / confirmedItems.length) * 1000) / 10 : 0
+  const kpiItems: KpiSummaryItem[] = [
+    { label: '확정 브리핑', value: confirmedItems.length, unit: '건' },
+    { label: '심각 비중', value: criticalRatio, unit: '%' },
+    { label: '정상', value: normalCount, unit: '건' },
+    { label: '주의', value: warningCount, unit: '건' },
+    { label: '심각', value: criticalCount, unit: '건' },
+  ]
 
   function chooseBriefing(item: AiBriefingDetail) {
     setSelected(item)
@@ -39,16 +59,18 @@ export function ExecutiveBriefingsPage() {
       {!loading && errorMessage && <Message>{errorMessage}</Message>}
       {!evidence.loading && evidence.errorMessage && <Message>{evidence.errorMessage}</Message>}
       {!evidence.loading && !evidence.errorMessage && (
-        <section className={styles.section} aria-labelledby="executive-briefings-heading">
+        <>
+          <KpiSummaryCards items={kpiItems} />
+          <section className={styles.section} aria-labelledby="executive-briefings-heading">
           <div className={styles.sectionHeader}>
             <h2 id="executive-briefings-heading">최근 AI 브리핑</h2>
             <span className={styles.count}>
-              최근 {evidence.items.length}건 / 전체 {evidence.totalCount}건
+              확정 브리핑 {confirmedItems.length}건
             </span>
           </div>
-          {evidence.items.length === 0 ? <Message>아직 생성된 AI 브리핑이 없습니다.</Message> : (
+          {confirmedItems.length === 0 ? <Message>아직 확정된 AI 브리핑이 없습니다.</Message> : (
             <div className={styles.briefingList}>
-              {evidence.items.map((item) => (
+              {confirmedItems.map((item) => (
                 <button
                   key={item.briefing_id}
                   type="button"
@@ -77,7 +99,8 @@ export function ExecutiveBriefingsPage() {
               ))}
             </div>
           )}
-        </section>
+          </section>
+        </>
       )}
     </ExecutivePageLayout>
   )

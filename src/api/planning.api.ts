@@ -390,12 +390,15 @@ function fetchAiBriefingSummaryDashboardMock(page: number, size: number): AiBrie
   }))
 
   const criticalCount = events.filter((event) => event.grade === '심각').length
+  const warningCount = events.filter((event) => event.grade === '주의').length
+  const normalCount = events.filter((event) => event.grade === '정상').length
   const kpi_summary: KpiSummaryItem[] = [
     // risk_event 표본(7건)은 "이번 분기 브리핑"을 대표하기엔 규모가 작아 예시값 사용 — mock 임시값
     { label: '이번 분기 브리핑', value: 32, unit: '건' },
-    { label: 'CRITICAL 비중', value: Math.round((criticalCount / events.length) * 1000) / 10, unit: '%' },
-    { label: '평균 대응 소요', value: 2.3, unit: '일' },
-    { label: '임원 보고 지정', value: 4, unit: '건' },
+    { label: '심각 비중', value: Math.round((criticalCount / events.length) * 1000) / 10, unit: '%' },
+    { label: '정상', value: normalCount, unit: '건' },
+    { label: '주의', value: warningCount, unit: '건' },
+    { label: '심각', value: criticalCount, unit: '건' },
   ]
 
   return { kpi_summary, by_unit, recent, recent_total_count }

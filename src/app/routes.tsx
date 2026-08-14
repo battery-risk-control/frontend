@@ -28,6 +28,7 @@ import { ExecutiveBriefingsPage } from '../features/executive/pages/ExecutiveBri
 import { ExecutiveVerificationPage } from '../features/executive/pages/ExecutiveVerificationPage'
 import { AdminApprovalsPage } from '../features/admin/pages/AdminApprovalsPage'
 import { DashboardBootstrapSkeleton } from '../components/layout/DashboardBootstrapSkeleton'
+import { ScrollToTop } from '../components/layout/ScrollToTop'
 import { useAuthState } from '../lib/useAuthState'
 import { DASHBOARD_PATH_BY_TIER } from '../lib/dashboardPaths'
 import { TIER_LABEL } from '../lib/tierLabels'
@@ -73,7 +74,9 @@ function RequireAuth({ tier, children }: { tier: OrgTier; children: ReactNode })
  */
 export function AppRoutes() {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       <Route path="/" element={<PublicDashboardPage />} />
       {/*
         비로그인 `/public/*` 4개 — 구매팀 1계층 사이드바 하위 화면(리스크 모니터링/원자재
@@ -276,6 +279,7 @@ export function AppRoutes() {
           </RequireAuth>
         }
       />
-    </Routes>
+      </Routes>
+    </>
   )
 }

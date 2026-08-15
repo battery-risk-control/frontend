@@ -171,8 +171,8 @@ function PendingTable({ users, busyId, onAction }: ActionProps) {
           {users.map((user) => (
             <tr key={user.user_id}>
               <td>{user.name}</td>
-              <td>{user.username}</td>
-              <td>{user.email ?? '—'}</td>
+              <td className={styles.breakable}>{user.username}</td>
+              <td className={styles.breakable}>{user.email ?? '—'}</td>
               <td>{tierLabel(user.org_tier)}</td>
               <td>{user.org_name ?? '-'}</td>
               <td>{formatDate(user.created_at)}</td>
@@ -276,8 +276,8 @@ function RejectedTable({ users, busyId, onAction }: ActionProps) {
           {users.map((user) => (
             <tr key={user.user_id}>
               <td>{user.name}</td>
-              <td>{user.username}</td>
-              <td>{user.email ?? '—'}</td>
+              <td className={styles.breakable}>{user.username}</td>
+              <td className={styles.breakable}>{user.email ?? '—'}</td>
               <td>{tierLabel(user.org_tier)}</td>
               <td>{user.org_name ?? '-'}</td>
               <td>{formatDate(user.created_at)}</td>

@@ -16,7 +16,12 @@ test.describe('테스트 계정 로그인', () => {
     test(`${account.email} 로그인 시 ${account.path}로 이동한다`, async ({ page }) => {
       await loginAs(page, account.email)
       await expect(page).toHaveURL(new RegExp(`${account.path}$`))
-      await expect(page.getByText(account.heading)).toBeVisible()
+      await expect(
+        page.getByRole('heading', {
+          name: account.heading,
+          exact: true,
+        }),
+      ).toBeVisible()
     })
   }
 })

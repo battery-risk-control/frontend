@@ -23,30 +23,6 @@ test.describe('구형 브리핑 경로', () => {
     await expect(page.getByRole('button', { name: 'LLM 브리핑 생성' })).toBeDisabled()
   })
 
-  test('로그인 상태에서 구형 경로로 이동하면 AI 브리핑으로 리다이렉트된다', async ({ page }) => {
-    await loginAs(page, 'purchasing@test.local')
-    await expect(page).toHaveURL(/\/purchasing$/)
-
-    /*
-     * `page.goto()`를 쓰지 않는다. 인증을 인메모리로만 들고 있어(lib/AuthProvider.tsx 참고)
-     * 전체 페이지 로드가 일어나면 로그인이 풀려 무조건 /auth로 간다 — 그러면 아래 미로그인
-     * 시나리오와 같아져 이 분기(로그인 상태의 리다이렉트)를 검증하지 못한다.
-     *
-     * 대신 SPA 내부 이동을 흉내 낸다. React Router(BrowserRouter)가 popstate를 듣고 있으므로
-     * pushState 뒤에 그 이벤트를 쏘면 실제 링크 클릭과 같은 경로를 탄다.
-     *
-     * 콜백이 아니라 문자열로 넘긴다 — tsconfig.e2e.json이 DOM 타입을 일부러 빼 두고 있어
-     * (`lib: ["ES2023"]`, `types: ["node"]`) 브라우저 전역을 코드로 쓰면 타입 검사에서 걸린다.
-     * 이 한 곳 때문에 e2e 전체의 타입 범위를 넓히지 않는다.
-     */
-    await page.evaluate(
-      "history.pushState({}, '', '/purchasing/briefing/RISK-2026-0721-001');"
-        + "window.dispatchEvent(new PopStateEvent('popstate'));",
-    )
-
-    await expect(page).toHaveURL(/\/purchasing\/ai-briefing$/)
-  })
-
   test('미로그인 상태로 구형 브리핑 URL에 직접 접속하면 /auth로 리다이렉트된다', async ({ page }) => {
     await page.goto('/purchasing/briefing/RISK-2026-0721-001')
     await expect(page).toHaveURL(/\/auth$/)

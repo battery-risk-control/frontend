@@ -12,11 +12,14 @@ import {
 } from '../../../api/planning.api'
 import { fetchPublicRiskBoard } from '../../../api/public.api'
 import { useAuthState } from '../../../lib/useAuthState'
-import { LIVE_REFRESH_INTERVAL_MS } from '../../../lib/useLiveRefresh'
+import { LIVE_REFRESH_SLOW_INTERVAL_MS } from '../../../lib/useLiveRefresh'
 
 const liveQueryOptions = {
   staleTime: 30_000,
-  refetchInterval: LIVE_REFRESH_INTERVAL_MS,
+  // 2계층 쿼리는 전부 ERP·분석 집계(대시보드·지도·브리핑 요약)라 원천이 드물게 바뀐다 —
+  // 60초 폴링은 서버 부하만 만들어 5분으로 차등화했다(뉴스 목록은 페이지의 별도 60초 이펙트).
+  // 탭 복귀 시 즉시 갱신은 refetchOnWindowFocus가 그대로 맡는다.
+  refetchInterval: LIVE_REFRESH_SLOW_INTERVAL_MS,
   refetchIntervalInBackground: false,
   refetchOnWindowFocus: true,
 } as const

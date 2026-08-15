@@ -43,7 +43,19 @@ interface HeaderProps {
 export function Header({ children, accountExtra }: HeaderProps) {
   const { orgTier, email, signOut } = useAuthState()
   const { pathname } = useLocation()
-  const homePath = orgTier ? DASHBOARD_PATH_BY_TIER[orgTier] : '/'
+  // 로고·브랜드의 홈 경로. 일반 계정은 자기 계층 대시보드로 고정이지만, 마스터는
+  // DASHBOARD_PATH_BY_TIER['master']가 항상 /purchasing이라 그대로 쓰면 어느 계층을 보고 있든
+  // 홈이 구매팀으로 가버린다. 그래서 마스터는 지금 보고 있는 계층(경로 접두)으로 돌려보낸다
+  // (계층 밖 화면이면 기본 /purchasing).
+  function resolveHomePath(): string {
+    if (!orgTier) return '/'
+    if (orgTier === 'master') {
+      const current = MASTER_TIER_TABS.find((tab) => pathname.startsWith(tab.path))
+      return current ? current.path : DASHBOARD_PATH_BY_TIER.master
+    }
+    return DASHBOARD_PATH_BY_TIER[orgTier]
+  }
+  const homePath = resolveHomePath()
 
   function handleLogout() {
     // react-router의 SPA navigate()를 쓰면 history 리스너가 인증 Context 갱신과 다른

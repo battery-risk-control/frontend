@@ -37,6 +37,12 @@ async function openDataManagement(page: Page) {
   await page.getByRole('link', { name: '데이터 관리', exact: true }).click()
   await expect(page).toHaveURL(/\/purchasing\/data-management$/)
 
+  // 페이지가 실제로 렌더될 때까지 기다린다 — 이 화면은 lazy 청크(routes.tsx의 React.lazy)라
+  // URL이 바뀐 직후엔 아직 마운트 전이다. 아래 잠금 판정은 기다리지 않는 isVisible()이라,
+  // 렌더 전에 읽으면 안내 문구가 DOM에 없어 항상 false → CI(mock 빌드)에서 test.skip이
+  // 걸리지 않고 비활성 버튼을 클릭하다 타임아웃난다. 헤딩이 뜬 뒤에 판정하면 확실하다.
+  await expect(page.getByRole('heading', { name: '데이터 관리', exact: true })).toBeVisible()
+
   /*
    * 이 화면만 mock 폴백이 없다 — 다른 화면과 달리 ERP 반영은 실제 DB 트랜잭션이라 지어낼 수
    * 없기 때문이다(`isDataImportApiConfigured`). `VITE_API_BASE_URL` 없이 빌드하면 화면이

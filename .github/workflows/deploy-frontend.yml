@@ -46,8 +46,21 @@ jobs:
 
       - name: Upload build files to S3
         run: |
+          # 해시 붙은 자산(assets/*-<hash>.js/css)은 내용 불변 → 브라우저·CDN에 1년 immutable 캐시.
+          # 재배포 시 파일명(해시)이 바뀌므로 오래 캐시해도 안전하다. 이 헤더가 없으면 재방문마다
+          # 청크를 재검증/재다운로드해 코드 스플리팅의 재방문 이득이 반감된다.
           aws s3 sync ./dist "s3://${S3_BUCKET}" \
             --delete \
+            --exclude "index.html" \
+            --cache-control "public,max-age=31536000,immutable" \
+            --region "${AWS_REGION}"
+
+          # index.html은 항상 재검증(no-cache) → 재배포 직후에도 브라우저가 새 청크 목록을 받는다.
+          # 이게 없으면 휴리스틱 캐시된 옛 index.html이 사라진 해시의 청크를 참조할 수 있다
+          # (main.tsx의 vite:preloadError 가드가 복구하지만 예방이 우선).
+          # [ROLLBACK] 이 스텝을 원래의 단일 sync(3줄, 캐시 헤더 없음)로 되돌리면 끝.
+          aws s3 cp ./dist/index.html "s3://${S3_BUCKET}/index.html" \
+            --cache-control "no-cache" \
             --region "${AWS_REGION}"
 
       - name: Invalidate CloudFront cache

@@ -83,3 +83,29 @@
   font-weight: var(--font-weight-bold);
   text-decoration: none;
 }
+
+/* 마스터 전용 계층 전환 탭 — 공개 대시보드(PublicDashboardPage.module.css)의 tierTab과 같은
+   시각 언어를 쓴다. 활성(현재 계층) 탭은 밝은 배경+굵기로 구분해 시연 중 현재 위치가 보이게 한다. */
+.tierTabs {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.tierTab {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-surface);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+.tierTab:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.tierTabActive {
+  background: rgba(255, 255, 255, 0.18);
+  font-weight: var(--font-weight-bold);
+}

@@ -46,7 +46,7 @@ import { buildDashboardAlerts, PUBLIC_ALERT_TARGETS } from '../../../lib/dashboa
 import { fromNewsFeedItem, fromRiskBoardItem } from '../../../lib/selectedArticle'
 import { PUBLIC_SIDE_NAV_ITEMS } from '../../../lib/publicNav'
 import { DEFAULT_PERIOD, PERIOD_DAYS } from '../../../lib/materialPricePeriods'
-import { useLiveRefresh } from '../../../lib/useLiveRefresh'
+import { useLiveRefresh, LIVE_REFRESH_SLOW_INTERVAL_MS } from '../../../lib/useLiveRefresh'
 import { useDashboardAlertTarget } from '../../../lib/useDashboardAlertTarget'
 import { PurchasingDashboardHeader } from '../components/PurchasingDashboardHeader'
 import { PurchasingKpiRow } from '../components/PurchasingKpiRow'
@@ -154,6 +154,9 @@ export function PublicDashboardPage() {
   const { accessToken, orgTier } = useAuthState()
   const navigate = useNavigate()
   const liveRefreshKey = useLiveRefresh()
+  // 천천히 변하는 공개 데이터(지도·수입의존도·환율·가격)용 느린 갱신 키(5분) — 구매팀
+  // 대시보드와 같은 차등화. 탭 복귀 시 즉시 갱신은 두 키 모두 동일하게 동작한다.
+  const slowRefreshKey = useLiveRefresh(LIVE_REFRESH_SLOW_INTERVAL_MS)
   // 주요 알림(가격 변동성 주의) 클릭 시 넘어온 자재 선택 + 섹션 스크롤 처리.
   const alertMaterial = useDashboardAlertTarget()
 
@@ -275,7 +278,8 @@ export function PublicDashboardPage() {
   const [alertsFocusToken, setAlertsFocusToken] = useState(0)
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // 공개 API — 토큰이 필요 없으므로 마운트 시 한 번만 부른다(기간 탭에 반응하는 가격 2종 제외).
+  // 공개 API(느린 갱신) — 지도·수입의존도·환율은 원천 갱신이 드물어 5분 주기로 폴링한다.
+  // 탭 복귀 시에는 slowRefreshKey도 즉시 갱신된다.
   useEffect(() => {
     let cancelled = false
     fetchPublicRiskBoard()
@@ -287,13 +291,6 @@ export function PublicDashboardPage() {
       })
       .finally(() => {
         if (!cancelled) setRiskBoardLoading(false)
-      })
-    fetchPublicNewsFeedCount()
-      .then((total) => {
-        if (!cancelled) setNewsTotal(total)
-      })
-      .catch((err) => {
-        console.error('뉴스 건수 조회 실패', err)
       })
     fetchPublicImportDependency()
       .then((data) => {
@@ -308,6 +305,22 @@ export function PublicDashboardPage() {
       })
       .catch((err) => {
         console.error('환율 조회 실패', err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [slowRefreshKey])
+
+  // 뉴스 총건수는 뉴스 목록과 같은 60초 주기를 쓴다 — 목록과 건수가 다른 주기로 갱신되면
+  // 마지막 페이지 화살표 잠금이 어긋난다(둘은 같은 조건의 쿼리 짝이다).
+  useEffect(() => {
+    let cancelled = false
+    fetchPublicNewsFeedCount()
+      .then((total) => {
+        if (!cancelled) setNewsTotal(total)
+      })
+      .catch((err) => {
+        console.error('뉴스 건수 조회 실패', err)
       })
     return () => {
       cancelled = true
@@ -339,7 +352,9 @@ export function PublicDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [period, liveRefreshKey])
+    // 가격 원천(yfinance)은 장중 15분 간격 갱신이라 5분 폴링이면 충분하다. 기간 탭(period)
+    // 클릭은 의존성에 그대로 있어 즉시 반응한다.
+  }, [period, slowRefreshKey])
 
   // 뉴스 목록은 페이지가 바뀔 때마다 다시 부른다.
   useEffect(() => {
@@ -532,18 +547,22 @@ export function PublicDashboardPage() {
           />
         }
       >
-        <div className={styles.tierTabs}>
-          {TIER_TABS.map((tab) => (
-            <button
-              key={tab.label}
-              type="button"
-              className={styles.tierTab}
-              onClick={() => handleTierTabClick(tab.path)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {/* 마스터 계정은 Header 자체가 전 화면 공통 계층 탭을 렌더하므로(Header.tsx
+            MASTER_TIER_TABS) 여기 자체 탭을 겹쳐 그리지 않는다 — 같은 탭이 두 벌 보이는 중복 방지. */}
+        {orgTier !== 'master' && (
+          <div className={styles.tierTabs}>
+            {TIER_TABS.map((tab) => (
+              <button
+                key={tab.label}
+                type="button"
+                className={styles.tierTab}
+                onClick={() => handleTierTabClick(tab.path)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
       </Header>
       <div className={styles.body}>
         <SideNav items={PUBLIC_SIDE_NAV_ITEMS} />

@@ -47,7 +47,7 @@ import { buildDashboardAlerts, PURCHASING_ALERT_TARGETS } from '../../../lib/das
 import { fromNewsFeedItem, fromRiskBoardItem } from '../../../lib/selectedArticle'
 import { PURCHASING_SIDE_NAV_ITEMS } from '../../../lib/purchasingNav'
 import { DEFAULT_PERIOD, PERIOD_DAYS } from '../../../lib/materialPricePeriods'
-import { useLiveRefresh } from '../../../lib/useLiveRefresh'
+import { useLiveRefresh, LIVE_REFRESH_SLOW_INTERVAL_MS } from '../../../lib/useLiveRefresh'
 import { useDashboardAlertTarget } from '../../../lib/useDashboardAlertTarget'
 import { PurchasingDashboardHeader } from '../components/PurchasingDashboardHeader'
 import { PurchasingKpiRow } from '../components/PurchasingKpiRow'
@@ -151,6 +151,10 @@ const SECTION_DOTS_SECTIONS = [
 export function PurchasingDashboardPage() {
   const { accessToken } = useAuthState()
   const liveRefreshKey = useLiveRefresh()
+  // 천천히 변하는 공개 데이터(지도·수입의존도·환율·가격)용 느린 갱신 키. 원천이 드물게
+  // 바뀌는 데이터를 60초마다 재조회하던 것을 5분으로 늦춰 폴링 트래픽을 줄인다.
+  // 탭 복귀 시 즉시 갱신은 두 키 모두 동일하게 동작한다(useLiveRefresh focus 리스너).
+  const slowRefreshKey = useLiveRefresh(LIVE_REFRESH_SLOW_INTERVAL_MS)
   // 주요 알림(가격 변동성 주의) 클릭 시 넘어온 자재 선택 + 섹션 스크롤 처리.
   const alertMaterial = useDashboardAlertTarget()
 
@@ -310,7 +314,8 @@ export function PurchasingDashboardPage() {
     [openAlertsPanel],
   )
 
-  // 공개 API — 토큰이 필요 없으므로 마운트 시 한 번만 부른다(기간 탭에 반응하는 가격 2종 제외).
+  // 공개 API(느린 갱신) — 지도·수입의존도·환율은 원천 갱신이 드물어(환율 하루 2회, 지도는
+  // 분석 파이프라인) 5분 주기로 폴링한다. 탭 복귀 시에는 slowRefreshKey도 즉시 갱신된다.
   useEffect(() => {
     let cancelled = false
     fetchPublicRiskBoard()
@@ -322,13 +327,6 @@ export function PurchasingDashboardPage() {
       })
       .finally(() => {
         if (!cancelled) setRiskBoardLoading(false)
-      })
-    fetchPublicNewsFeedCount()
-      .then((total) => {
-        if (!cancelled) setNewsTotal(total)
-      })
-      .catch((err) => {
-        console.error('뉴스 건수 조회 실패', err)
       })
     fetchPublicImportDependency()
       .then((data) => {
@@ -343,6 +341,22 @@ export function PurchasingDashboardPage() {
       })
       .catch((err) => {
         console.error('환율 조회 실패', err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [slowRefreshKey])
+
+  // 뉴스 총건수는 뉴스 목록과 같은 60초 주기를 쓴다 — 목록과 건수가 다른 주기로 갱신되면
+  // 마지막 페이지 화살표 잠금이 어긋난다(둘은 같은 조건의 쿼리 짝이다).
+  useEffect(() => {
+    let cancelled = false
+    fetchPublicNewsFeedCount()
+      .then((total) => {
+        if (!cancelled) setNewsTotal(total)
+      })
+      .catch((err) => {
+        console.error('뉴스 건수 조회 실패', err)
       })
     return () => {
       cancelled = true
@@ -375,7 +389,9 @@ export function PurchasingDashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [period, liveRefreshKey])
+    // 가격 원천(yfinance)은 장중 15분 간격 갱신이라 5분 폴링이면 충분하다. 기간 탭(period)
+    // 클릭은 의존성에 그대로 있어 즉시 반응한다.
+  }, [period, slowRefreshKey])
 
   // 뉴스 목록은 페이지가 바뀔 때마다 다시 부른다. 위 공개 API 묶음에서 떼어낸 이유는 그쪽이
   // 마운트 1회용인데 여기만 newsPage에 의존하기 때문이다 — 같이 두면 화살표를 누를 때마다

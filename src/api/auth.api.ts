@@ -31,6 +31,8 @@ const TEST_ACCOUNTS: { email: string; password: string; org_tier: OrgTier }[] = 
   { email: 'purchasing@test.local', password: 'test1234!', org_tier: 'purchasing' },
   { email: 'planning@test.local', password: 'test1234!', org_tier: 'planning' },
   { email: 'executive@test.local', password: 'test1234!', org_tier: 'executive' },
+  // 시연용 마스터 — mock 모드에서도 로그인되게 목록에 넣는다. RequireAuth가 master를 모든 계층에서 통과시킨다.
+  { email: 'master@test.local', password: 'test1234!', org_tier: 'master' },
 ]
 
 /** Figma 와이어프레임 회원가입 폼에는 소속 회사명 입력이 없어 임시로 고정한다. */
@@ -192,6 +194,13 @@ export interface RefreshResult {
   access_token: string
   /** 새 access token 만료까지 남은 초. */
   expires_in?: number
+  /**
+   * 부트스트랩(F5 세션 복원)이 refresh 한 번으로 끝나도록 백엔드가 함께 내리는 계정 표시 정보.
+   * optional인 이유: 구버전 백엔드(필드 없음)와 신버전 프론트가 섞이는 배포 순서에서도
+   * 프론트가 /auth/me 폴백으로 기존처럼 동작해야 하기 때문이다(AuthProvider 참고).
+   */
+  org_tier?: OrgTier
+  username?: string
 }
 
 /**

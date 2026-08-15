@@ -66,8 +66,11 @@ export interface RiskEventBriefing {
 /**
  * 인증 계층. 3계층(구매팀/경영기획팀/경영진)에 더해 가입 승인 전용 관리자(admin)를 포함한다.
  * admin은 대시보드 계층이 아니라 /admin(가입 승인 화면)으로만 라우팅된다.
+ *
+ * master는 시연 전용 계층이다 — 한 계정으로 1·2·3계층 대시보드를 모두 열람한다(RequireAuth가
+ * master를 모든 계층 게이트에서 통과시킨다). 백엔드 test-seed(master@test.local)에서만 발급된다.
  */
-export type OrgTier = 'purchasing' | 'planning' | 'executive' | 'admin'
+export type OrgTier = 'purchasing' | 'planning' | 'executive' | 'admin' | 'master'
 
 export interface LoginRequest {
   email: string
@@ -108,7 +111,7 @@ export interface SignupFormValues {
   name: string
   email: string
   password: string
-  org_tier: Exclude<OrgTier, 'admin'>
+  org_tier: Exclude<OrgTier, 'admin' | 'master'>
   privacy_required_consent: boolean
   marketing_optional_consent: boolean
 }

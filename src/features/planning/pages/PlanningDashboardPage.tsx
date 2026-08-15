@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchPublicNewsFeed, fetchPublicNewsFeedCount } from '../../../api/public.api'
 import { Header } from '../../../components/layout/Header'
+import { AlertsBellButton } from '../../../components/layout/AlertsBellButton'
 import { Footer } from '../../../components/layout/Footer'
 import { SideNav } from '../../../components/layout/SideNav'
 import { DashboardSidePanel } from '../../purchasing/components/DashboardSidePanel'
@@ -54,6 +55,15 @@ export function PlanningDashboardPage() {
 
   const { expanded: alertsExpanded, open: openAlertsPanel } = useAlertsPanelState()
 
+  // 헤더 알림 벨(다른 계층과 동일하게 노출). 누르면 우측 패널을 열고 "주요 알림" 탭으로 옮긴다
+  // — 구매팀과 같은 focusAlertsToken 방식(토큰 증가 → DashboardSidePanel이 탭 전환)이다.
+  // 경영기획 대시보드는 자체 알림 목록이 없어(alerts=[]) 배지 숫자는 뜨지 않고 아이콘만 보인다.
+  const [alertsFocusToken, setAlertsFocusToken] = useState(0)
+  const handleOpenAlerts = useCallback(() => {
+    openAlertsPanel()
+    setAlertsFocusToken((previous) => previous + 1)
+  }, [openAlertsPanel])
+
   const handleSelectArticle = useCallback(
     (article: SelectedArticle) => {
       setSelectedNews(article)
@@ -91,7 +101,16 @@ export function PlanningDashboardPage() {
 
   return (
     <div className={styles.page}>
-      <Header />
+      <Header
+        accountExtra={
+          <AlertsBellButton
+            count={0}
+            onOpenAlerts={handleOpenAlerts}
+            onMouseEnter={() => {}}
+            onMouseLeave={() => {}}
+          />
+        }
+      />
       <div className={styles.body}>
         <SideNav items={PLANNING_SIDE_NAV_ITEMS} />
         <main id="main-content" className={styles.main}>
@@ -179,6 +198,7 @@ export function PlanningDashboardPage() {
           alerts={[]}
           briefings={[]}
           expanded={alertsExpanded}
+          focusAlertsToken={alertsFocusToken}
           isPreviewing={false}
           onPreviewMouseEnter={() => {}}
           onPreviewMouseLeave={() => {}}

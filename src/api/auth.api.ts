@@ -194,6 +194,13 @@ export interface RefreshResult {
   access_token: string
   /** 새 access token 만료까지 남은 초. */
   expires_in?: number
+  /**
+   * 부트스트랩(F5 세션 복원)이 refresh 한 번으로 끝나도록 백엔드가 함께 내리는 계정 표시 정보.
+   * optional인 이유: 구버전 백엔드(필드 없음)와 신버전 프론트가 섞이는 배포 순서에서도
+   * 프론트가 /auth/me 폴백으로 기존처럼 동작해야 하기 때문이다(AuthProvider 참고).
+   */
+  org_tier?: OrgTier
+  username?: string
 }
 
 /**

@@ -52,15 +52,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const refreshed = await requestTokenRefresh()
       if (cancelled) return
       if (!('error' in refreshed)) {
-        const me = await fetchMe(refreshed.access_token)
-        if (cancelled) return
-        if (!('error' in me)) {
+        // 신버전 백엔드는 refresh 응답에 org_tier·username을 함께 내린다 — 이 경우 /auth/me
+        // 왕복 없이 부트스트랩이 끝나 F5 복원이 요청 한 번으로 완료된다. 필드가 없으면
+        // (구버전 백엔드와 섞이는 배포 순서) 기존처럼 /auth/me로 폴백해 동작을 보존한다.
+        if (refreshed.org_tier && refreshed.username) {
           startSession({ accessToken: refreshed.access_token, expiresInSeconds: refreshed.expires_in })
-          setOrgTier(me.org_tier)
+          setOrgTier(refreshed.org_tier)
           // 헤더 표시는 로그인 계정 아이디(username)를 쓴다 — 개인 email(gmail) 노출을 피한다.
-          // (로그인 직후 경로도 AuthPage에서 입력한 아이디를 넣으므로 F5 전후 표시가 일치한다.)
-          setEmail(me.username)
+          setEmail(refreshed.username)
           setAccessToken(refreshed.access_token)
+        } else {
+          const me = await fetchMe(refreshed.access_token)
+          if (cancelled) return
+          if (!('error' in me)) {
+            startSession({ accessToken: refreshed.access_token, expiresInSeconds: refreshed.expires_in })
+            setOrgTier(me.org_tier)
+            // 헤더 표시는 로그인 계정 아이디(username)를 쓴다 — 개인 email(gmail) 노출을 피한다.
+            // (로그인 직후 경로도 AuthPage에서 입력한 아이디를 넣으므로 F5 전후 표시가 일치한다.)
+            setEmail(me.username)
+            setAccessToken(refreshed.access_token)
+          }
         }
       }
       setInitializing(false)

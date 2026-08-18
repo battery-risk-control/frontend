@@ -199,7 +199,16 @@ async function toDownloadedFile(
   fallbackFileName: string,
 ): Promise<DownloadedFile | FetchJsonError> {
   const contentType = res.headers.get('Content-Type') ?? ''
-  if (!res.ok || contentType.includes('application/json')) {
+  const normalizedContentType = contentType.split(';', 1)[0].trim().toLowerCase()
+  if (normalizedContentType === 'text/html' || normalizedContentType === 'application/xhtml+xml') {
+    // CloudFront의 SPA fallback은 백엔드 404를 index.html + 200으로 바꿀 수 있다. 이를 성공으로
+    // 취급하면 계약서 대신 웹앱을 .htm으로 저장하므로 파일 본문을 읽기 전에 차단한다.
+    return {
+      error: 'DOWNLOAD_FAILED',
+      message: '계약서 원본을 찾지 못했습니다. 잠시 후 다시 시도해 주세요.',
+    }
+  }
+  if (!res.ok || normalizedContentType === 'application/json') {
     try {
       const payload = (await res.json()) as ApiErrorEnvelope
       return { error: payload.error.code, message: payload.error.message }

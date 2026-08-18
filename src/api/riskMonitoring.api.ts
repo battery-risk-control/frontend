@@ -25,7 +25,10 @@ export interface RiskMonitoringFilters {
   material?: string
   /** 최근 N일(1~180) */
   days?: number
+  /** 페이지 크기. 서버 페이지네이션(2026-08-16)에서 한 페이지 건수다. */
   limit?: number
+  /** 건너뛸 건수(page * limit). 과거 이벤트로 페이지를 넘길 때 쓴다. */
+  offset?: number
 }
 
 /** `VITE_API_BASE_URL`이 없으면 실 API를 부를 수 없다 — 화면이 안내 문구를 띄우도록 알린다. */
@@ -41,6 +44,7 @@ function toQuery(filters: RiskMonitoringFilters): string {
   if (filters.material) params.set('material', filters.material)
   if (filters.days !== undefined) params.set('days', String(filters.days))
   if (filters.limit !== undefined) params.set('limit', String(filters.limit))
+  if (filters.offset !== undefined) params.set('offset', String(filters.offset))
   const query = params.toString()
   return query ? `?${query}` : ''
 }
@@ -62,6 +66,29 @@ export async function fetchRiskMonitoringEvents(
   )
   if ('error' in result) {
     throw new Error(result.message)
+  }
+  return result
+}
+
+/**
+ * 이벤트 전체 건수 조회. 목록과 **같은 필터**를 넘겨야 페이지 수·마지막 페이지 화살표 잠금이
+ * 정확하다(limit·offset은 건수와 무관하므로 쿼리에서 제외).
+ *
+ * 사용 예:
+ *   const total = await fetchRiskMonitoringEventCount(accessToken, { days: 7, grade: '심각' })
+ */
+export async function fetchRiskMonitoringEventCount(
+  accessToken: string,
+  filters: RiskMonitoringFilters = {},
+): Promise<number> {
+  const countFilters = { ...filters, limit: undefined, offset: undefined }
+  const result = await fetchWithAuth<number>(
+    `/api/v1/risk-monitoring/events/count${toQuery(countFilters)}`,
+    accessToken,
+  )
+  // 숫자 하나짜리 응답이라 'error' in 판별이 타입상 안 된다 — 뉴스 건수(fetchPublicNewsFeedCount)와 같은 방식.
+  if (typeof result !== 'number') {
+    throw new Error('이벤트 건수 조회에 실패했습니다.')
   }
   return result
 }

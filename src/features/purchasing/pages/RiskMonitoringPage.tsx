@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   fetchRiskMonitoringEvent,
+  fetchRiskMonitoringEventCount,
   fetchRiskMonitoringEvents,
   isRiskMonitoringApiConfigured,
 } from '../../../api/riskMonitoring.api'
@@ -115,16 +116,21 @@ export function RiskMonitoringPage() {
   const [reloadToken, setReloadToken] = useState(0)
   /** 이벤트 목록 현재 페이지(0-indexed). 필터 변경·새로고침 시 0으로 되돌린다. */
   const [page, setPage] = useState(0)
+  /** 현재 필터 조건의 전체 이벤트 수 — 페이지 수 계산·마지막 페이지 화살표 잠금용. */
+  const [totalCount, setTotalCount] = useState(0)
 
   const apiConfigured = isRiskMonitoringApiConfigured()
 
+  // 목록은 서버 페이지네이션(2026-08-16)이다 — 한 페이지(6건)만 받아온다. 예전에는 200건을
+  // 한 번에 받아 프론트에서 잘랐는데, 그 방식은 200건이 하드 상한이 되고(그 너머 이벤트는
+  // 영영 안 보임) 첫 로딩도 무겁다. 페이지가 바뀔 때마다 offset으로 다음 구간을 새로 요청한다.
   useEffect(() => {
     if (!accessToken || !apiConfigured) {
       return
     }
     // 필터를 빠르게 바꾸면 이전 요청이 늦게 도착해 최신 결과를 덮어쓸 수 있다.
     let cancelled = false
-    async function load(token: string, filters: AppliedFilters) {
+    async function load(token: string, filters: AppliedFilters, pageIndex: number) {
       try {
         const result = await fetchRiskMonitoringEvents(token, {
           days: filters.days,
@@ -132,18 +138,12 @@ export function RiskMonitoringPage() {
           confidence: filters.confidence === ALL ? undefined : filters.confidence,
           country: filters.country === ALL ? undefined : filters.country,
           material: filters.material === ALL ? undefined : filters.material,
-          // 백엔드 상한(200)까지 요청한다 — 기존 50은 프론트에서만 걸던 제한이라 그 이상 존재하는
-          // 이벤트가 잘려 보였다(7일 내 실제 79건 등).
-          limit: 200,
+          limit: EVENTS_PER_PAGE,
+          offset: pageIndex * EVENTS_PER_PAGE,
         })
         if (cancelled) return
         setEvents(result)
         setListError(null)
-        // 국가 후보는 "국가로 좁히지 않은" 응답에서만 갱신한다 — 좁힌 결과로 갱신하면 선택한
-        // 국가 하나만 남아 다른 국가로 옮겨갈 수 없게 된다(직접 "전체"로 되돌려야 함).
-        if (filters.country === ALL) {
-          setCountryOptions(collectCountries(result))
-        }
       } catch (err) {
         if (cancelled) return
         setEvents([])
@@ -152,7 +152,50 @@ export function RiskMonitoringPage() {
         if (!cancelled) setIsLoading(false)
       }
     }
-    void load(accessToken, { grade, confidence, country, material, days })
+    void load(accessToken, { grade, confidence, country, material, days }, page)
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken, apiConfigured, confidence, country, days, grade, material, page, reloadToken])
+
+  // 전체 건수 + 국가 필터 후보. 페이지 이동에는 반응하지 않는다 — 건수·후보는 필터에만 달려
+  // 있어서, 여기 묶어두면 화살표를 누를 때마다 다시 세는 낭비가 된다.
+  useEffect(() => {
+    if (!accessToken || !apiConfigured) {
+      return
+    }
+    let cancelled = false
+    async function loadMeta(token: string, filters: AppliedFilters) {
+      try {
+        const commonFilters = {
+          days: filters.days,
+          grade: filters.grade === ALL ? undefined : filters.grade,
+          confidence: filters.confidence === ALL ? undefined : filters.confidence,
+          material: filters.material === ALL ? undefined : filters.material,
+        }
+        const total = await fetchRiskMonitoringEventCount(token, {
+          ...commonFilters,
+          country: filters.country === ALL ? undefined : filters.country,
+        })
+        if (cancelled) return
+        setTotalCount(total)
+        // 데이터가 줄어 현재 페이지가 범위를 벗어났으면 마지막 페이지로 되돌린다 — 안 하면
+        // 빈 페이지에 갇혀 화살표만 남는다.
+        const newPageCount = Math.max(1, Math.ceil(total / EVENTS_PER_PAGE))
+        setPage((previous) => Math.min(previous, newPageCount - 1))
+        // 국가 후보는 "국가로 좁히지 않은" 넓은 조회(최대 200건)에서 만든다 — 현재 페이지 6건만
+        // 보면 후보가 그 페이지의 국가로 쪼그라들어 다른 국가로 옮겨갈 수 없게 된다. 이 넓은
+        // 조회는 필터가 바뀔 때만 나가므로(페이지 이동 아님) 예전(매 조회 200건)보다 가볍다.
+        if (filters.country === ALL) {
+          const sample = await fetchRiskMonitoringEvents(token, { ...commonFilters, limit: 200 })
+          if (cancelled) return
+          setCountryOptions(collectCountries(sample))
+        }
+      } catch {
+        // 건수·후보는 보조 정보다 — 실패해도 목록 자체(위 effect)의 에러 처리에 맡긴다.
+      }
+    }
+    void loadMeta(accessToken, { grade, confidence, country, material, days })
     return () => {
       cancelled = true
     }
@@ -211,13 +254,17 @@ export function RiskMonitoringPage() {
   const filtersApplied =
     grade !== ALL || confidence !== ALL || country !== ALL || material !== ALL || days !== DEFAULT_DAYS
 
-  // 목록을 6건씩 나눠 보여준다. events가 줄어 현재 페이지가 범위를 벗어나면 마지막 페이지로 클램프한다.
-  const pageCount = Math.max(1, Math.ceil(events.length / EVENTS_PER_PAGE))
+  // 서버 페이지네이션 — events는 이미 현재 페이지 한 장(최대 6건)이다. 페이지 수는 전체
+  // 건수(count API)로 계산해 마지막 페이지에서 화살표를 잠근다.
+  const pageCount = Math.max(1, Math.ceil(totalCount / EVENTS_PER_PAGE))
   const currentPage = Math.min(page, pageCount - 1)
-  const pagedEvents = events.slice(
-    currentPage * EVENTS_PER_PAGE,
-    currentPage * EVENTS_PER_PAGE + EVENTS_PER_PAGE,
-  )
+  const pagedEvents = events
+
+  /** 페이지를 넘기면 그 구간을 서버에 새로 요청한다 — 로딩 표시를 켜서 이전 페이지가 새 페이지인 척 남지 않게 한다. */
+  const handlePageChange = useCallback((nextPage: number) => {
+    setIsLoading(true)
+    setPage(nextPage)
+  }, [])
 
   /**
    * 선택한 이벤트를 URL에 남긴다 — AI 브리핑에 다녀와도 같은 기사가 열려 있어야 하기 때문이다.
@@ -364,7 +411,9 @@ export function RiskMonitoringPage() {
           <div className={styles.split}>
             <section className={styles.listPanel} aria-labelledby="event-list-heading">
               <h2 id="event-list-heading" className={styles.panelHeading}>
-                이벤트 목록 · {events.length}건
+                {/* 전체 건수(count API)를 쓴다 — events는 현재 페이지 한 장(최대 6건)이라
+                    그걸 세면 몇 페이지가 있든 항상 "6건"으로 보인다(서버 페이지네이션 전환 시 실수). */}
+                이벤트 목록 · {totalCount}건
               </h2>
               {/* 텍스트 한 줄 대신 들어올 목록 모양으로 자리를 잡는다 — 도착할 때 화면이
                   튀지 않고, 몇 건쯤 오는지도 미리 읽힌다. */}
@@ -415,7 +464,7 @@ export function RiskMonitoringPage() {
                 ))}
               </ul>
               {!isLoading && !listError && events.length > 0 && (
-                <Pagination page={currentPage} pageCount={pageCount} onChange={setPage} />
+                <Pagination page={currentPage} pageCount={pageCount} onChange={handlePageChange} />
               )}
             </section>
 

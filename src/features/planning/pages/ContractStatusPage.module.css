@@ -71,15 +71,19 @@
   color: var(--color-text);
 }
 
-.contractSection { padding: var(--space-5); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
-.contractHeader { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+.contractSection { padding: var(--space-6); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+/* 제목줄과 아래 필터/표 사이를 넉넉히 띄운다 — 예전에는 박스·요소들이 바짝 붙어 답답했다.
+   row-gap을 둬 좁은 화면에서 제목과 상태 필터가 줄바꿈될 때도 세로 간격이 유지된다. */
+.contractHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3) var(--space-4); margin-bottom: var(--space-6); }
 .contractHeader h2 { margin: 0; font-size: var(--font-size-lg); }
-.filters, .unitFilters { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.unitFilters { margin: var(--space-3) 0; }
-.filters button, .unitFilters button { padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); cursor: pointer; }
+.filters, .unitFilters { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+/* 사업부 필터 줄과 표 사이 여백. 위(제목줄)는 contractHeader의 margin-bottom이 맡으므로 아래만 넉넉히. */
+.unitFilters { margin: 0 0 var(--space-6); }
+.filters button, .unitFilters button { padding: var(--space-2) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); cursor: pointer; }
 .filters .activeFilter, .unitFilters .activeFilter { color: var(--color-surface); background: var(--color-primary); border-color: var(--color-primary); }
 .tableWrap { overflow-x: auto; }
 .tableWrap table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
-.tableWrap th, .tableWrap td { padding: var(--space-3); text-align: left; border-top: 1px solid var(--color-border); white-space: nowrap; }
+/* 행·열이 붙어 보이지 않게 셀 여백을 조금 키운다(세로 space-4·가로 space-4). */
+.tableWrap th, .tableWrap td { padding: var(--space-4); text-align: left; border-top: 1px solid var(--color-border); white-space: nowrap; }
 .download { padding: var(--space-1) var(--space-2); border: 0; border-radius: var(--radius-sm); color: var(--color-surface); background: var(--color-primary); cursor: pointer; }
 .empty { text-align: center !important; color: var(--color-text-muted); }

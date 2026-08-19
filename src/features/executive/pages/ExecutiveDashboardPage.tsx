@@ -159,6 +159,7 @@ export function ExecutiveDashboardPage() {
             <ExecutiveKpiPanel
               kpi={dashboard.kpi}
               topRiskScore={priorityBriefing?.procurement_risk_score ?? dashboard.top_risks[0]?.score}
+              topRiskLabel="우선 브리핑 점수"
             />
 
             {planningQuery.data && (

@@ -7,6 +7,13 @@ import styles from './ExecutiveKpiPanel.module.css'
 interface ExecutiveKpiPanelProps {
   kpi: ExecutiveKpi
   topRiskScore?: number
+  /**
+   * 메인 점수 카드 라벨. 이 패널을 2계층·3계층이 공유하는데 넘기는 값의 의미가 다르다:
+   * 2계층(전략 대시보드)=핵심 리스크 랭킹 1위 자재 점수 → "최고 위험 점수",
+   * 3계층(경영진 대시보드)=우선 검토 브리핑 1건의 점수 → "우선 브리핑 점수".
+   * 라벨이 하나로 고정되면 두 화면이 서로 다른 지표에 같은 이름을 달아 혼동되므로 prop으로 분리한다.
+   */
+  topRiskLabel?: string
 }
 
 interface KpiItem {
@@ -15,8 +22,8 @@ interface KpiItem {
   tone: 'critical' | 'warning' | 'primary' | 'success' | 'review'
   /**
    * 카드 하단 24h 보조 줄. 1계층 KPI와 같은 취지로, 건수 카드는 "최근 24시간 수집 건수"를,
-   * 최고 위험 점수 카드는 "최근 24시간 최고 점수"를 보여준다. 큰 숫자와 모집단이 달라 뺄셈
-   * 하면 안 되는 값이라 회색·작은 글씨로만 둔다.
+   * 점수 카드는 "최근 24시간 최고 점수"를 보여준다. 큰 숫자와 모집단이 달라 뺄셈 하면 안 되는
+   * 값이라 회색·작은 글씨로만 둔다.
    */
   sub: string
 }
@@ -24,6 +31,7 @@ interface KpiItem {
 export function ExecutiveKpiPanel({
   kpi,
   topRiskScore,
+  topRiskLabel = '최고 위험 점수',
 }: ExecutiveKpiPanelProps) {
   // 심각·주의·검증완료·검토필요 카드는 모두 "24시간 총 수집 건수"를 공유한다(요구사항).
   // 값이 없으면(예: 24h 필드가 없는 구버전 응답) 0으로 폴백해 "undefined건"이 뜨지 않게 한다.
@@ -44,7 +52,7 @@ export function ExecutiveKpiPanel({
       sub: `${kpi.warning_count_24h ?? 0}건`,
     },
     {
-      label: topRiskScore == null ? '평균 위험 점수' : '최고 위험 점수',
+      label: topRiskScore == null ? '평균 위험 점수' : topRiskLabel,
       value:
         `${(topRiskScore ?? kpi.average_risk_score).toFixed(1)}점`,
       tone: 'primary',

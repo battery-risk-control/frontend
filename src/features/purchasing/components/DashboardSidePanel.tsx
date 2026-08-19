@@ -209,7 +209,9 @@ function BriefingList({ briefings }: { briefings: AiBriefingListItem[] }) {
     return <p className={styles.empty}>저장된 브리핑이 없습니다.</p>
   }
   return (
-    <ul className={styles.list}>
+    <>
+      <p className={styles.listNote}>최근 5건이 표시됩니다</p>
+      <ul className={styles.list}>
       {briefings.map((briefing) => (
         <li key={briefing.briefing_id} className={styles.item}>
           <div className={styles.badges}>
@@ -230,7 +232,8 @@ function BriefingList({ briefings }: { briefings: AiBriefingListItem[] }) {
           </Link>
         </li>
       ))}
-    </ul>
+      </ul>
+    </>
   )
 }
 

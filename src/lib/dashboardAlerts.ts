@@ -25,13 +25,13 @@ export interface DashboardAlertTargets {
 /** 로그인 구매팀 대시보드(`/purchasing`)용 링크 묶음. */
 export const PURCHASING_ALERT_TARGETS: DashboardAlertTargets = {
   riskMonitoringPath: '/purchasing/risk-monitoring',
-  priceDetailPath: '/purchasing?material={material}#material-price-detail-heading',
+  priceDetailPath: '/purchasing#material-price-detail-heading',
 }
 
 /** 비로그인 대시보드(`/`)용 링크 묶음. */
 export const PUBLIC_ALERT_TARGETS: DashboardAlertTargets = {
   riskMonitoringPath: '/public/risk-monitoring',
-  priceDetailPath: '/?material={material}#material-price-detail-heading',
+  priceDetailPath: '/#material-price-detail-heading',
 }
 
 /**
@@ -158,7 +158,8 @@ function toPriceAlerts(
  */
 function withMaterialQuery(priceDetailPath: string, material: string): string {
   const [path, hash] = priceDetailPath.split('#')
-  const query = `?material=${encodeURIComponent(material)}`
+  const separator = path.includes('?') ? '&' : '?'
+  const query = `${separator}material=${encodeURIComponent(material)}`
   return `${path}${query}${hash ? `#${hash}` : ''}`
 }
 

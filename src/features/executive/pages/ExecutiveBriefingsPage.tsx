@@ -5,6 +5,7 @@ import { ExecutivePageLayout } from '../components/ExecutivePageLayout'
 import { ExecutiveEvidencePanel, type EvidenceTab } from '../components/ExecutiveEvidencePanel'
 import { ExecutiveSectionSkeleton } from '../components/ExecutiveSectionSkeleton'
 import { KpiSummaryCards } from '../../planning/components/KpiSummaryCards'
+import { useAiBriefing } from '../../planning/hooks/usePlanningQueries'
 import { useExecutiveDashboard } from '../useExecutiveDashboard'
 import { useExecutiveEvidence } from '../useExecutiveEvidence'
 import styles from '../components/ExecutiveDashboardSections.module.css'
@@ -12,6 +13,8 @@ import styles from '../components/ExecutiveDashboardSections.module.css'
 export function ExecutiveBriefingsPage() {
   const { dashboard, loading, errorMessage } = useExecutiveDashboard()
   const evidence = useExecutiveEvidence()
+  // 확정 브리핑 KPI는 2계층 AI 브리핑과 같은 백엔드 집계(aiBriefingKpi)를 그대로 쓴다.
+  const briefingSummary = useAiBriefing(0)
   const [searchParams, setSearchParams] = useSearchParams()
   const [selected, setSelected] = useState<AiBriefingDetail | null>(null)
   const [tab, setTab] = useState<EvidenceTab>('summary')
@@ -26,19 +29,12 @@ export function ExecutiveBriefingsPage() {
     : null
   const selectedItem = requestedItem ?? selected ?? confirmedItems[0] ?? null
 
-  // 확정 브리핑 기준 KPI(2계층 AI 브리핑과 동일 구성: 심각 비중 / 정상 / 주의 / 심각).
-  const criticalCount = confirmedItems.filter((item) => item.procurement_risk_level === 'CRITICAL').length
-  const warningCount = confirmedItems.filter((item) => item.procurement_risk_level === 'WARNING').length
-  const normalCount = confirmedItems.filter((item) => item.procurement_risk_level === 'NORMAL').length
-  const criticalRatio =
-    confirmedItems.length > 0 ? Math.round((criticalCount / confirmedItems.length) * 1000) / 10 : 0
-  const kpiItems: KpiSummaryItem[] = [
-    { label: '확정 브리핑', value: confirmedItems.length, unit: '건' },
-    { label: '심각 비중', value: criticalRatio, unit: '%' },
-    { label: '정상', value: normalCount, unit: '건' },
-    { label: '주의', value: warningCount, unit: '건' },
-    { label: '심각', value: criticalCount, unit: '건' },
-  ]
+  // 확정 브리핑 KPI(심각 비중 / 정상 / 주의 / 심각)는 2계층 AI 브리핑과 같은 백엔드 집계를 쓴다.
+  // 이 화면의 evidence.items는 상세 근거 패널용으로 최근 20건(BRIEFING_PAGE_SIZE)만 불러오므로,
+  // 그 표본 길이로 KPI를 세면 실제 확정 브리핑이 192건이어도 20에서 멈춘다(집계≠표본).
+  const kpiItems: KpiSummaryItem[] = briefingSummary.data?.kpi_summary ?? []
+  // 확정 브리핑 총건수(전체 집계). 아래 목록은 점수 상위 20건만 표시하므로 라벨로 구분한다.
+  const confirmedTotal = briefingSummary.data?.recent_total_count ?? confirmedItems.length
 
   function chooseBriefing(item: AiBriefingDetail) {
     setSelected(item)
@@ -65,7 +61,8 @@ export function ExecutiveBriefingsPage() {
           <div className={styles.sectionHeader}>
             <h2 id="executive-briefings-heading">최근 AI 브리핑</h2>
             <span className={styles.count}>
-              확정 브리핑 {confirmedItems.length}건
+              확정 브리핑 {confirmedTotal}건
+              {confirmedItems.length < confirmedTotal ? ` (상위 ${confirmedItems.length}건 표시)` : ''}
             </span>
           </div>
           {confirmedItems.length === 0 ? <Message>아직 확정된 AI 브리핑이 없습니다.</Message> : (

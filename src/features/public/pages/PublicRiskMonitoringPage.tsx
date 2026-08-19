@@ -19,12 +19,16 @@ import styles from './PublicRiskMonitoringPage.module.css'
 /** 필터 "전체"를 뜻하는 값. 백엔드에는 파라미터를 생략해서 보낸다. */
 const ALL = '전체'
 
-/** 화면 상단 기간 필터. 백엔드 days 파라미터 상한(180)을 넘지 않는다. */
+/**
+ * 화면 상단 기간 필터. 백엔드 days 파라미터 상한(180)을 넘지 않는다.
+ * days:0 은 "전체 기간" — 백엔드가 수집일 하한 없이 반환한다(과거 날짜 데모까지 노출).
+ */
 const PERIOD_OPTIONS = [
   { label: '최근 24시간', days: 1 },
   { label: '최근 7일', days: 7 },
   { label: '최근 30일', days: 30 },
   { label: '최근 180일', days: 180 },
+  { label: '전체', days: 0 },
 ]
 
 const GRADE_OPTIONS = [ALL, '심각', '주의', '정상']

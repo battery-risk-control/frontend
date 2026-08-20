@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchAiBriefing, fetchRecentAiBriefings } from '../../api/aiBriefing.api'
+import { fetchRecentAiBriefingDetails } from '../../api/aiBriefing.api'
 import type { AiBriefingDetail } from '../../api/types'
 import { useAuthState } from '../../lib/useAuthState'
 import { useLiveRefresh } from '../../lib/useLiveRefresh'
@@ -31,25 +31,15 @@ export function useExecutiveEvidence() {
 
       try {
         setLoading(true)
-        const firstPage = await fetchRecentAiBriefings(accessToken, {
+        // 상세 20건을 한 번에 받는다(개별 fetchAiBriefing × 20 = N+1 제거). 반환 데이터는 이전과
+        // 동일한 AiBriefingDetail[]이라 소비 화면 동작은 그대로다. 정렬(점수 desc)도 그대로 유지.
+        const page = await fetchRecentAiBriefingDetails(accessToken, {
           page: 0,
           size: BRIEFING_PAGE_SIZE,
         })
-        const summaries = firstPage.content
-        const details = await Promise.all(
-          summaries.map((item) => fetchAiBriefing(accessToken, item.briefing_id)),
-        )
         if (active) {
-          // 상세 쿼리(findById)는 subject_title을 영문 스냅샷 그대로 주지만, 목록 쿼리(findPage)는
-          // raw_events.title_ko를 우선한 한글 제목을 준다. 상세의 나머지 필드는 그대로 쓰되 제목만
-          // 목록의 한글 값으로 덮는다 — 안 그러면 경영진 '우선 확인'·AI 브리핑 목록 제목이 영문으로
-          // 뜬다(2026-08-20). summaries와 details는 같은 순서라 index로 1:1 대응된다.
-          const merged = details.map((detail, index) => ({
-            ...detail,
-            subject_title: summaries[index]?.subject_title ?? detail.subject_title,
-          }))
-          setItems([...merged].sort(compareBriefings))
-          setTotalCount(firstPage.total_elements)
+          setItems([...page.content].sort(compareBriefings))
+          setTotalCount(page.total_elements)
           setErrorMessage(null)
         }
       } catch (error) {

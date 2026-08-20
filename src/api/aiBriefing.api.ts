@@ -117,6 +117,28 @@ export async function fetchRecentAiBriefings(
 }
 
 /**
+ * `fetchRecentAiBriefings`와 같은 목록·정렬이되, 각 항목의 <b>상세(AiBriefingDetail) 전체</b>를
+ * 한 번에 받는다. 경영진 근거 화면이 상세 N건을 개별 호출(N+1)하던 것을 단일 요청으로 접는다.
+ */
+export async function fetchRecentAiBriefingDetails(
+  accessToken: string,
+  query: AiBriefingListQuery = {},
+): Promise<ApiPage<AiBriefingDetail>> {
+  const params = new URLSearchParams()
+  if (query.source) params.set('source', query.source)
+  if (query.level) params.set('level', query.level)
+  if (query.reviewStatus) params.set('reviewStatus', query.reviewStatus)
+  if (query.days != null) params.set('days', String(query.days))
+  params.set('page', String(query.page ?? 0))
+  params.set('size', String(query.size ?? 5))
+
+  return unwrap(await fetchWithAuth<ApiPage<AiBriefingDetail>>(
+    `/api/v1/ai-briefing/briefings/details?${params.toString()}`,
+    accessToken,
+  ))
+}
+
+/**
  * "다운로드" — 저장된 브리핑을 PDF로 받는다.
  *
  * **서버가 LLM을 다시 부르지 않는다.** 이미 저장된 그 행을 그리는 일이라 화면에서 읽은 내용과

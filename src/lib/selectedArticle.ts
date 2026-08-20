@@ -52,6 +52,9 @@ export function fromRiskBoardItem(item: GlobalRiskBoardItem): SelectedArticle {
     country_code: item.country_code ?? null,
     country_name: item.country_name,
     collected_at: item.collected_at ?? undefined,
+    // 백엔드가 analyses.summary_kr을 지도 응답에도 실어 준다(2026-08-20). 뉴스 목록 경로와 같은
+    // 요약을 본문에 채워, 마커로 열어도 영문 제목만 남지 않고 한국어 요약이 뜬다. 없으면 null.
+    summary: item.summary_kr ?? null,
     url: item.source_url ?? null,
   }
 }

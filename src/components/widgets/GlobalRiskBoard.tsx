@@ -195,7 +195,11 @@ function computeEventMarkerPositions(items: LocatedItem[]): Map<string, EventMar
   }
   const positions = new Map<string, EventMarkerPosition>()
   for (const group of byCountry.values()) {
-    const spread = group.length > 1 ? 1.4 : 0
+    // 분산 반경은 0.5°로 제한한다. 이전 값(1.4°)은 한 나라의 남북 폭에 육박해서, 같은 국가에
+    // 이벤트가 여러 건이면 마커가 국경을 넘어 이웃 나라에 찍혔다 — 특히 한국(서울 37.57°N)은
+    // 1.4°만 밀려도 평양 위도(39°N)까지 올라가 남한 이벤트가 북한에 뜨는 문제가 있었다.
+    // 0.5°면 최북단 마커도 38°N 안쪽(남한)에 머물면서 9px 마커끼리 지역 줌에서 충분히 벌어진다.
+    const spread = group.length > 1 ? 0.5 : 0
     group.forEach((item, index) => {
       const angle = (index / group.length) * 2 * Math.PI
       positions.set(item.risk_event_id, {

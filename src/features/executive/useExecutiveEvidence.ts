@@ -40,7 +40,15 @@ export function useExecutiveEvidence() {
           summaries.map((item) => fetchAiBriefing(accessToken, item.briefing_id)),
         )
         if (active) {
-          setItems([...details].sort(compareBriefings))
+          // 상세 쿼리(findById)는 subject_title을 영문 스냅샷 그대로 주지만, 목록 쿼리(findPage)는
+          // raw_events.title_ko를 우선한 한글 제목을 준다. 상세의 나머지 필드는 그대로 쓰되 제목만
+          // 목록의 한글 값으로 덮는다 — 안 그러면 경영진 '우선 확인'·AI 브리핑 목록 제목이 영문으로
+          // 뜬다(2026-08-20). summaries와 details는 같은 순서라 index로 1:1 대응된다.
+          const merged = details.map((detail, index) => ({
+            ...detail,
+            subject_title: summaries[index]?.subject_title ?? detail.subject_title,
+          }))
+          setItems([...merged].sort(compareBriefings))
           setTotalCount(firstPage.total_elements)
           setErrorMessage(null)
         }

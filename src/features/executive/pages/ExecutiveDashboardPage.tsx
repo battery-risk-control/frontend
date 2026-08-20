@@ -1,4 +1,5 @@
 import {
+  useRef,
   useState,
 } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -73,6 +74,11 @@ export function ExecutiveDashboardPage() {
   const [newsTotal, setNewsTotal] = useState(0)
   const [newsLoading, setNewsLoading] = useState(true)
   const [selectedNews, setSelectedNews] = useState<SelectedArticle | null>(null)
+  // 첫 진입에서만 "최신 뉴스"를 상세 기본값으로 세팅했는지 표시한다. 라이브 새로고침(60초 + 창
+  // 포커스/가시성 변화)마다 뉴스 목록을 다시 불러오는데, 그때도 기본 선택을 다시 걸면 사용자가
+  // '대응 확인'으로 열어둔 근거/위험 상세(그 순간 selectedNews=null)를 최신 뉴스 상세로 덮어써
+  // 버린다(2026-08-20 버그). 최초 1회만 기본 선택하고 이후 새로고침은 목록만 갱신한다.
+  const didInitialNewsSelect = useRef(false)
   const [detailInteractionKey, setDetailInteractionKey] = useState<string | null>(null)
   const priorityBriefing = evidence.items.find(
     (item) => item.composite && item.verification.review_passed === true
@@ -112,7 +118,12 @@ export function ExecutiveDashboardPage() {
       .then((items) => {
         if (!active) return
         setNews(items)
-        setSelectedNews((current) => current ?? (items[0] ? fromNewsFeedItem(items[0]) : null))
+        // 최초 1회만 최신 뉴스를 기본 상세로 연다. 이후 새로고침 틱에서는 사용자가 열어둔 상세를
+        // 건드리지 않는다 — selectedNews=null(근거/위험 상세를 보는 중)을 최신 뉴스로 덮지 않도록.
+        if (!didInitialNewsSelect.current && items[0]) {
+          didInitialNewsSelect.current = true
+          setSelectedNews((current) => current ?? fromNewsFeedItem(items[0]))
+        }
       })
       .catch((error) => {
         console.error('경영진 뉴스 조회 실패', error)

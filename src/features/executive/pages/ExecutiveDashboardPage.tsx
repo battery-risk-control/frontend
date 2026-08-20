@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom'
 import type { AiBriefingDetail, NewsFeedItem, SelectedArticle } from '../../../api/types'
 import { useEffect } from 'react'
 import { fetchPublicNewsFeed, fetchPublicNewsFeedCount } from '../../../api/public.api'
+import { fetchAcknowledgedAssessments } from '../../../api/publicPurchasingDashboard.api'
+import { useAuthState } from '../../../lib/useAuthState'
 import { fromNewsFeedItem } from '../../../lib/selectedArticle'
 import { LatestNewsPanel } from '../../purchasing/components/LatestNewsPanel'
 import {
@@ -44,11 +46,16 @@ const NEWS_FEED_PAGE_SIZE = 5
 export function ExecutiveDashboardPage() {
   const navigate = useNavigate()
   const liveRefreshKey = useLiveRefresh()
+  const { accessToken } = useAuthState()
   const {
     dashboard,
     loading,
     errorMessage,
   } = useExecutiveDashboard()
+  // 확인 완료된 평가 id 집합. "우선 브리핑 점수"가 확인 완료된 평가에 연결된 브리핑을 우선
+  // 대상에서 빼도록, 아래 priorityBriefing 선택에서 제외한다(2026-08-20). 자재 랭킹은 백엔드가
+  // 이미 제외하지만, 우선 브리핑은 브리핑(ai_briefings) 소스라 여기서 걸러야 한다.
+  const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(new Set())
   // 경영진 화면에도 경영기획팀 "KPI 요약 카드"를 함께 노출하기 위해 2계층 전략 대시보드를 조회한다.
   const planningQuery = useStrategyDashboard()
 
@@ -68,8 +75,11 @@ export function ExecutiveDashboardPage() {
   const [selectedNews, setSelectedNews] = useState<SelectedArticle | null>(null)
   const [detailInteractionKey, setDetailInteractionKey] = useState<string | null>(null)
   const priorityBriefing = evidence.items.find(
-    (item) => item.composite && item.verification.review_passed === true,
-  ) ?? evidence.items.find((item) => item.composite)
+    (item) => item.composite && item.verification.review_passed === true
+      && !acknowledgedIds.has(item.assessment_id ?? ''),
+  ) ?? evidence.items.find(
+    (item) => item.composite && !acknowledgedIds.has(item.assessment_id ?? ''),
+  )
   const selectedEvidenceNews = selectedEvidence
     ? news.find((item) => (
         item.risk_event_id === selectedEvidence.news_id
@@ -77,6 +87,16 @@ export function ExecutiveDashboardPage() {
         || item.headline_original === selectedEvidence.source_headline
       ))
     : undefined
+
+  useEffect(() => {
+    let active = true
+    fetchAcknowledgedAssessments(accessToken, 50)
+      .then((items) => {
+        if (active) setAcknowledgedIds(new Set(items.map((item) => item.assessment_id)))
+      })
+      .catch((error) => console.error('경영진 확인 완료 목록 조회 실패', error))
+    return () => { active = false }
+  }, [accessToken, liveRefreshKey])
 
   useEffect(() => {
     let active = true

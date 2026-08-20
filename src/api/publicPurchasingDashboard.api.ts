@@ -168,11 +168,17 @@ export async function unacknowledgeAssessment(
   }
 }
 
-/** 완료 처리된 평가 목록. 되돌리기 UI가 이 목록 위에 선다. */
+/**
+ * 완료 처리된 평가 목록. 되돌리기 UI가 이 목록 위에 선다.
+ *
+ * @param limit 노출 건수(1~50, 기본 5). 경영진 화면은 "우선 브리핑 점수"에서 확인 완료된 평가에
+ *   연결된 브리핑을 제외하려고 assessment_id 집합이 필요해 더 크게(예: 50) 조회한다.
+ */
 export async function fetchAcknowledgedAssessments(
   accessToken: string | null,
+  limit = 5,
 ): Promise<AcknowledgedItem[]> {
-  return resolve(accessToken, '/api/v1/purchasing-dashboard/acknowledged?limit=5', MOCK_ACKNOWLEDGED)
+  return resolve(accessToken, `/api/v1/purchasing-dashboard/acknowledged?limit=${limit}`, MOCK_ACKNOWLEDGED)
 }
 
 /** 심각 → 주의 → 정상 순으로 세울 때 쓰는 순위. 값이 클수록 위험하다. */

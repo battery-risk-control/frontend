@@ -150,6 +150,11 @@ export interface GlobalRiskBoardItem {
   source_url?: string | null
   /** 분석 생성 시각(ISO). placeholder 폴백 항목에는 없다. */
   collected_at?: string | null
+  /**
+   * 분석이 만든 한국어 요약(analyses.summary_kr). 마커 클릭 시 뉴스 상세가 영문 제목 대신
+   * 이 요약을 본문으로 쓴다 — 뉴스 목록 경로(summary_kr)와 같다. 없으면 null(미분석·placeholder).
+   */
+  summary_kr?: string | null
 }
 
 /**

@@ -20,7 +20,7 @@
 
 - **React 19 + TypeScript + Vite**
 - **react-router-dom** — 클라이언트 라우팅
-- **서버 상태**: TanStack Query (패키지 설치됨, 실사용처 아직 없음 — docs/roadmap-candidates.md C11 참고)
+- **서버 상태**: TanStack Query — `App.tsx`에 `QueryClientProvider` 등록, 경영기획(2계층) 대시보드 훅(`features/planning/hooks/usePlanningQueries.ts`)에서 폴링·윈도우 포커스 리페치에 사용
 - **UI 상태**: React 기본 `useState`/`Context` — 별도 상태관리 라이브러리 미도입
 - **스타일**: CSS Modules (`*.module.css`), 디자인 토큰은 `src/styles/tokens.css`로 전역 관리
 - **차트**: Recharts
@@ -30,13 +30,15 @@
 
 ```
 src/
-  api/                  # 백엔드 연동 — 현재는 mock 함수, 응답 타입(api/types.ts) 우선 정의
+  api/                  # 백엔드 연동 — 실 fetch 구현(응답 타입 api/types.ts). VITE_API_BASE_URL 미설정 시 mock 폴백
   app/                  # 최상위 라우트 정의(routes.tsx) + 로그인 가드
   assets/               # 정적 리소스
   components/
     layout/             # 공통 레이아웃: Header, Footer, SideNav, Breadcrumb, SkipLink
     ui/                 # 공통 UI 요소: ConfidenceBadge, RiskGradeBadge
+    widgets/            # 화면 공유 위젯: GlobalRiskBoard(글로벌 리스크 맵) 등
   features/             # 화면 단위 경계 — 폴더별로 독립적으로 작업 가능
+    admin/                # 관리자 — 회원가입 승인 관리
     auth/                 # 로그인/회원가입/승인대기 락 화면
     executive/            # 3계층 경영진 대시보드
     planning/             # 2계층 경영기획팀 대시보드
@@ -58,8 +60,11 @@ docs-ref/               # Figma, 서비스 플로우, UI 데모 이미지 등 �
 # 의존성 설치
 npm install
 
-# 개발 서버 (기본 http://localhost:5173)
+# 개발 서버 — mock 모드 (기본 http://localhost:5173, 백엔드 없이 목업 데이터)
 npm run dev
+
+# 개발 서버 — 실 백엔드 연결 (실제 결과 확인용; 백엔드가 localhost:8080에 떠 있어야 함)
+npm run dev:live
 
 # 타입 체크
 npm run typecheck
@@ -78,13 +83,19 @@ npm run build
 npm run test:e2e
 ```
 
-별도 `.env` 파일 없이 `npm install && npm run dev`만 실행해도 정상 동작합니다(①단계 mock 모드가 기본값) — `.env.live`는 ②단계(백엔드 연결) 전환 시에만 필요합니다.
+> ⚠️ **`npm run dev`는 mock 모드입니다** — 백엔드 없이 목업 데이터가 떠서 **실제 데이터·동작을 확인할 수 없습니다.** 제대로 된 결과를 보려면 **백엔드를 먼저 띄운 뒤 `npm run dev:live`로 실행**하세요.
+
+- `npm run dev` — mock 모드(기본). `.env` 없이도 동작하며 목업 데이터 + 의도적 로딩 지연을 씁니다.
+- `npm run dev:live` — 실 백엔드 연결 모드(`vite --mode live` → `.env.live`의 `VITE_API_BASE_URL=http://localhost:8080`). Spring 백엔드가 8080에 떠 있어야 합니다.
 
 ```bash
-# 프론트엔드 단독 모드(기본값) — mock 데이터 + 로딩 지연 시뮬레이션
+# 실제 결과 확인 (권장) — 백엔드 기동 후 실행
+npm run dev:live
+
+# mock 단독 모드(기본) — 백엔드 없이 목업 + 로딩 지연
 npm run dev
 
-# mock 로딩 지연 끄기(서비스 테스트 단계 대비)
+# mock 로딩 지연만 끄기
 VITE_MOCK_DELAY_MS=0 npm run dev
 ```
 
@@ -97,6 +108,8 @@ VITE_MOCK_DELAY_MS=0 npm run dev
 | `/purchasing` | 1계층 구매팀 대시보드(Seq 24, MVP) | 로그인 필요 |
 | `/planning` | 2계층 경영기획팀 대시보드 | 로그인 필요 |
 | `/executive` | 3계층 경영진 대시보드 | 로그인 필요 |
+
+각 계층 대시보드는 세부 하위 라우트를 가집니다(예: 경영기획팀의 자재 위험·수입 의존도·공급사·계약·AI 브리핑·데이터 품질 탭). 정확한 경로 정의는 `app/routes.tsx`가 기준입니다.
 
 "로그인 필요" 라우트는 `app/routes.tsx`의 `RequireAuth`가 지키고 있으나, 이는 메모리 상의 인증 상태(`orgTier`) 유무만 확인하는 **클라이언트 UX 수준 가드**입니다. 새로고침하면 상태가 사라지고, 실제 보안 경계(토큰 검증)는 백엔드가 담당합니다. 현재는 계층 간 접근 제한도 하지 않습니다(예: 구매팀으로 로그인해도 `/planning` 접근 가능).
 
@@ -116,7 +129,7 @@ VITE_MOCK_DELAY_MS=0 npm run dev
 
 ## API 명세
 
-백엔드 API 계약은 대부분 아직 확정되지 않았습니다. 현재는 [docs/mock-schemas.md](docs/mock-schemas.md)(그리고 `CLAUDE.md`에 정의된 1계층 `risk_event` 스키마)를 **잠정 계약**으로 삼아, `src/api/` 아래 mock 함수로 프론트엔드를 우선 구현했습니다. 응답 타입을 `src/api/types.ts`에 먼저 정의해뒀기 때문에, 실제 계약이 확정되면 각 `api/*.api.ts` 파일의 구현부(mock 데이터를 실제 fetch 호출로 교체)만 바꾸면 됩니다. 일부(인증, 공개 지도)는 이미 실 백엔드와 검증까지 끝나 [docs/backend-api-contracts.md](docs/backend-api-contracts.md)로 옮겨졌습니다 — 확정된 계약과 아직 제안 단계인 계약을 구분해서 봐야 합니다.
+프론트엔드는 **실 백엔드(Spring, `/api/v1`)와 연동 완료** 상태입니다. `src/api/*.api.ts`가 실제 fetch를 호출하고, 응답 타입은 `src/api/types.ts`에 정의돼 있습니다. `VITE_API_BASE_URL`이 설정되면 실 백엔드로, 미설정이면 **mock 폴백**으로 동작합니다(단독 데모·스켈레톤 검증용). 확정된 계약은 [docs/backend-api-contracts.md](docs/backend-api-contracts.md), 초기 잠정 스키마는 [docs/mock-schemas.md](docs/mock-schemas.md)를 참고하세요.
 
 현재 프론트엔드는 세 가지 실행 단계를 구분합니다:
 1. **프론트엔드 단독** — mock 데이터 + 의도적 로딩 지연(스켈레톤 UI 검증·단독 시연용).
@@ -131,85 +144,3 @@ mock 단독(①단계)으로 전체 화면을 순서대로 시연하는 절차�
 ## ERD
 
 데이터베이스 설계(ERD)는 이 레포(프론트엔드) 범위 밖이며, 백엔드 레포에서 관리합니다.
-
----
-
-## 부록: Vite 템플릿 기본 안내
-
-아래는 프로젝트 생성 시 Vite가 기본으로 넣어준 안내로, ESLint 설정을 더 엄격하게 확장하고 싶을 때 참고용입니다.
-
-# React + TypeScript + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
